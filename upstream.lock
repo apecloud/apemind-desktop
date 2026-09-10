@@ -20,6 +20,13 @@ upstream:
   # 上游许可证（随上游，不因本仓改名）
   license: MIT
 
+# 品牌修订号：附加到构建产物的版本上（如 0.1.5-rc.1+apemind.1）。
+# 为什么需要：桌面版按"版本相同即复用已装 profile"决定是否重装
+# （apps/desktop/README.md:44）。版本不变时改品牌**不会生效**，
+# 会一直显示上一次装进去的旧品牌，且构建日志全绿、难以察觉。
+# 改品牌 = 把这里 +1 → 复用条件不成立 → 自动重装。
+brand_revision: apemind.1
+
 # 构建工具链要求：必须与上游仓库 package.json 声明一致。
 # 用 corepack 激活，不要用系统 pnpm（版本不符会在 install/build 阶段失败）。
 toolchain:

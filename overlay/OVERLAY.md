@@ -13,6 +13,13 @@
 # 变更清单（与 docs/branding.md 一致，改这里必须同步改那边）：
 
 patches:
+  # ── 品牌修订号：把 brand_revision 附到版本号（非补丁，由 sync 直接写入）──
+  #    ⚠️ 目的：让桌面版的「版本相同即复用 profile」条件不成立（README:44），
+  #       否则改品牌后 app 仍加载旧 profile，看起来"改了没生效"。
+  versions:
+    - target: package.json
+    - target: apps/desktop/package.json
+
   # ── 04-title.patch：窗口/标签页标题 ────────────────────────────────
   - file: patches/04-title.patch
     kind: branding
