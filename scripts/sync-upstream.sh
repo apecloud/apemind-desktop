@@ -83,17 +83,39 @@ if [[ "${ACTUAL}" != "${UPSTREAM_COMMIT}" ]]; then
 fi
 echo "    HEAD = ${ACTUAL} ✓"
 
-# ── 2. 应用 overlay ────────────────────────────────────────────────────
-echo "==> 应用 overlay"
-# 用 rsync 语义把 overlay/apps/... 映射到 work-dir/apps/...
-(cd "${OVERLAY_DIR}" && find . -type f -not -name 'OVERLAY.md' -print0) \
-  | while IFS= read -r -d '' rel; do
-      src="${OVERLAY_DIR}/${rel#./}"
-      dst="${WORK_DIR}/${rel#./}"
-      mkdir -p "$(dirname "${dst}")"
-      cp "${src}" "${dst}"
-      echo "    overlay -> ${rel#./}"
-    done
+# ── 2. 应用 overlay：补丁（按文件名排序，顺序敏感）────────────────────
+# 设计：overlay 里**不放任何上游文件副本**，只放 diff 补丁。
+# 任何补丁 apply 失败（上下文不匹配）= 结构性报错，不会静默产生陈旧副本。
+PATCH_DIR="${OVERLAY_DIR}/patches"
+echo "==> 应用 overlay 补丁"
+if [[ -d "${PATCH_DIR}" ]]; then
+  while IFS= read -r patch; do
+    [[ -z "${patch}" ]] && continue
+    echo "    apply $(basename "${patch}")"
+    if ! git -C "${WORK_DIR}" apply --whitespace=nowarn "${patch}"; then
+      echo "FATAL: 补丁应用失败：$(basename "${patch}")" >&2
+      echo "       通常意味着上游在本补丁涉及的上下文处有变更；" >&2
+      echo "       请同步更新补丁，不要跳过。" >&2
+      exit 1
+    fi
+  done < <(find "${PATCH_DIR}" -maxdepth 1 -type f -name '*.patch' | sort)
+else
+  echo "    （无 patches/ 目录，跳过）"
+fi
+
+# 非补丁类资源（图标占位等）仍按文件复制，但**不含上游逻辑**。
+RESOURCE_DIR="${OVERLAY_DIR}/apps/desktop/resources"
+if [[ -d "${RESOURCE_DIR}" ]]; then
+  echo "==> 应用 overlay 资源（非上游逻辑）"
+  (cd "${OVERLAY_DIR}" && find apps/desktop/resources -type f -print0) \
+    | while IFS= read -r -d '' rel; do
+        src="${OVERLAY_DIR}/${rel}"
+        dst="${WORK_DIR}/${rel}"
+        mkdir -p "$(dirname "${dst}")"
+        cp "${src}" "${dst}"
+        echo "    overlay -> ${rel}"
+      done
+fi
 
 # ── 3. 校验：overlay 不得退化成 fork ───────────────────────────────────
 if [[ "${SKIP_VERIFY}" -eq 0 ]]; then
@@ -101,7 +123,8 @@ if [[ "${SKIP_VERIFY}" -eq 0 ]]; then
   # 只允许这些文件出现差异；任何其他改动都是越界。
   # 注意：逐文件列举，**不用目录前缀**——前缀会让任意文件通过。
   # 与 scripts/verify-overlay.sh 的 ALLOWED 保持同步。
-  ALLOWED_REGEX='(^|/)apps/desktop/electron-builder\.config\.mjs$|(^|/)apps/desktop/src/locale\.ts$|(^|/)apps/desktop/resources/(README\.md|icon\.icns|icon\.ico)$'
+  # 品牌 + 开关均通过 patches/ 施加，故此处列出其目标文件。
+  ALLOWED_REGEX='(^|/)apps/desktop/electron-builder\.config\.mjs$|(^|/)apps/desktop/src/locale\.ts$|(^|/)apps/desktop/scripts/desktop-release-environment\.mjs$|(^|/)apps/desktop/scripts/desktop-release-environment\.d\.mts$|(^|/)apps/desktop/scripts/prepare-seed\.ts$|(^|/)apps/desktop/resources/(README\.md|icon\.icns|icon\.ico)$'
   # 用 --untracked-files=all：否则 git 会把新增目录折叠成 `resources/`，
   # 导致逐文件白名单无法匹配（新增文件会被误报为越界）。
   CHANGED="$(git -C "${WORK_DIR}" status --porcelain --untracked-files=all | awk '{print $2}')"

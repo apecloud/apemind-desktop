@@ -16,7 +16,11 @@ upstream.lock  ──►  checkout 上游锁定 commit  ──►  应用 overla
 
 1. **锁 commit，不锁分支/tag。** 分支会移动、tag 可被重打；只有 40 位 commit 不可变。
    升级上游 = 改 `upstream.lock` 一个版本号 + 跑回归。
-2. **overlay 极小且受闸门约束。** 当前只覆盖 2 个文件 + 图标资源（见 `overlay/OVERLAY.md`）。
+2. **overlay 是纯补丁、无上游文件副本，且受闸门约束。** overlay 只放 `overlay/patches/*.patch`
+   （品牌 + 未签名开关），按固定顺序 `git apply`；补丁上下文不匹配就**结构性失败**，
+   不存在"副本静默落后上游"的隐患（见 `overlay/OVERLAY.md`）。
+   `scripts/verify-overlay.sh` 会校验：overlay 里无上游副本、每个补丁只碰授权路径。
+   这条闸门是防止 overlay 悄悄退化成 fork 的关键。
    `scripts/sync-upstream.sh` 会在构建前校验：除白名单文件外任何差异都直接失败 —— 
    这条闸门是防止 overlay 悄悄退化成 fork 的关键。
 3. **依赖不自建版本表。** 全部继承上游 lockfile；`upstream.lock` 记录其 sha256，
