@@ -1,7 +1,13 @@
 diff --git a/packages/client/ui-brand-official/src/client/Brand.tsx b/packages/client/ui-brand-official/src/client/Brand.tsx
-index 9ac6dd7ce..397ed6a31 100644
+index 9ac6dd7ce..3145d856f 100644
 --- a/packages/client/ui-brand-official/src/client/Brand.tsx
 +++ b/packages/client/ui-brand-official/src/client/Brand.tsx
+@@ -1,4 +1,4 @@
+-import { BrandWordmark, FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
++import { FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
+ import type { SidebarBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
+ 
+ /**
 @@ -15,5 +15,11 @@ export function OfficialBrandMark({ size }: SidebarBrandMarkOwnerProps) {
   * @returns the official name wordmark.
   */
