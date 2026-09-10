@@ -98,9 +98,13 @@ echo "==> 应用 overlay"
 # ── 3. 校验：overlay 不得退化成 fork ───────────────────────────────────
 if [[ "${SKIP_VERIFY}" -eq 0 ]]; then
   echo "==> 校验 overlay 范围"
-  # 只允许这些文件出现差异；任何其他改动都是越界
-  ALLOWED_REGEX='(^|/)apps/desktop/electron-builder\.config\.mjs$|(^|/)apps/desktop/src/locale\.ts$|(^|/)apps/desktop/resources/'
-  CHANGED="$(git -C "${WORK_DIR}" status --porcelain | awk '{print $2}')"
+  # 只允许这些文件出现差异；任何其他改动都是越界。
+  # 注意：逐文件列举，**不用目录前缀**——前缀会让任意文件通过。
+  # 与 scripts/verify-overlay.sh 的 ALLOWED 保持同步。
+  ALLOWED_REGEX='(^|/)apps/desktop/electron-builder\.config\.mjs$|(^|/)apps/desktop/src/locale\.ts$|(^|/)apps/desktop/resources/(README\.md|icon\.icns|icon\.ico)$'
+  # 用 --untracked-files=all：否则 git 会把新增目录折叠成 `resources/`，
+  # 导致逐文件白名单无法匹配（新增文件会被误报为越界）。
+  CHANGED="$(git -C "${WORK_DIR}" status --porcelain --untracked-files=all | awk '{print $2}')"
   BAD=0
   while IFS= read -r f; do
     [[ -z "$f" ]] && continue
