@@ -60,7 +60,12 @@ jobs:
           # 从 upstream.lock 读出版本（在仓库根执行，不依赖 CWD）
           PM="$(./scripts/lock-get.sh toolchain.package_manager)"   # 形如 pnpm@11.7.0
           echo "upstream requires: ${PM}"
+          # ⚠️ 必须 `corepack enable` 才能把 shim 放进 PATH。
+          # 只跑 `corepack prepare --activate` 在 GitHub runner 上不会创建 pnpm shim，
+          # 随后 `pnpm` 会 command not found（exit 127）——首次跑 CI 时实测撞到。
+          corepack enable
           corepack prepare "${PM}" --activate
+          command -v pnpm
           pnpm --version
 
       - name: 安装依赖
