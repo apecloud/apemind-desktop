@@ -13,6 +13,24 @@
 # 变更清单（与 docs/branding.md 一致，改这里必须同步改那边）：
 
 patches:
+  # ── 05-brand-mark.patch：侧栏 mark + 中间 hero 的图形（用户可见）──────
+  - file: patches/05-brand-mark.patch
+    kind: brand-occupant
+    targets:
+      - target: packages/client/ui-brand-official/src/client/Brand.tsx
+      - target: packages/client/ui-conversation/src/client/skeleton/EmptyHero.tsx
+    upstream_logic_changed: true
+    reason: >
+      侧栏 mark 与对话中间 hero 的图形仍是上游的鱼（用户可见）。
+      换成 ApeMind 方标（内联 data-URI：**web 客户端 bundle 读不到
+      apps/desktop/resources/**，那是桌面壳的资源）。
+    guardrail: >
+      只改 occupant 的渲染内容；hero 的静态图替换后，随之失效的
+      HeroFish / swim 路径 / hovering 状态一并删除（否则 TS 报 unused）。
+    note: >
+      副作用：hero 原有的 hover 游泳动画随静态图消失（owner 未要求保留）。
+      由 @猫猫 提供并在本机实测生效；我已复核 apply 干净、build 通过。
+
   # ── 品牌修订号：把 brand_revision 附到版本号（非补丁，由 sync 直接写入）──
   #    ⚠️ 目的：让桌面版的「版本相同即复用 profile」条件不成立（README:44），
   #       否则改品牌后 app 仍加载旧 profile，看起来"改了没生效"。
