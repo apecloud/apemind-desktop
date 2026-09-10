@@ -36,6 +36,32 @@
 
 ## 两个必须守住的边界
 
+### 核 overlay 差异时的正确基准（易错，会得到假阴性）
+
+要断言"overlay 只改了那几处"，必须对**纯净上游**比，**不能对 work tree 比**：
+
+```bash
+# ✅ 正确：HEAD 就是锁定的上游 commit（sync-upstream.sh 用 checkout --detach）
+git -C work/dsh-desktop diff --stat
+#   → apps/desktop/electron-builder.config.mjs | 4 ++--   (2 行)
+#   → apps/desktop/src/locale.ts               | 16 ++++--- (8 处)
+
+# ✅ 也可：逐文件对纯净上游看
+git -C work/dsh-desktop show HEAD:apps/desktop/electron-builder.config.mjs > /tmp/pristine
+ diff /tmp/pristine overlay/apps/desktop/electron-builder.config.mjs
+
+# ❌ 错误：work tree 已应用过 overlay，两者本来就相同 → 0 差异假阴性
+diff work/dsh-desktop/apps/desktop/electron-builder.config.mjs \
+     overlay/apps/desktop/electron-builder.config.mjs      # 恒为 IDENTICAL
+```
+
+原因：`sync-upstream.sh` 做的是 `checkout --detach <upstream_commit>`，
+所以 work tree 的 HEAD **就是纯净上游**；`git diff`（work tree vs HEAD）恰好等于
+上面那个正确基准。而直接 `diff` 两个文件路径会把"已应用 overlay 的副本"
+当成上游，得出"没差异"的错误结论。
+
+（仓内的 `verify-overlay.sh` / `sync-upstream.sh` 不受此影响：它们读 `git status`，不读 diff。）
+
 1. **overlay 不得包含上游逻辑改动。** 出现任何非品牌改动，`sync-upstream.sh` 的校验闸门会失败。
    若确有功能需求，**先评估能不能用上游官方扩展点**（`--patch` 配置叠加、官方插件、
    provider 投影、MCP），而不是改上游代码。
