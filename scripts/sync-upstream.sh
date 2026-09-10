@@ -76,6 +76,17 @@ fi
 echo "==> checkout 锁定 commit（不用分支/tag，保证不可变）"
 git -C "${WORK_DIR}" fetch --filter=blob:none origin "${UPSTREAM_COMMIT}"
 git -C "${WORK_DIR}" checkout --detach "${UPSTREAM_COMMIT}"
+
+# 把工作树恢复成**纯净上游**再打补丁。
+# 为什么必需：`git checkout --detach` **不会**清理本地修改（也不删未跟踪文件），
+# 所以对一棵已经打过 overlay 的树再跑一次时，补丁会因“上下文已改”而失败，
+# 并报出**错误的归因**（说“上游变了”，实际是我们自己的残留）。
+# 本步让脚本幂等：无论本地工作树什么状态，结果都是“锁定 commit + overlay”。
+# （CI runner 可能复用工作区，这条同样必需。）
+git -C "${WORK_DIR}" reset --hard --quiet
+# 清掉 overlay 引入的未跟踪文件（如 resources/README.md），但不碰 .gitignore 覆盖的构建产物。
+git -C "${WORK_DIR}" clean --quiet -fd
+
 ACTUAL="$(git -C "${WORK_DIR}" rev-parse HEAD)"
 if [[ "${ACTUAL}" != "${UPSTREAM_COMMIT}" ]]; then
   echo "FATAL: checkout 后 commit 不符：期望 ${UPSTREAM_COMMIT}，实际 ${ACTUAL}" >&2
