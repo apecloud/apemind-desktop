@@ -115,11 +115,23 @@ else
 fi
 
 # 非补丁类资源（图标占位等）仍按文件复制，但**不含上游逻辑**。
+# ⚠️ 这里**必须逐文件比对白名单**：否则一个未登记的文件（尤其上游逻辑副本）
+# 会被静默拷进构建树。实测过：把上游 prepare-seed.ts 放进 resources/ 下能蒙骗过关 ——
+# 因为此处原先是无条件 cp。
 RESOURCE_DIR="${OVERLAY_DIR}/apps/desktop/resources"
 if [[ -d "${RESOURCE_DIR}" ]]; then
   echo "==> 应用 overlay 资源（非上游逻辑）"
   (cd "${OVERLAY_DIR}" && find apps/desktop/resources -type f -print0) \
     | while IFS= read -r -d '' rel; do
+        # 只允许白名单内的资源文件名（与 verify-overlay.sh 的 ALLOWED 同步）
+        case "${rel}" in
+          apps/desktop/resources/README.md|apps/desktop/resources/icon.icns|apps/desktop/resources/icon.ico) ;;
+          *)
+            echo "    ✗ 未登记的 overlay 资源: ${rel}" >&2
+            echo "      （新增资源必须同时在 verify-overlay.sh 的 ALLOWED 与 OVERLAY.md 登记）" >&2
+            exit 1
+            ;;
+        esac
         src="${OVERLAY_DIR}/${rel}"
         dst="${WORK_DIR}/${rel}"
         mkdir -p "$(dirname "${dst}")"
@@ -129,7 +141,34 @@ if [[ -d "${RESOURCE_DIR}" ]]; then
 fi
 
 # ── 3. 校验：overlay 不得退化成 fork ───────────────────────────────────
-if [[ "${SKIP_VERIFY}" -eq 0 ]]; then
+# ⚠️ 这一段**不受 --skip-verify 影响**，永远执行。
+#
+# 原因（实测过的缺陷）：这段原先包在 `if [[ SKIP_VERIFY -eq 0 ]]` 里，
+# 于是 `--skip-verify` 会把「overlay 文件白名单」一并跳过 —— 一个未授权文件
+# （例如上游逻辑副本）会 exit 0 静默通过。
+#
+# 两个开关的语义本来就不同：
+#   --skip-verify 的本意是跳过「对上游工作树的 diff 审计」（慢、调试时可能想跳）；
+#   白名单校验查的是「overlay 里放了什么」—— 纯本地、极快、**没有跳过的正当理由**。
+# 所以：**可以放弃 diff 审计，不可以放弃“只让登记过的文件进树”。**
+
+# 校验（A）：**overlay 源树**本身。
+#
+# 为何必需：下面那段校验查的是**工作树**（git status）——只能看到“被应用了什么”。
+# 一个只存在于 overlay/ 但根本不会被应用的文件（如误放的上游副本）对它是**隐形的**：
+# 实测把上游 main.ts 放进 overlay/apps/desktop/src/ 后，工作树仍然干净，两段都无感。
+# verify-overlay.sh 走的是 overlay/ 源树，因此能拓住这类；此处直接复用同一逻辑，
+# 保证“单跑 sync-upstream.sh”也不漏。
+if [[ -x "${REPO_ROOT}/scripts/verify-overlay.sh" ]]; then
+  echo "==> 校验 overlay 源树与登记一致（不受 --skip-verify 影响）"
+  # 无条件调用：该脚本的检查全是纯本地、亚秒级，没有任何需要跳过的理由。
+  if ! "${REPO_ROOT}/scripts/verify-overlay.sh"; then
+    echo "FATAL: overlay 源树校验失败（上面已列出具体文件）。" >&2
+    exit 1
+  fi
+fi
+
+if true; then
   echo "==> 校验 overlay 范围"
   # 只允许这些文件出现差异；任何其他改动都是越界。
   # 注意：逐文件列举，**不用目录前缀**——前缀会让任意文件通过。
