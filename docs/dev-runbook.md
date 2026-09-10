@@ -98,3 +98,31 @@ Electron 二进制（`electron@44.0.0`）**首次调用时按需下载**，不�
 `prepare:packages` 之后，**卡在 `prepare:seed`**。想跳过必须先拿到凭据，
 或做「未签名开关」式源码改动（短路上述多处 + `forceCodeSigning`/`notarize`/`afterSign`），
 不要硬改。
+
+## 打包需要外网 —— 国内网络必须配 Electron 镜像（硬阻塞，非偶发）
+
+`package:desktop:*` 全程需要外网，至少三处下载：
+
+1. `prepare:runtime` 下载 **Node 24.17.0**（官方源可达即可）；
+2. `prepare:seed` 从 npm 拉依赖；
+3. **electron-builder 打包阶段下载 Electron 二进制**（`@electron/get`），
+   默认去 **`github.com`**（`electron/electron` releases）。
+
+⚠️ 在 `github.com` 不可达的环境（如部分国内网络），第 3 步会**挂在 0 字节**：
+进程不报错、不退出，卡在
+
+```
+/tmp/electron-download-XXXX/electron-v<ver>-<os>-<arch>.zip   （大小 0）
+```
+
+**解法**：设 `ELECTRON_MIRROR` 指到可达镜像，例如：
+
+```bash
+export ELECTRON_MIRROR="https://registry.npmmirror.com/-/binary/electron/"
+```
+
+设好后 electron 会 100% 下载、打包通过。**CI 与本地打包都应设置**这条，
+否则国内网络下打包会随机卡死（看起来像"构建慢"，实际是网络挂起）。
+
+诊断提示：`lsof -nP -p <electron-builder-pid> | grep TCP` 若看到指向 `github.com` 的
+`ESTABLISHED` 且 `%CPU` 为 0，即为本例。
