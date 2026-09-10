@@ -51,12 +51,13 @@ jobs:
         run: ./scripts/sync-upstream.sh --work-dir "${RUNNER_TEMP}/dsh-desktop"
 
       - name: 激活上游要求的 pnpm（必须匹配 packageManager）
-        working-directory: ${{ runner.temp }}/dsh-desktop
         run: |
           set -euo pipefail
           export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-          corepack prepare "$(./../../scripts/lock-get.sh toolchain.package_manager 2>/dev/null || echo pnpm@11.7.0)" --activate || true
-          corepack prepare pnpm@11.7.0 --activate
+          # 从 upstream.lock 读出版本（在仓库根执行，不依赖 CWD）
+          PM="$(./scripts/lock-get.sh toolchain.package_manager)"   # 形如 pnpm@11.7.0
+          echo "upstream requires: ${PM}"
+          corepack prepare "${PM}" --activate
           pnpm --version
 
       - name: 安装依赖
