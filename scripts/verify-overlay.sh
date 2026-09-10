@@ -77,6 +77,32 @@ if [[ -f "$LOCALE" ]]; then
   [[ "$n" == "8" ]] || { echo "    ✗ locale 品牌文案应为 8 处，实际 ${n}" >&2; fail=1; }
 fi
 
+echo "==> 校验图标一致性（防「加了图标但没接进 builder」静默通过）"
+# 规则：图标文件存在 ⇒ builder 必须配 icon 键；反之也建议一致。
+# 这道校验防的是一个具体失败模式：图标进了 overlay 白名单，但忘了给 electron-builder
+# 配 icon，结果产物仍用 Electron 默认图标，而所有其他断言都绿。
+HAS_ICNS=0; [[ -f "${OVERLAY_DIR}/apps/desktop/resources/icon.icns" ]] && HAS_ICNS=1
+HAS_ICO=0;  [[ -f "${OVERLAY_DIR}/apps/desktop/resources/icon.ico" ]] && HAS_ICO=1
+HAS_ICON_KEY=0
+[[ -f "$BUILDER" ]] && grep -qE '^\s*icon:' "$BUILDER" && HAS_ICON_KEY=1
+
+if [[ $HAS_ICNS -eq 1 || $HAS_ICO -eq 1 ]]; then
+  if [[ $HAS_ICON_KEY -eq 0 ]]; then
+    echo "    ✗ 图标资源已存在，但 builder 配置里没有 icon 键 —— 图标不会生效" >&2
+    echo "      （在 overlay 的 electron-builder.config.mjs 里给 mac/win 段加 icon:）" >&2
+    fail=1
+  else
+    echo "    ✓ 图标资源与 builder icon 键同时存在"
+  fi
+else
+  if [[ $HAS_ICON_KEY -eq 1 ]]; then
+    echo "    ✗ builder 配了 icon 键，但 overlay 里没有图标文件（构建会找不到资源）" >&2
+    fail=1
+  else
+    echo "    ○ 尚无图标资源，builder 也未配 icon —— 与 PENDING-ASSET 一致"
+  fi
+fi
+
 if [[ $fail -ne 0 ]]; then
   echo "FATAL: overlay 校验失败。" >&2
   exit 1

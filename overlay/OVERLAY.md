@@ -40,18 +40,45 @@ overlay:
       同样受"除白名单行外必须与上游一致"的校验。
 
   # ── 3. 图标资源（新增，非替换）────────────────────────────────────
-  - source: apps/desktop/resources/
-    target: apps/desktop/resources/
+  # 注意：即使将来提供，这里是**逐文件**列出（不用目录），与脚本 ALLOWED 一致。
+  - source: apps/desktop/resources/README.md
+    target: apps/desktop/resources/README.md
     kind: add-files
     touches:
-      - "icon.icns（macOS）/ icon.ico（Windows）"
+      - "占位说明（当前无真实图标）"
+    upstream_logic_changed: false
+    status: PROVIDED
+
+  - source: apps/desktop/resources/icon.icns
+    target: apps/desktop/resources/icon.icns
+    kind: add-files        # macOS 图标
     upstream_logic_changed: false
     status: PENDING-ASSET
-    note: >
+    note: 待品牌/美术提供。拿到后需同时完成下方「双登记」与 builder `icon` 键配置。
+
+  - source: apps/desktop/resources/icon.ico
+    target: apps/desktop/resources/icon.ico
+    kind: add-files        # Windows 图标
+    upstream_logic_changed: false
+    status: PENDING-ASSET
+
+  - note: >
       ⚠️ 上游仓库**一个图标文件都没有**，所以这是**新增**资源而不是替换。
-      当前只有占位说明，**真实图标待品牌/美术提供**。
       缺失不阻塞构建：builder 无 icon 键时 fallback 到 Electron 默认图标（已实测）。
       因此图标是**发版门槛**，不是开发门槛。
+
+# ── 新增 overlay 文件的双登记规则（重要）──────────────────────────────
+#
+# 本目录**逐文件授权**，不用目录前缀放行（前缀会让任意文件通过，包括不该入库的东西）。
+# 因此任何新增文件必须**同时**完成两道登记，才算授权：
+#
+#   1. 在 scripts/verify-overlay.sh 的 ALLOWED 数组 + scripts/sync-upstream.sh
+#      的 ALLOWED_REGEX 里列出该**确切文件名**；
+#   2. 在本文件的 overlay 清单里新增对应条目（含理由、是否改上游逻辑）。
+#
+# 两道登记缺一：闸门会拒绝构建（这是有意设计，不是 bug）。
+# 另：图标即使进了白名单，**还必须**给 builder 配 `icon` 键，否则不会生效——
+# 且要注意让品牌断言能覆盖到图标存在性，避免「加了图标但没生效」静默通过。
 
 # 明确**不在** overlay 里的东西（已被上游 env 化，走 CI 变量即可）：
 not_in_overlay:
