@@ -5,9 +5,12 @@
 #     package:desktop / DSH_DESKTOP_APP_ID），所以这条流水线是我们自己的。
 #   - 构建**需要外网**：prepare:runtime 会下载 Node 24.17.0，
 #     prepare:seed 会从 registry.npmjs.org 拉依赖。**不是离线构建**。
-#   - runner 使用 self-hosted（本组织新 workflow 的默认要求）。
-#     macOS 桌面**打包**需要签名凭据与专用 runner，本 workflow 只做**校验与前段构建**，
-#     不产出可分发安装包（那需要 Apple 凭据，owner 已定"凭据后置"）。
+#   - runner 使用 **hosted `ubuntu-latest`**，与同组织其他仓（apemind-computer /
+#     apemind-status / apemind-agent）保持一致。
+#     本 workflow 只干：checkout + 跑 bash 脚本 + pnpm + corepack —— 都是标准 hosted
+#     runner 能做的事，不需要特权、不需要内网、不碰客户环境。
+#     ⚠️ 建仓时曾误写为 `self-hosted`，而本仓**没有注册任何 self-hosted runner**,
+#     导致自建仓第一个 commit 起所有 run 永久停在 `queued`（从未执行）。已修正。
 name: ci
 
 on:
@@ -20,7 +23,7 @@ jobs:
   # ── 闸门：锁与 overlay 范围 ────────────────────────────────────────
   verify-lock-and-overlay:
     name: 校验 upstream.lock 与 overlay 范围
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -42,7 +45,7 @@ jobs:
   # ── 前段构建：证明 overlay 后仍能构建（不含签名/打包）──────────────
   build-dev:
     name: overlay 后可构建（dev 前段）
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: verify-lock-and-overlay
     steps:
       - uses: actions/checkout@v4
