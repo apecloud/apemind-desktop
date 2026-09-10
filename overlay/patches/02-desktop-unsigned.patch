@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/electron-builder.config.mjs b/apps/desktop/electron-builder.config.mjs
-index 92540db..b82fc51 100644
+index c47bd6d7a..34bf9c08c 100644
 --- a/apps/desktop/electron-builder.config.mjs
 +++ b/apps/desktop/electron-builder.config.mjs
 @@ -2,6 +2,7 @@ import {
@@ -18,8 +18,22 @@ index 92540db..b82fc51 100644
    const targetPlatform = env.DSH_DESKTOP_TARGET_PLATFORM
    const resolvedPlatform = targetPlatform ?? hostPlatform
    const resolvedArch = env.DSH_DESKTOP_TARGET_ARCH ?? hostArch
-@@ -64,20 +66,22 @@ export function createElectronBuilderConfig(
+@@ -47,8 +49,8 @@ export function createElectronBuilderConfig(
+   const buildPaths = desktopTargetBuildPaths(update.target)
+   return {
+     appId,
+-    productName: 'DeepSeek Harness',
+-    artifactName: 'deepseek-harness-${version}-${os}-${arch}.${ext}',
++    productName: 'ApeMind Desktop',
++    artifactName: 'apemind-desktop-${version}-${os}-${arch}.${ext}',
+     directories: { output: buildPaths.artifacts },
+     asar: true,
+     files: [
+@@ -62,22 +64,25 @@ export function createElectronBuilderConfig(
+       { from: buildPaths.seed, to: 'seed' },
+     ],
      mac: {
++      icon: 'resources/icon.icns',
        category: 'public.app-category.developer-tools',
        identity: macOSSigning?.signingIdentity,
 -      forceCodeSigning: true,
@@ -44,17 +58,18 @@ index 92540db..b82fc51 100644
        if (!artifact.file.endsWith('.dmg')) return
        return notarizeMacOSDiskImageArtifact(
          artifact,
-@@ -86,7 +90,7 @@ export function createElectronBuilderConfig(
+@@ -86,7 +91,8 @@ export function createElectronBuilderConfig(
        )
      },
      win: {
 -      forceCodeSigning: true,
++      icon: 'resources/icon.ico',
 +      forceCodeSigning: !unsignedBuild,
        signtoolOptions: {
          sign: windowsSigner,
          signingHashAlgorithms: ['sha256'],
 diff --git a/apps/desktop/scripts/desktop-release-environment.d.mts b/apps/desktop/scripts/desktop-release-environment.d.mts
-index ad48933..1c3c5cd 100644
+index ad48933f6..1c3c5cdec 100644
 --- a/apps/desktop/scripts/desktop-release-environment.d.mts
 +++ b/apps/desktop/scripts/desktop-release-environment.d.mts
 @@ -7,6 +7,12 @@ export const MACOS_SIGNING_IDENTITY_ENV: 'DSH_DESKTOP_MACOS_SIGNING_IDENTITY'
@@ -71,7 +86,7 @@ index ad48933..1c3c5cd 100644
  export interface MacOSSigningEnvironment {
    readonly signingIdentity: string
 diff --git a/apps/desktop/scripts/desktop-release-environment.mjs b/apps/desktop/scripts/desktop-release-environment.mjs
-index 4674642..63e095a 100644
+index 46746428d..63e095a94 100644
 --- a/apps/desktop/scripts/desktop-release-environment.mjs
 +++ b/apps/desktop/scripts/desktop-release-environment.mjs
 @@ -9,6 +9,19 @@ export const MACOS_SIGNING_IDENTITY_ENV = 'DSH_DESKTOP_MACOS_SIGNING_IDENTITY'
@@ -125,7 +140,7 @@ index 4674642..63e095a 100644
    if (appleIdValues.some(value => value !== undefined)) {
      return {
 diff --git a/apps/desktop/scripts/prepare-seed.ts b/apps/desktop/scripts/prepare-seed.ts
-index 73da078..cebbc95 100644
+index 73da078ef..cebbc95fc 100644
 --- a/apps/desktop/scripts/prepare-seed.ts
 +++ b/apps/desktop/scripts/prepare-seed.ts
 @@ -24,6 +24,7 @@ import {

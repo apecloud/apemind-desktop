@@ -1,0 +1,33 @@
+diff --git a/packages/client/ui-brand-official/src/client/Brand.tsx b/packages/client/ui-brand-official/src/client/Brand.tsx
+index 9ac6dd7ce..397ed6a31 100644
+--- a/packages/client/ui-brand-official/src/client/Brand.tsx
++++ b/packages/client/ui-brand-official/src/client/Brand.tsx
+@@ -15,5 +15,11 @@ export function OfficialBrandMark({ size }: SidebarBrandMarkOwnerProps) {
+  * @returns the official name wordmark.
+  */
+ export function OfficialBrandName() {
+-  return <BrandWordmark includeMark={false} />
++  // ApeMind：用字体渲染字标（尚无 ApeMind 字标美术资产）。
++  // 字体栈取自 apemind-design/brand-spec.md 的 Display 族。
++  return (
++    <span style={{ fontFamily: "'Fraunces', 'Noto Serif SC', 'Songti SC', serif", fontWeight: 500 }}>
++      ApeMind
++    </span>
++  )
+ }
+diff --git a/packages/client/ui-brand-official/src/client/index.ts b/packages/client/ui-brand-official/src/client/index.ts
+index 332a5f600..fd3446b04 100644
+--- a/packages/client/ui-brand-official/src/client/index.ts
++++ b/packages/client/ui-brand-official/src/client/index.ts
+@@ -14,7 +14,10 @@ export const inject = ['slots']
+  * @param ctx - Client root context.
+  */
+ export function apply(ctx: ClientContext): void {
+-  if (process.env.DSH_CLIENT_BUILD_PROFILE !== 'official') return
++  // ApeMind: 上游只在 'official' profile 下注册。我们的客户端构建没有设该 profile，
++  // 所以这里额外接受一个 profile 值；未设 profile 时仍保持上游行为不变。
++  const profile = process.env.DSH_CLIENT_BUILD_PROFILE
++  if (profile !== 'official' && profile !== 'apemind') return
+   ctx.slots.inject('sidebar.brand.mark', () =>
+     ctx.slots.inject('sidebar.brand.name', function* () {
+       yield ctx.slots.register({ name: 'sidebar.brand.mark' }, OfficialBrandMark)

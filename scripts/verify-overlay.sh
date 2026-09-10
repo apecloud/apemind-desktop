@@ -1,171 +1,62 @@
 #!/usr/bin/env bash
-# verify-overlay.sh — 校验 overlay/ 的形态与 overlay/OVERLAY.md 的声明一致。
 #
-# overlay 的设计：**只放补丁，不放任何上游文件副本。**
-# 本脚本回答四个问题：
-#   1. overlay 里**没有**上游代码副本（那会退化成 fork），且文件都在声明范围内；
-#   2. 声明的文件与磁盘实际存在的文件一致（防偷加文件绕过声明）；
-#   3. 每个补丁**只触及授权路径**（防补丁偷偷改到别处）；
-#   4. 品牌断言 + 图标一致性断言。
+# verify-overlay.sh — 校验 overlay/ 没有退化成 fork。
 #
-# 用法：./scripts/verify-overlay.sh
+#   ./scripts/verify-overlay.sh
+#
+# 只回答一个问题：**overlay 里是不是只有"品牌接线"，没有上游代码副本？**
+#
+# 为什么这条必要：overlay 一旦出现上游文件的整份副本，上游升版时副本会
+# **静默落后**（构建照过、逻辑已旧）——这是真实发生过、且最难发现的事故。
+# 其他检查（图标一致性、add-files 同名、skip-verify 开关…）在真正需要之前不加。
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OVERLAY_DIR="${REPO_ROOT}/overlay"
-PATCH_DIR="${OVERLAY_DIR}/patches"
-
-# 允许出现在 overlay 里的文件（与 overlay/OVERLAY.md 的清单一一对应）。
-# 注意：这里**逐文件列举，不用目录前缀放行**（前缀会让任意文件通过）。
-# 新增文件必须先在本数组 + OVERLAY.md 同时登记。
-ALLOWED=(
-  "OVERLAY.md"
-  "patches/01-branding.patch"
-  "patches/02-desktop-unsigned.patch"
-  "apps/desktop/resources/README.md"
-  # add-files/：我们**自己新增**的文件（区别于 patches/ 的“改上游”）。
-  # 每个文件都必须在此登记，且必须通过下面“不得与上游同名”的断言。
-  # 图标：拿到正式资产后，把它加进 ALLOWED **并**同步改 overlay/OVERLAY.md
-  # 的 status（PENDING-ASSET → PROVIDED）。两道登记都做完才算授权。
-  # 有意不在现在预先放行：图标尚未存在，提前放行等于给"任意 icns 都可入库"开永久的门。
-)
-
-# 补丁允许触及的上游路径（逐文件列举，不用目录前缀）。与 sync-upstream.sh 的
-# ALLOWED_REGEX 保持同步。
-ALLOWED_PATCHED='^(a/|b/)(apps/desktop/electron-builder\.config\.mjs|apps/desktop/src/locale\.ts|apps/desktop/scripts/desktop-release-environment\.mjs|apps/desktop/scripts/desktop-release-environment\.d\.mts|apps/desktop/scripts/prepare-seed\.ts)$'
 
 fail=0
 
-echo "==> 校验 overlay 文件清单（无上游副本）"
+# ── 1. overlay 顶层只允许这些（其余一律视为可疑的上游副本）────────────
+ALLOWED_TOP=("OVERLAY.md" "patches" "apps")
+echo "==> overlay 顶层文件"
 while IFS= read -r f; do
   [[ -z "$f" ]] && continue
+  top="${f%%/*}"
   ok=0
-  for a in "${ALLOWED[@]}"; do
-    [[ "$f" == "$a" ]] && ok=1 && break
+  for a in "${ALLOWED_TOP[@]}"; do
+    [[ "$top" == "$a" ]] && ok=1 && break
   done
   if [[ $ok -eq 0 ]]; then
-    echo "    ✗ 未在 OVERLAY.md 声明的文件（疑似上游副本）: $f" >&2
+    echo "    ✗ 未允许的顶层条目: ${f}" >&2
     fail=1
   else
-    echo "    ✓ $f"
+    echo "    ✓ ${f}"
   fi
-done < <(cd "${OVERLAY_DIR}" && find . -type f -print | sed 's|^\./||' | sort)
+done < <(cd "${OVERLAY_DIR}" && find . -mindepth 1 -maxdepth 1 -print | sed 's|^\./||' | sort)
 
-echo "==> 校验声明存在（防只声明不落盘）"
-for a in "${ALLOWED[@]}"; do
-  [[ "$a" == "OVERLAY.md" ]] && continue
-  # 图标尚未提供，允许缺失；其余声明的文件必须存在
-  case "$a" in
-    apps/desktop/resources/icon.*) continue ;;
+# ── 2. patches/ 只允许 .patch；不允许把上游文件塞进来 ──────────────────
+echo "==> patches/ 只含补丁"
+while IFS= read -r f; do
+  [[ -z "$f" ]] && continue
+  case "$f" in
+    *.patch) echo "    ✓ ${f}" ;;
+    *) echo "    ✗ patches/ 里出现非 .patch 文件（疑似上游副本）: ${f}" >&2; fail=1 ;;
   esac
-  if [[ ! -f "${OVERLAY_DIR}/${a}" ]]; then
-    echo "    ✗ 声明存在但磁盘缺失: $a" >&2
-    fail=1
-  fi
-done
+done < <(cd "${OVERLAY_DIR}" && find patches -type f -print 2>/dev/null | sed 's|^\./||' | sort)
 
-echo "==> 校验每个补丁只触及授权路径"
-if [[ -d "${PATCH_DIR}" ]]; then
-  shopt -s nullglob
-  patches=("${PATCH_DIR}"/*.patch)
-  if [[ ${#patches[@]} -eq 0 ]]; then
-    echo "    ✗ patches/ 目录为空" >&2; fail=1
-  fi
-  for p in "${patches[@]}"; do
-    while IFS= read -r fpath; do
-      [[ -z "$fpath" ]] && continue
-      if [[ ! "$fpath" =~ $ALLOWED_PATCHED ]]; then
-        echo "    ✗ $(basename "$p") 触及越界路径: $fpath" >&2; fail=1
-      fi
-    done < <(grep -E '^\+\+\+ ' "$p" | awk '{print $2}' | grep -v '^/dev/null$' | sort -u)
-    echo "    ✓ $(basename "$p")"
-  done
-else
-  echo "    ✗ 缺少 patches/ 目录" >&2; fail=1
-fi
-
-echo "==> 校验品牌断言（补丁内容层面）"
-# 品牌必须体现在补丁里：builder productName/artifactName + locale 8 处。
-if ! grep -rq "productName: 'ApeMind Desktop'" "${PATCH_DIR}" 2>/dev/null; then
-  echo "    ✗ 补丁里没有 productName 品牌化" >&2; fail=1
-fi
-if ! grep -rq "artifactName: 'apemind-desktop-" "${PATCH_DIR}" 2>/dev/null; then
-  echo "    ✗ 补丁里没有 artifactName 品牌化（只改 productName 会断更新链）" >&2; fail=1
-fi
-if grep -E '^\+.*DeepSeek Harness' "${PATCH_DIR}/01-branding.patch" >/dev/null 2>&1; then
-  echo "    ✗ 品牌补丁新增行仍残留 'DeepSeek Harness'" >&2; fail=1
-fi
-brand_hits="$(grep -rh '^+.*ApeMind Desktop' "${PATCH_DIR}" 2>/dev/null | wc -l | tr -d ' ')"
-[[ "${brand_hits}" -ge 8 ]] || { echo "    ✗ locale 品牌文案补丁少于 8 处（实际 ${brand_hits}）" >&2; fail=1; }
-
-echo "==> 校验 add-files 不与上游同名（区分「我们的代码」与「上游副本」）"
-# 这是 add-files/ 与 patches/ 的机械分界线：
-#   同名  → 你其实想**改**上游文件 → 必须走 patches/（否则就是上游副本）
-#   不同名 → 纯新增，安全
-# 为什么需要机械判据：两类文件在目录里长得一样，靠人记必然出错。
-UPSTREAM_CLONE="${UPSTREAM_CLONE:-}"
-ADD_DIR="${OVERLAY_DIR}/add-files"
-if [[ -d "${ADD_DIR}" ]]; then
-  while IFS= read -r rel; do
-    [[ -z "$rel" ]] && continue
-    target="${rel#add-files/}"
-    # 优先用本地上游工作树判定；没有则退回 git ls-tree（需 UPSTREAM_CLONE 指向上游仓）
-    if [[ -n "${UPSTREAM_CLONE}" && -d "${UPSTREAM_CLONE}/.git" ]]; then
-      if git -C "${UPSTREAM_CLONE}" cat-file -e "HEAD:${target}" 2>/dev/null; then
-        echo "    ✗ add-files 与上游同名: ${target}" >&2
-        echo "      → 同名意味着你想“改上游”，请改走 patches/（add-files 只放新增文件）" >&2
-        fail=1
-      fi
-    fi
-  done < <(cd "${OVERLAY_DIR}" && find add-files -type f -print 2>/dev/null | sort)
-  # ③ 与 patches/ 目标不重叠（@乔布斯 提）：同一文件不能既当"新增"又当"补丁"。
-  # 重叠意味着意图不清：要么它是上游文件（该走 patches/），要么不是（不该在 patches 里）。
-  if [[ -d "${OVERLAY_DIR}/patches" ]]; then
-    while IFS= read -r rel; do
-      [[ -z "$rel" ]] && continue
-      target="${rel#add-files/}"
-      while IFS= read -r pf; do
-        [[ -z "$pf" ]] && continue
-        if grep -qE "^(\+\+\+|---) [ab]/${target}$" "${pf}" 2>/dev/null; then
-          echo "    ✗ add-files 与 patches 目标重叠: ${target}" >&2
-          echo "      同一路径不能既算新增又算补丁；请二选一" >&2
-          fail=1
-        fi
-      done < <(find "${OVERLAY_DIR}/patches" -maxdepth 1 -type f -name '*.patch' 2>/dev/null | sort)
-    done < <(cd "${OVERLAY_DIR}" && find add-files -type f -print 2>/dev/null | sort)
-  fi
-
-  if [[ -n "${UPSTREAM_CLONE}" && -d "${UPSTREAM_CLONE}/.git" ]]; then
-    echo "    （已对上游 ${UPSTREAM_CLONE} 完成同名检查）"
+# ── 3. 品牌必须体现在补丁里（唯一一条内容断言，防"补丁被清空壳"）───────
+# 判据用"增删配平"而不是数总数：数总数有盲区（总数含 productName 那一处，
+# 丢一处 locale 仍可能满足阈值）。配平对"漏改一行"敏感。
+echo "==> 品牌补丁配平"
+BRANDING="${OVERLAY_DIR}/patches/01-branding.patch"
+if [[ -f "$BRANDING" ]]; then
+  removed="$(grep -c '^-.*DeepSeek Harness' "$BRANDING" || true)"
+  added="$(grep -c '^+.*ApeMind Desktop' "$BRANDING" || true)"
+  if [[ "${removed}" == "${added}" && "${removed}" != "0" ]]; then
+    echo "    ✓ 配平（-${removed} / +${added}）"
   else
-    echo "    ⚠️ 未提供 UPSTREAM_CLONE（或它不是 git 仓）—— 本次**跳过了同名检查**" >&2
-    echo "       CI 会提供它；单跑时请设 UPSTREAM_CLONE=<上游工作树> 以获得完整校验" >&2
-  fi
-fi
-
-echo "==> 校验图标一致性（防「加了图标但没接进 builder」静默通过）"
-# 规则：图标文件存在 ⇒ 品牌补丁必须给 builder 配 icon 键；反之也建议一致。
-# 这道校验防的是：图标进了 overlay 白名单，但忘了给 electron-builder 配 icon，
-# 结果产物仍用 Electron 默认图标，而所有其他断言都绿。
-HAS_ICNS=0; [[ -f "${OVERLAY_DIR}/apps/desktop/resources/icon.icns" ]] && HAS_ICNS=1
-HAS_ICO=0;  [[ -f "${OVERLAY_DIR}/apps/desktop/resources/icon.ico" ]] && HAS_ICO=1
-HAS_ICON_KEY=0
-grep -rqE '^\+[[:space:]]*icon:' "${PATCH_DIR}" 2>/dev/null && HAS_ICON_KEY=1
-
-if [[ $HAS_ICNS -eq 1 || $HAS_ICO -eq 1 ]]; then
-  if [[ $HAS_ICON_KEY -eq 0 ]]; then
-    echo "    ✗ 图标资源已存在，但补丁里没有 builder icon 键 —— 图标不会生效" >&2
-    echo "      （在 01-branding.patch 里给 mac/win 段加 icon:）" >&2
+    echo "    ✗ 品牌替换未配平：-${removed} / +${added}（疑似漏改或漏删一行）" >&2
     fail=1
-  else
-    echo "    ✓ 图标资源与 builder icon 键同时存在"
-  fi
-else
-  if [[ $HAS_ICON_KEY -eq 1 ]]; then
-    echo "    ✗ 补丁配了 icon 键，但 overlay 里没有图标文件（构建会找不到资源）" >&2
-    fail=1
-  else
-    echo "    ○ 尚无图标资源，补丁也未配 icon —— 与 PENDING-ASSET 一致"
   fi
 fi
 

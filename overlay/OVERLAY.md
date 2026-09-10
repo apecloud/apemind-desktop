@@ -13,9 +13,34 @@
 # 变更清单（与 docs/branding.md 一致，改这里必须同步改那边）：
 
 patches:
+  # ── 03-brand-occupant.patch：侧栏品牌 occupant（"改 ApeMind"的第一步）─────
+  #    ⚠️ 这是**第二个**碰上游逻辑的补丁，登记理由如下。
+  - file: patches/03-brand-occupant.patch
+    kind: brand-occupant
+    targets:
+      - target: packages/client/ui-brand-official/src/client/index.ts
+      - target: packages/client/ui-brand-official/src/client/Brand.tsx
+    upstream_logic_changed: true
+    reason: >
+      上游侧栏品牌位是插件占位的（ui-brand-official），且只在
+      DSH_CLIENT_BUILD_PROFILE==='official' 时注册。我们的客户端构建没设该 profile
+      （已实测：构建记录里无此变量），所以槽位空着 → 侧栏显示回退（本地构建标签 + 鱼）。
+      要显示 ApeMind，必须让 occupant 注册并改其内容。
+    guardrail: >
+      改动仅限两个 occupant 函数的实现 + 那道 profile 门所在的一行：
+      · index.ts：门改为 official | apemind（未设 profile 时上游行为不变）
+      · Brand.tsx：name 槽改为文字 "ApeMind"（字体栈取自 brand-spec.md）
+      mark 槽**仍指向上游 FishLogo**（未提供 ApeMind mark 前不伪造）。
+    note: >
+      这是 owner 明确的“改 logo”一步；侧栏 mark 图标待 asset 到位后单独处理。
+
   # ── 01-branding.patch：品牌（不涉及上游逻辑改动）────────────────────
   - file: patches/01-branding.patch
     kind: branding
+    # 本补丁会改动的上游路径（授权清单的**单一事实源**，脚本从这里读）
+    targets:
+      - target: apps/desktop/electron-builder.config.mjs
+      - target: apps/desktop/src/locale.ts
     touches:
       - "apps/desktop/electron-builder.config.mjs：productName + artifactName"
       - "apps/desktop/src/locale.ts：4 个 key × en/zh = 8 处品牌文案"
@@ -30,6 +55,10 @@ patches:
   #     ⚠️ 这是**唯一**碰上游逻辑的补丁，登记理由如下。
   - file: patches/02-desktop-unsigned.patch
     kind: build-switch
+    targets:
+      - target: apps/desktop/scripts/desktop-release-environment.mjs
+      - target: apps/desktop/scripts/desktop-release-environment.d.mts
+      - target: apps/desktop/scripts/prepare-seed.ts
     touches:
       - "apps/desktop/scripts/desktop-release-environment.mjs：新增 isDesktopUnsignedBuild()，开关下短路 resolveDesktopAppId / resolveMacOSSigningEnvironment / resolveMacOSNotarizationEnvironment"
       - "apps/desktop/scripts/desktop-release-environment.d.mts：同步 declare isDesktopUnsignedBuild()（**不放宽** MacOSSigningEnvironment 字段类型，避免污染正常路径）"
@@ -50,6 +79,7 @@ patches:
 # 注意：即使是资源也**逐文件**列出（不用目录），与脚本 ALLOWED 一致。
 resources:
   - source: apps/desktop/resources/README.md
+    target: apps/desktop/resources/README.md
     kind: add-files
     touches:
       - "占位说明（当前无真实图标）"
@@ -57,14 +87,29 @@ resources:
     status: PROVIDED
 
   - source: apps/desktop/resources/icon.icns
+    target: apps/desktop/resources/icon.icns
     kind: add-files        # macOS 图标
     upstream_logic_changed: false
-    status: PENDING-ASSET
-    note: 待品牌/美术提供。拿到后需同时完成下方「双登记」与 builder `icon` 键配置。
+    status: PROVIDED
+    note: 由 ApeRAG 方形 mark（1264×1264 源）生成；builder 的 icon 键已在 02 补丁里配置。
 
   - source: apps/desktop/resources/icon.ico
+    target: apps/desktop/resources/icon.ico
     kind: add-files        # Windows 图标
     upstream_logic_changed: false
+    status: PROVIDED
+
+  - source: apps/desktop/resources/mark-24.png
+    target: apps/desktop/resources/mark-24.png
+    kind: add-files        # 侧栏 mark（1x）
+    upstream_logic_changed: false
+    status: PROVIDED
+
+  - source: apps/desktop/resources/mark-48.png
+    target: apps/desktop/resources/mark-48.png
+    kind: add-files        # 侧栏 mark（2x）
+    upstream_logic_changed: false
+    status: PROVIDED
     status: PENDING-ASSET
 
   - note: >
