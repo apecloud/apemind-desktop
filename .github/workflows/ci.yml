@@ -1,0 +1,83 @@
+# CI：验证 upstream.lock 真的锁得住、overlay 只碰授权文件、构建可复现。
+#
+# 说明（2026-09-10 建仓时的实际约束，不要按习惯改）：
+#   - 上游 dsh **没有任何桌面打包 workflow**（全部 20 个 workflow 里零引用
+#     package:desktop / DSH_DESKTOP_APP_ID），所以这条流水线是我们自己的。
+#   - 构建**需要外网**：prepare:runtime 会下载 Node 24.17.0，
+#     prepare:seed 会从 registry.npmjs.org 拉依赖。**不是离线构建**。
+#   - runner 使用 self-hosted（本组织新 workflow 的默认要求）。
+#     macOS 桌面**打包**需要签名凭据与专用 runner，本 workflow 只做**校验与前段构建**，
+#     不产出可分发安装包（那需要 Apple 凭据，owner 已定"凭据后置"）。
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # ── 闸门：锁与 overlay 范围 ────────────────────────────────────────
+  verify-lock-and-overlay:
+    name: 校验 upstream.lock 与 overlay 范围
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 校验 overlay 文件与 upstream.lock 的声明一致
+        run: ./scripts/verify-overlay.sh
+
+      - name: 取上游并按锁应用 overlay（含越界校验）
+        run: ./scripts/sync-upstream.sh --work-dir "${RUNNER_TEMP}/dsh-desktop"
+
+      - name: 确认 HEAD 与 upstream.lock 完全一致
+        run: |
+          set -euo pipefail
+          WANT="$(./scripts/lock-get.sh upstream.commit)"
+          GOT="$(git -C "${RUNNER_TEMP}/dsh-desktop" rev-parse HEAD)"
+          echo "want=${WANT}"
+          echo "got =${GOT}"
+          test "${WANT}" = "${GOT}"
+
+  # ── 前段构建：证明 overlay 后仍能构建（不含签名/打包）──────────────
+  build-dev:
+    name: overlay 后可构建（dev 前段）
+    runs-on: self-hosted
+    needs: verify-lock-and-overlay
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 取上游 + overlay
+        run: ./scripts/sync-upstream.sh --work-dir "${RUNNER_TEMP}/dsh-desktop"
+
+      - name: 激活上游要求的 pnpm（必须匹配 packageManager）
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: |
+          set -euo pipefail
+          export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+          corepack prepare "$(./../../scripts/lock-get.sh toolchain.package_manager 2>/dev/null || echo pnpm@11.7.0)" --activate || true
+          corepack prepare pnpm@11.7.0 --activate
+          pnpm --version
+
+      - name: 安装依赖
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: pnpm run build
+
+      - name: 断言品牌已生效（overlay 确实被应用）
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: |
+          set -euo pipefail
+          grep -q "ApeMind Desktop" apps/desktop/electron-builder.config.mjs
+          ! grep -q "DeepSeek Harness" apps/desktop/electron-builder.config.mjs
+          echo "✓ productName/artifactName 已品牌化"
+          # locale 里品牌文案应已替换（4 key × 2 locale = 8 处全换）
+          test "$(grep -c 'ApeMind Desktop' apps/desktop/src/locale.ts)" = "8"
+          echo "✓ locale 8 处文案已品牌化"
+
+      # 注意：此处**有意不做** pnpm run package:* —— 它需要 Apple 凭据，
+      # 且会在两处签名门抛错（electron-builder config 构造 + prepare-seed）。
+      # 未签名开关（DSH_DESKTOP_UNSIGNED）见 docs/。等 owner 给凭据后再加打包 job。

@@ -1,0 +1,28 @@
+# ── 构建产物与工作区（绝不可入库）──────────────────────────────
+# 按 upstream.lock 取出的上游工作树：由 scripts/sync-upstream.sh 生成，不入库。
+work/
+# 桌面打包产物（未签名 .app / dmg / nsis 等，单个体量可达数百 MB）
+**/.desktop-build/
+**/dist/
+**/artifacts/
+# 依赖
+node_modules/
+# 图标等二进制资源的中间产物
+*.icns.tmp
+*.ico.tmp
+
+# ── 凭据与环境（公开仓，绝不能出现）──────────────────────────────
+# Apple 凭据、appId、更新源等一律走 CI 变量，不落盘到仓库。
+.env
+.env.*
+!.env.example
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+
+# ── 编辑器 / 系统 ────────────────────────────────────────────────
+.DS_Store
+*.swp
+.idea/
+.vscode/

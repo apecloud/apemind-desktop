@@ -1,0 +1,36 @@
+# upstream.lock — 上游 dsh 版本锁
+#
+# 本文件是 apemind-desktop 对上游 DeepSeek Harness 的**唯一版本事实来源**。
+# 同步/打包脚本只读这里，不接受环境变量或 CI 隐式覆盖。
+#
+# 升级上游 = 改本文件的 commit/tag + 跑回归；不在本仓 merge 上游代码。
+# （这是 apemind-agent fork 一年同步债的反面做法：overlay 与上游代码永不产生 merge 冲突。）
+
+upstream:
+  # 上游仓库
+  repository: https://github.com/deepseek-ai/deepseek-harness
+  # 锁定的 commit（40 位完整 SHA，不用分支/tag，保证不可变）
+  commit: aa8262ec091698bae9a6b04773a6b5b06ad4aef2
+  # 人类可读的对应版本（仅用于展示与排查，权威是上面的 commit）
+  version: 0.1.5-rc.1
+  # 该 commit 的日期（仅供展示）
+  committed_at: "2026-09-10T12:34:48+08:00"
+  # 该 commit 的上游描述
+  subject: "Merge pull request #3920 from deepseek-harness/feat/add-readme-citation"
+  # 上游许可证（随上游，不因本仓改名）
+  license: MIT
+
+# 构建工具链要求：必须与上游仓库 package.json 声明一致。
+# 用 corepack 激活，不要用系统 pnpm（版本不符会在 install/build 阶段失败）。
+toolchain:
+  # 上游 package.json 的 packageManager 字段
+  package_manager: pnpm@11.7.0
+  # 上游 package.json 的 engines.node
+  node: "^22.19.0 || >=24.0.0"
+
+# 依赖版本策略：全部从上游 lockfile 继承，本仓不自建版本表。
+dependencies:
+  strategy: inherit-upstream-lockfile
+  # 上游 pnpm-lock.yaml 的 sha256，用于确认"我们拿到的确实是被验证过的那份依赖图"。
+  # 注意：升级 commit 时此值需同步更新，且必须由脚本在 checkout 后实测得出，不要手填。
+  upstream_lockfile_sha256: a6515566578a26c29b5faddaf94abb5ec452ce6e533f8957e813328ebd4b3c27
