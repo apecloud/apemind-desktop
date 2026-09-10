@@ -25,9 +25,6 @@ ALLOWED=(
   "apps/desktop/resources/README.md"
   # add-files/：我们**自己新增**的文件（区别于 patches/ 的“改上游”）。
   # 每个文件都必须在此登记，且必须通过下面“不得与上游同名”的断言。
-  "add-files/packages/client/ui-brand-apemind/package.json"
-  "add-files/packages/client/ui-brand-apemind/src/client/index.ts"
-  "add-files/packages/client/ui-brand-apemind/src/client/Brand.tsx"
   # 图标：拿到正式资产后，把它加进 ALLOWED **并**同步改 overlay/OVERLAY.md
   # 的 status（PENDING-ASSET → PROVIDED）。两道登记都做完才算授权。
   # 有意不在现在预先放行：图标尚未存在，提前放行等于给"任意 icns 都可入库"开永久的门。
@@ -121,6 +118,23 @@ if [[ -d "${ADD_DIR}" ]]; then
       fi
     fi
   done < <(cd "${OVERLAY_DIR}" && find add-files -type f -print 2>/dev/null | sort)
+  # ③ 与 patches/ 目标不重叠（@乔布斯 提）：同一文件不能既当"新增"又当"补丁"。
+  # 重叠意味着意图不清：要么它是上游文件（该走 patches/），要么不是（不该在 patches 里）。
+  if [[ -d "${OVERLAY_DIR}/patches" ]]; then
+    while IFS= read -r rel; do
+      [[ -z "$rel" ]] && continue
+      target="${rel#add-files/}"
+      while IFS= read -r pf; do
+        [[ -z "$pf" ]] && continue
+        if grep -qE "^(\+\+\+|---) [ab]/${target}$" "${pf}" 2>/dev/null; then
+          echo "    ✗ add-files 与 patches 目标重叠: ${target}" >&2
+          echo "      同一路径不能既算新增又算补丁；请二选一" >&2
+          fail=1
+        fi
+      done < <(find "${OVERLAY_DIR}/patches" -maxdepth 1 -type f -name '*.patch' 2>/dev/null | sort)
+    done < <(cd "${OVERLAY_DIR}" && find add-files -type f -print 2>/dev/null | sort)
+  fi
+
   if [[ -n "${UPSTREAM_CLONE}" && -d "${UPSTREAM_CLONE}/.git" ]]; then
     echo "    （已对上游 ${UPSTREAM_CLONE} 完成同名检查）"
   else

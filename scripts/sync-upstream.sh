@@ -195,7 +195,7 @@ if true; then
   # 品牌 + 开关均通过 patches/ 施加，故此处列出其目标文件。
   # 允许的改动 = 补丁目标（改上游）+ add-files 目标（新增我们的文件）+ 资源。
   # 三者的语义分界见 overlay/OVERLAY.md；新增任一项都需同时登记 ALLOWED / ALLOWED_REGEX / OVERLAY.md。
-  ALLOWED_REGEX='(^|/)apps/desktop/electron-builder\.config\.mjs$|(^|/)apps/desktop/src/locale\.ts$|(^|/)apps/desktop/scripts/desktop-release-environment\.mjs$|(^|/)apps/desktop/scripts/desktop-release-environment\.d\.mts$|(^|/)apps/desktop/scripts/prepare-seed\.ts$|(^|/)apps/desktop/resources/(README\.md|icon\.icns|icon\.ico)$|(^|/)packages/client/ui-brand-apemind/(package\.json|src/client/index\.ts|src/client/Brand\.tsx)$'
+  ALLOWED_REGEX='(^|/)apps/desktop/electron-builder\.config\.mjs$|(^|/)apps/desktop/src/locale\.ts$|(^|/)apps/desktop/scripts/desktop-release-environment\.mjs$|(^|/)apps/desktop/scripts/desktop-release-environment\.d\.mts$|(^|/)apps/desktop/scripts/prepare-seed\.ts$|(^|/)apps/desktop/resources/(README\.md|icon\.icns|icon\.ico)$'
   # 用 --untracked-files=all：否则 git 会把新增目录折叠成 `resources/`，
   # 导致逐文件白名单无法匹配（新增文件会被误报为越界）。
   CHANGED="$(git -C "${WORK_DIR}" status --porcelain --untracked-files=all | awk '{print $2}')"
