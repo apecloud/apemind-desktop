@@ -13,6 +13,17 @@
 # 变更清单（与 docs/branding.md 一致，改这里必须同步改那边）：
 
 patches:
+  # ── 04-title.patch：窗口/标签页标题 ────────────────────────────────
+  - file: patches/04-title.patch
+    kind: branding
+    targets:
+      - target: scripts/client-build-environment.ts
+    upstream_logic_changed: false   # 只改一个品牌常量值
+    reason: >
+      窗口/标签页标题来自 DSH_CLIENT_TITLE（apps/web/vite.config.ts:21 读取），
+      **用户可见**。按 owner 口径"用户不可见的可以不改"，此处要改。
+    note: 由 @乔布斯 提供并在纯净上游实测 apply 通过（一行改动）。
+
   # ── 03-brand-occupant.patch：侧栏品牌 occupant（"改 ApeMind"的第一步）─────
   #    ⚠️ 这是**第二个**碰上游逻辑的补丁，登记理由如下。
   - file: patches/03-brand-occupant.patch
