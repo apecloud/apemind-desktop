@@ -23,6 +23,11 @@ ALLOWED=(
   "patches/01-branding.patch"
   "patches/02-desktop-unsigned.patch"
   "apps/desktop/resources/README.md"
+  # add-files/：我们**自己新增**的文件（区别于 patches/ 的“改上游”）。
+  # 每个文件都必须在此登记，且必须通过下面“不得与上游同名”的断言。
+  "add-files/packages/client/ui-brand-apemind/package.json"
+  "add-files/packages/client/ui-brand-apemind/src/client/index.ts"
+  "add-files/packages/client/ui-brand-apemind/src/client/Brand.tsx"
   # 图标：拿到正式资产后，把它加进 ALLOWED **并**同步改 overlay/OVERLAY.md
   # 的 status（PENDING-ASSET → PROVIDED）。两道登记都做完才算授权。
   # 有意不在现在预先放行：图标尚未存在，提前放行等于给"任意 icns 都可入库"开永久的门。
@@ -95,6 +100,34 @@ if grep -E '^\+.*DeepSeek Harness' "${PATCH_DIR}/01-branding.patch" >/dev/null 2
 fi
 brand_hits="$(grep -rh '^+.*ApeMind Desktop' "${PATCH_DIR}" 2>/dev/null | wc -l | tr -d ' ')"
 [[ "${brand_hits}" -ge 8 ]] || { echo "    ✗ locale 品牌文案补丁少于 8 处（实际 ${brand_hits}）" >&2; fail=1; }
+
+echo "==> 校验 add-files 不与上游同名（区分「我们的代码」与「上游副本」）"
+# 这是 add-files/ 与 patches/ 的机械分界线：
+#   同名  → 你其实想**改**上游文件 → 必须走 patches/（否则就是上游副本）
+#   不同名 → 纯新增，安全
+# 为什么需要机械判据：两类文件在目录里长得一样，靠人记必然出错。
+UPSTREAM_CLONE="${UPSTREAM_CLONE:-}"
+ADD_DIR="${OVERLAY_DIR}/add-files"
+if [[ -d "${ADD_DIR}" ]]; then
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    target="${rel#add-files/}"
+    # 优先用本地上游工作树判定；没有则退回 git ls-tree（需 UPSTREAM_CLONE 指向上游仓）
+    if [[ -n "${UPSTREAM_CLONE}" && -d "${UPSTREAM_CLONE}/.git" ]]; then
+      if git -C "${UPSTREAM_CLONE}" cat-file -e "HEAD:${target}" 2>/dev/null; then
+        echo "    ✗ add-files 与上游同名: ${target}" >&2
+        echo "      → 同名意味着你想“改上游”，请改走 patches/（add-files 只放新增文件）" >&2
+        fail=1
+      fi
+    fi
+  done < <(cd "${OVERLAY_DIR}" && find add-files -type f -print 2>/dev/null | sort)
+  if [[ -n "${UPSTREAM_CLONE}" && -d "${UPSTREAM_CLONE}/.git" ]]; then
+    echo "    （已对上游 ${UPSTREAM_CLONE} 完成同名检查）"
+  else
+    echo "    ⚠️ 未提供 UPSTREAM_CLONE（或它不是 git 仓）—— 本次**跳过了同名检查**" >&2
+    echo "       CI 会提供它；单跑时请设 UPSTREAM_CLONE=<上游工作树> 以获得完整校验" >&2
+  fi
+fi
 
 echo "==> 校验图标一致性（防「加了图标但没接进 builder」静默通过）"
 # 规则：图标文件存在 ⇒ 品牌补丁必须给 builder 配 icon 键；反之也建议一致。

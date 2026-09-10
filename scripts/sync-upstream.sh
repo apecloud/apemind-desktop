@@ -114,6 +114,25 @@ else
   echo "    （无 patches/ 目录，跳过）"
 fi
 
+# ── 2b. 应用 overlay：add-files（新增我们自己的文件）─────────────────
+# 与 patches/ 的分工（机械可分）：
+#   patches/   改上游**已有**文件（diff）
+#   add-files/ **新增**我们自己的文件（不得与上游同名，否则应走 patches/）
+# “不得同名”由 verify-overlay.sh 断言，此处不重复判定；此处只负责拷入。
+ADD_DIR="${OVERLAY_DIR}/add-files"
+if [[ -d "${ADD_DIR}" ]]; then
+  echo "==> 应用 overlay add-files（新增文件）"
+  (cd "${ADD_DIR}" && find . -type f -print0) \
+    | while IFS= read -r -d '' rel; do
+        rel="${rel#./}"
+        src="${ADD_DIR}/${rel}"
+        dst="${WORK_DIR}/${rel}"
+        mkdir -p "$(dirname "${dst}")"
+        cp "${src}" "${dst}"
+        echo "    add-files -> ${rel}"
+      done
+fi
+
 # 非补丁类资源（图标占位等）仍按文件复制，但**不含上游逻辑**。
 # ⚠️ 这里**必须逐文件比对白名单**：否则一个未登记的文件（尤其上游逻辑副本）
 # 会被静默拷进构建树。实测过：把上游 prepare-seed.ts 放进 resources/ 下能蒙骗过关 ——
@@ -174,7 +193,9 @@ if true; then
   # 注意：逐文件列举，**不用目录前缀**——前缀会让任意文件通过。
   # 与 scripts/verify-overlay.sh 的 ALLOWED 保持同步。
   # 品牌 + 开关均通过 patches/ 施加，故此处列出其目标文件。
-  ALLOWED_REGEX='(^|/)apps/desktop/electron-builder\.config\.mjs$|(^|/)apps/desktop/src/locale\.ts$|(^|/)apps/desktop/scripts/desktop-release-environment\.mjs$|(^|/)apps/desktop/scripts/desktop-release-environment\.d\.mts$|(^|/)apps/desktop/scripts/prepare-seed\.ts$|(^|/)apps/desktop/resources/(README\.md|icon\.icns|icon\.ico)$'
+  # 允许的改动 = 补丁目标（改上游）+ add-files 目标（新增我们的文件）+ 资源。
+  # 三者的语义分界见 overlay/OVERLAY.md；新增任一项都需同时登记 ALLOWED / ALLOWED_REGEX / OVERLAY.md。
+  ALLOWED_REGEX='(^|/)apps/desktop/electron-builder\.config\.mjs$|(^|/)apps/desktop/src/locale\.ts$|(^|/)apps/desktop/scripts/desktop-release-environment\.mjs$|(^|/)apps/desktop/scripts/desktop-release-environment\.d\.mts$|(^|/)apps/desktop/scripts/prepare-seed\.ts$|(^|/)apps/desktop/resources/(README\.md|icon\.icns|icon\.ico)$|(^|/)packages/client/ui-brand-apemind/(package\.json|src/client/index\.ts|src/client/Brand\.tsx)$'
   # 用 --untracked-files=all：否则 git 会把新增目录折叠成 `resources/`，
   # 导致逐文件白名单无法匹配（新增文件会被误报为越界）。
   CHANGED="$(git -C "${WORK_DIR}" status --porcelain --untracked-files=all | awk '{print $2}')"
