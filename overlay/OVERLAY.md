@@ -36,6 +36,9 @@ patches:
     kind: seam-mount
     targets:
       - target: packages/bundle/base/cordis.patch.yml
+      - target: packages/bundle/base/package.json
+      - target: scripts/experimental-package-policy.ts
+      - target: tsconfig.host.json
     upstream_logic_changed: false   # 只新增一个 roster 条目，不改任何现有行
     reason: >
       ApeMind 登录 flow 要注册到 `ctx.authorization`。上游把该缝挂在哪里都没有
@@ -124,9 +127,19 @@ patches:
 # 每个文件都必须在此登记（未登记则不拷且报错，见 scripts/sync-upstream.sh 3c 段）。
 #
 # 当前用途：ApeMind 登录插件（@猫猫 实现，注册 dsh credential/authorization flow）。
+# ── 派生文件：sync 时由脚本重新生成，不是我们手写的补丁 ────────────────
+# pnpm-lock.yaml 需随 add-files 的 workspace 包一起变化；
+# 我们存的是"派生规则"而不是 lock 内容本身（见 sync-upstream.sh 5 段）。
+derived:
+  - target: pnpm-lock.yaml
+
 add-files:
-  # 目前为空：插件作为一个 workspace 包会让 pnpm-lock.yaml 失效，
-  # 而 CI/打包链用 --frozen-lockfile（见 06 的说明）。待与 @猫猫 对齐后再放。
+  # ApeMind 登录插件（@猫猫 实现）：注册 `apemind/account` credential flow。
+  # 作为 workspace 包分发，因此 pnpm-lock.yaml 需在 sync 时**派生**（见 sync-upstream.sh 5 段）。
+  - target: packages/experimental/apemind-login/package.json
+  - target: packages/experimental/apemind-login/tsconfig.json
+  - target: packages/experimental/apemind-login/tsdown.config.ts
+  - target: packages/experimental/apemind-login/src/index.ts
 
 resources:
   - source: apps/desktop/resources/README.md

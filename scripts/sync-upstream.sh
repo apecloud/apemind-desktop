@@ -111,7 +111,27 @@ if [[ -d "${ADD_DIR}" ]]; then
   done < <(cd "${ADD_DIR}" && find . -type f -print | sed 's|^\./||' | sort)
 fi
 
-# ── 4. 校验改动范围 ────────────────────────────────────────────────────
+# ── 5. 派生 lockfile（仅当 add-files 非空）────────────────────────
+# 为什么需要：add-files 里是**新的 workspace 包**，它们会改变 pnpm 解析输入，
+# 使上游 pnpm-lock.yaml 失效 → `--frozen-lockfile`（CI 与打包链都使用）会直接报
+# ERR_PNPM_OUTDATED_LOCKFILE。
+#
+# 处置选择「派生」而非「在仓里存 lock 补丁」：
+#   · 升版时不会因我们那几行与上游冲突（无补丁即无冲突）；
+#   · lock 永远与 overlay 的 package.json 一致；
+#   · 实测新增一个包的 lock 变化仅 ~5 行、全是 `link:` 本地记录，零 registry 解析。
+if [[ -d "${ADD_DIR}" ]] && [[ -n "$(find "${ADD_DIR}" -type f -print -quit)" ]]; then
+  echo "==> 派生 lockfile（add-files 引入新的 workspace 包）"
+  if command -v pnpm >/dev/null 2>&1; then
+    (cd "${WORK_DIR}" && pnpm install --lockfile-only --ignore-scripts 2>/dev/null) \
+      && echo "    pnpm-lock.yaml 已派生" \
+      || echo "    ⚠️ 派生失败（pnpm 不可用或网络受限）—— 后续 pnpm install 需自行处理" >&2
+  else
+    echo "    ⚠️ 未找到 pnpm，跳过派生（需先 corepack prepare 上游要求的版本）" >&2
+  fi
+fi
+
+# ── 6. 校验改动范围 ────────────────────────────────────────────────────
 # overlay 只允许改 OVERLAY.md 里声明的文件（单一事实源，不在这里重复维护清单）。
 echo "==> 校验 overlay 范围"
 ALLOWED_REGEX="$(./scripts/allowed-paths.sh)"
