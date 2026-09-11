@@ -31,7 +31,7 @@ try {
   const ctx = await boot()
   const controller = ctx.authorizationController
   assert.equal(controller.typertRemote.namespace, 'apemindAuth')
-  assert.deepEqual(remoteMethods(controller).map(item => item.method).sort(), ['collections', 'connect', 'disconnect', 'select', 'state'])
+  assert.deepEqual(remoteMethods(controller).map(item => item.method).sort(), ['cancelBrowserLogin', 'collections', 'connect', 'disconnect', 'oauthCollections', 'oauthLogout', 'oauthState', 'refreshWorkspaces', 'select', 'selectWorkspace', 'startBrowserLogin', 'state'].sort())
   const state = await controller.connect('https://apemind.ai', key)
   assert.ok(!JSON.stringify(state).includes(key))
   assert.equal((await stat(file)).mode & 0o777, 0o600)

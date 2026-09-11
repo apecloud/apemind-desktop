@@ -6,7 +6,7 @@
 .apemind-account input:not([type=checkbox]), .apemind-account select { box-sizing: border-box; width: 100%; min-width: 0; padding: 10px 12px; color: inherit; background: transparent; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 7px; font: inherit; }
 .apemind-account option { color: CanvasText; background: Canvas; }
 .apemind-account button { padding: 9px 14px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 7px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-.apemind-account button[type=submit] { background: #205c52; color: white; border-color: #205c52; }
+.apemind-account button[type=submit], .apemind-account .apemind-primary { background: #205c52; color: white; border-color: #205c52; }
 .apemind-account :focus-visible { outline: 2px solid #398bca; outline-offset: 3px; }
 .apemind-account :disabled { opacity: .55; cursor: wait; }
 .apemind-account .apemind-checkbox { display: flex; flex-direction: row; align-items: center; gap: 8px; }
@@ -17,3 +17,10 @@
 .apemind-account dd { margin: 0; overflow-wrap: anywhere; }
 .apemind-account dt { opacity: .7; }
 @media (max-width: 480px) { .apemind-card { padding: 14px; } .apemind-account dl { grid-template-columns: 1fr; } }
+
+.apemind-advanced > summary { cursor: pointer; padding: 12px 0; opacity: .8; }
+.apemind-advanced[open] { display: grid; gap: 14px; }
+.apemind-knowledge { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); padding-top: 18px; }
+.apemind-knowledge small { font-weight: 400; opacity: .6; }
+.apemind-knowledge ul { list-style: none; padding: 0; margin: 0; }
+.apemind-knowledge li { padding: 10px 0; overflow-wrap: anywhere; }

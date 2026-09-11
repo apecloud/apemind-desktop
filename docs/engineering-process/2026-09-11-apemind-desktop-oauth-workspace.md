@@ -14,7 +14,7 @@
 
 设置页的主入口为“登录 ApeMind”。点击后使用系统默认浏览器打开 ApeMind 登录页。用户在浏览器中完成账号登录和必要的二次验证，授权页面明确展示 Desktop 请求的权限。授权完成后浏览器回到 Desktop，Desktop 自动加载个人空间和全部有效组织。
 
-登录结果页显示账户、登录设备和工作空间列表。只有一个工作空间时自动选中；存在多个工作空间时优先恢复上次选择，否则选择个人空间，没有个人空间时选择第一个可用组织。工作空间列表支持手动刷新。被暂停的组织不作为可选空间，并显示服务端返回的可理解原因。
+登录结果页显示账户、服务地址和工作空间列表。首次登录选择个人空间，没有个人空间时选择第一个可用组织；重启恢复已保存的选择。工作空间列表支持手动刷新；当前空间失效时清除选择，由用户重新选择。被暂停的组织显示“已暂停”并禁止选择。
 
 工作区选择器始终显示当前上下文。切换空间是显式动作，成功后后续会话和业务请求使用新的 workspace。切换失败保留原选择。退出操作撤销当前设备的刷新令牌并清除本机登录状态，不撤销用户创建的 API Key。
 
@@ -24,9 +24,9 @@
 
 Desktop 是公开原生客户端，不内置 client secret。登录使用 OAuth 2.0 Authorization Code + PKCE，并通过系统浏览器完成授权。应用为每次登录生成随机 `state`、`code_verifier` 和 `code_challenge`，严格校验回调来源、state 和一次性授权码。
 
-首选回调是本机 Loopback：`http://127.0.0.1:<随机端口>/callback`，只监听本机回环地址，并在收到一次回调后立即关闭监听器。可补充已注册的自定义 URI scheme 作为平台兜底。不得在 Electron 内嵌页面中输入 ApeMind 密码或读取浏览器 Cookie。
+回调使用本机 Loopback：`http://127.0.0.1:<随机端口>/callback`，只监听本机回环地址，在完成令牌交换、账户同步和本地保存后显示成功并关闭；超时、取消或失败也关闭监听器。首版仅支持此回调形式。不得在 Electron 内嵌页面中输入 ApeMind 密码或读取浏览器 Cookie。
 
-服务端返回短期 Access Token 和可轮换的 Refresh Token。Access Token 只保存在 Desktop Host 内存中，过期后使用 Refresh Token 换取新 Token。Refresh Token 使用 macOS Keychain、Windows Credential Manager/DPAPI 或 Linux Secret Service 保存。正式发行版不把 Refresh Token 放进明文 YAML；现有 `0600` 本地文件仅作为开发和兼容环境的降级实现。
+首版申请 `profile workspace.read collection.read`，不宣称支持 OpenID Connect 或签发 ID Token。服务端返回有效期 10 分钟的 Access Token 和可轮换的 Refresh Token；设备会话绝对有效期为 30 天，刷新不延长该期限。Access Token 只保存在 Desktop Host 内存中，过期后使用 Refresh Token 换取新 Token。当前版本由 DSH Host 凭据服务将 Refresh Token 保存到权限为 `0600` 的本地文件。此限制已被接受用于首版功能发布；文件权限不提供静态加密。macOS Keychain、Windows Credential Manager/DPAPI 和 Linux Secret Service 的接入与迁移由 [系统凭据库事项](https://github.com/apecloud/apemind-desktop/issues/3) 跟踪，尚未实现。
 
 Access Token 必须包含用户主体、客户端、受众、scope、会话 ID 和过期时间。服务端按请求重新检查工作空间成员关系；工作空间列表或权限变化不依赖长时间有效的 Token claims。
 
@@ -35,9 +35,9 @@ Access Token 必须包含用户主体、客户端、受众、scope、会话 ID �
 ### OAuth 授权
 
 ```http
-GET /api/v2/oauth/authorize
-POST /api/v2/oauth/token
-POST /api/v2/oauth/revoke
+GET /api/v2/auth/desktop/authorize
+POST /api/v2/auth/desktop/token
+POST /api/v2/auth/desktop/revoke
 ```
 
 授权请求使用 `client_id`、`redirect_uri`、`state`、`code_challenge`、`code_challenge_method=S256` 和最小 scope。服务端只接受预注册的 Desktop client 和 redirect URI。Token 端点支持授权码交换和刷新令牌；刷新令牌每次使用后轮换并使旧令牌失效。撤销端点支持按设备会话撤销。
@@ -85,22 +85,22 @@ Authorization: Bearer <access-token>
 X-ApeMind-Workspace-Id: org-id
 ```
 
-`X-ApeMind-Workspace-Id` 只表达客户端选择，绝不是权限证明。服务端统一中间件必须验证 Token、workspace 是否属于用户、组织是否 active、scope 和 RBAC 是否允许，并将最终 workspace 放入请求上下文和审计事件。客户端无法通过修改 Header 越权。
+`X-ApeMind-Workspace-Id` 只表达客户端选择，绝不是权限证明。服务端认证依赖必须验证 Token、workspace 是否属于用户、组织是否 active、scope 和 RBAC 是否允许，并将最终 workspace 放入请求上下文。首版知识库列表请求必须提供 workspace Header，个人空间排除组织知识库和订阅，组织空间只返回该组织资源。Cookie 原有行为不改变。客户端无法通过修改 Header 越权。
 
 API Key 请求仍由 Key 的绑定工作空间决定，不接受客户端用 workspace Header 覆盖其绑定范围。
 
 ## 服务端内部模型
 
-认证中间件将 API Key 和 OAuth Token 解析为统一 Principal：
+认证上下文按以下维度区分身份（这不是新增的通用 DTO）：
 
 ```text
 subject_id, subject_type, auth_method, client_id,
 session_id, workspace_id, scopes, permissions
 ```
 
-业务服务只依赖 Principal 和 workspace context，不在各路由中重复解析 Key、Cookie 或 JWT。审计记录至少包含用户、认证方式、设备会话、workspace、资源、动作和结果，不记录令牌、Key、Cookie 或授权码。
+现有业务服务继续使用认证依赖给出的 User 和工作空间上下文。首版不引入全仓 Principal 重构；认证依赖在请求状态中记录用户、认证方式、设备会话和选定空间，不记录令牌、Key、Cookie 或授权码。现有审计机制继续负责业务操作记录。
 
-建议新增设备会话表或等价存储，字段包括用户、客户端、Refresh Token 哈希、设备名称、创建时间、最近使用时间、过期时间和撤销时间。Refresh Token 只存哈希或可验证的密文，支持单设备撤销和全局退出。
+建议新增设备会话表或等价存储，字段包括用户、客户端、Refresh Token 哈希、设备名称、创建时间、最近使用时间、过期时间和撤销时间。Refresh Token 只存哈希或可验证的密文，首版支持撤销当前设备会话。
 
 ## Desktop 插件接口
 
@@ -108,16 +108,16 @@ Host Remote 对 Renderer 暴露：
 
 ```ts
 state()
-startBrowserLogin()
+startBrowserLogin(origin)
 cancelBrowserLogin()
 selectWorkspace(workspaceId)
 refreshWorkspaces()
-collections()
-disconnect()
-connectWithApiKey(origin, apiKey)
+oauthCollections()
+oauthLogout()
+connect(origin, apiKey)
 ```
 
-Renderer 只接收账户和工作空间公开投影。`startBrowserLogin` 返回登录状态、浏览器 URL 和进度，不返回 Token。业务插件只能请求 Host 执行当前 workspace 操作，不能读取 Refresh Token、Access Token 或 API Key。
+Renderer 只接收账户和工作空间公开投影。`startBrowserLogin(origin)` 打开浏览器并等待完成，返回账户投影。`state()` 同时返回 `browserLoginPending`；`cancelBrowserLogin()` 可在等待中调用。Renderer 不接收授权码、浏览器 Cookie 或 Token。
 
 状态模型从“每个连接对应一把 Key”调整为：
 
@@ -133,13 +133,13 @@ activeWorkspaceId: selected workspace
 
 登录回调必须验证 state 和 PKCE；过期授权码只能重新开始登录。刷新令牌失败时清除本机会话并要求重新登录。网络失败不清除仍可能有效的会话，服务恢复后再刷新。
 
-切换 workspace、刷新列表和退出操作串行执行。退出先撤销服务端设备会话，再删除本地 Refresh Token；撤销失败时显示失败并保留凭据，避免用户以为已退出。用户明确选择“仅清除此设备”时，可以在服务端不可达的情况下删除本地凭据，但 UI 必须说明服务端撤销将在下次联网时完成。
+同一 Host 的登录、切换 workspace、刷新列表和退出操作串行执行，取消可中断在途登录。凭据写入比较先前快照；独立 Host 进程同时轮换共享文件中的刷新令牌时会拒绝冲突，用户需要重新登录，不自动重试已消费的令牌。退出先撤销服务端设备会话，再清除本地 Refresh Token；撤销失败时显示失败并保留凭据。首版不提供离线强制删除按钮，不承诺未完成的服务端撤销。
 
 ## 安全与可观测性
 
 禁止默认创建 API Key，禁止创建不可见的隐藏 API Key，禁止复制浏览器 Cookie，禁止把 Token 或 Key 写入 URL、日志、错误文本、崩溃报告和 Renderer 状态。所有 API 请求使用 HTTPS；OAuth 回调监听仅限 `127.0.0.1` 并使用随机端口。
 
-Access Token scope 按实际功能最小化；资源服务端检查 audience。Refresh Token 使用轮换和重放检测。登录、刷新、撤销、工作空间切换和拒绝事件使用低基数结构化指标和审计事件。
+Access Token scope 按实际功能最小化；资源服务端检查 audience、client_id、session_id、实时会话状态和 scope。首版 OAuth 只允许 `GET /api/v2/auth/user`、`GET /api/v2/me/workspaces` 和 `GET /api/v2/collections`；其他方法与路径默认拒绝。增加业务操作时必须同时增加明确 scope、工作空间与 RBAC 校验和对应测试。Refresh Token 使用轮换和重放检测。禁止将授权请求、Token 端点表单或回调完整 URL 写入应用日志。
 
 ## 兼容与迁移
 
@@ -161,3 +161,7 @@ Access Token scope 按实际功能最小化；资源服务端检查 audience。R
 ## 读完后能回答的问题
 
 读者应能回答：普通用户如何登录、为什么不默认创建 API Key、为什么不使用 Cookie、多个组织如何自动发现、当前 workspace 如何影响请求、Token 存在哪里、API Key 入口如何兼容，以及服务端需要新增哪些 `/api/v2` 能力。
+
+## 协议依据
+
+系统浏览器与回环回调遵循 [RFC 8252](https://www.rfc-editor.org/rfc/rfc8252.html)，令牌范围约束、轮换与重放处理参考 [RFC 9700](https://www.rfc-editor.org/rfc/rfc9700.html)。

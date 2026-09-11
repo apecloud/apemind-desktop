@@ -41,11 +41,15 @@ export class AuthorizationController extends TypertRemoteService {
         const record = await ctx.credentials.readRecord(OAUTH_KEY)
         if (record === undefined) return undefined
         if (record.kind !== 'grant') throw new AccountError('storage', '本地登录记录格式不正确。')
-        return record.payload as never
+        return record.payload === null ? undefined : record.payload
       },
-      write: async (value) => {
-        if (value === undefined) { await ctx.credentials.deleteRecord(OAUTH_KEY); return }
-        await ctx.credentials.modifyRecord(OAUTH_KEY, () => Promise.resolve({ kind: 'grant', payload: value }))
+      write: async (value, expected) => {
+        await ctx.credentials.modifyRecord(OAUTH_KEY, (current) => {
+          if (current && current.kind !== 'grant') throw new AccountError('storage', '本地登录记录格式不正确。')
+          const existing = current?.payload === null ? undefined : current?.payload
+          if (!isDeepStrictEqual(existing, expected)) throw new AccountError('conflict', '登录状态已在其他窗口更新，请刷新后重试。')
+          return Promise.resolve({ kind: 'grant', payload: value ?? null })
+        })
       },
     })
   }
@@ -58,7 +62,7 @@ export class AuthorizationController extends TypertRemoteService {
 
   @Remote
   async state(): Promise<AccountState> {
-    return this.call(async () => ({ ...(await this.accounts.state()), oauth: await this.oauth.state() }))
+    return this.call(async () => ({ ...(await this.accounts.state()), oauth: await this.oauth.state(), browserLoginPending: this.oauth.isLoggingIn() }))
   }
 
   @Remote
@@ -66,6 +70,12 @@ export class AuthorizationController extends TypertRemoteService {
 
   @Remote
   async startBrowserLogin(origin: string): Promise<OAuthAccountView> { return this.call(() => this.oauth.login(origin)) }
+
+  @Remote
+  async cancelBrowserLogin(): Promise<void> { this.oauth.cancelLogin() }
+
+  @Remote
+  async refreshWorkspaces(): Promise<OAuthAccountView> { return this.call(() => this.oauth.refreshWorkspaces()) }
 
   @Remote
   async selectWorkspace(id: string): Promise<OAuthAccountView> { return this.call(() => this.oauth.select(id)) }

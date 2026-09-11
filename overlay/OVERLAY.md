@@ -161,6 +161,7 @@ add-files:
   - target: packages/experimental/apemind-login/src/types.ts
   - target: packages/experimental/apemind-login/src/api-client.ts
   - target: packages/experimental/apemind-login/src/account-service.ts
+  - target: packages/experimental/apemind-login/src/oauth-service.ts
   # ApeMind 设置分区，通过 remote.apemindAuth 操作 Host。
   - target: packages/client/ui-apemind-login/package.json
   - target: packages/client/ui-apemind-login/tsconfig.json

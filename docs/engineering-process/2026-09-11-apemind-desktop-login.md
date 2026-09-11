@@ -1,5 +1,7 @@
 # ApeMind Desktop 账户连接与工作空间
 
+本文说明 API Key 高级连接；当前浏览器登录与多工作空间合同以 [登录与工作空间设计](2026-09-11-apemind-desktop-oauth-workspace.md) 为准。历史验收记录只覆盖记录中注明的版本与链路。
+
 本文定义 Desktop 如何复用 ApeMind 的 API Key、身份与组织接口，验证连接并调用工作空间内的业务能力。
 
 ## 接口与权限

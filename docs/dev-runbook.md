@@ -94,10 +94,15 @@ Electron 二进制（`electron@44.0.0`）**首次调用时按需下载**，不�
    **`--dir` 绕不过去**（`--dir` 只影响 electron-builder 参数，不改 config 构造路径）。
 2. `apps/desktop/scripts/prepare-seed.ts:166` 再次解析签名环境 → 抛错。
 
-也就是说 `package:mac:arm64:dir` 会在跑完 `prepare:runtime`（下载 Node 24.17.0）、
-`prepare:packages` 之后，**卡在 `prepare:seed`**。想跳过必须先拿到凭据，
-或做「未签名开关」式源码改动（短路上述多处 + `forceCodeSigning`/`notarize`/`afterSign`），
-不要硬改。
+本仓 overlay 已提供 `DSH_DESKTOP_UNSIGNED=1`，用于本机功能验收。执行目录为同步后的 `work/dsh-desktop`：
+
+```bash
+DSH_DESKTOP_UNSIGNED=1 DSH_DESKTOP_APP_ID=com.apemind.desktop \
+ELECTRON_MIRROR=https://registry.npmmirror.com/-/binary/electron/ \
+pnpm --filter @deepseek-ai/dsh-desktop run package:mac:arm64:dir
+```
+
+该构建没有 Apple Developer 签名与公证；完成本机测试不等于已具备公共发行安装包。
 
 ## 打包需要外网 —— 国内网络必须配 Electron 镜像（硬阻塞，非偶发）
 

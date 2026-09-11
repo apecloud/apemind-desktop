@@ -15,6 +15,7 @@ export interface AccountState {
   activeId: string | null
   connections: AccountView[]
   oauth?: OAuthAccountView | null
+  browserLoginPending?: boolean
 }
 
 export interface WorkspaceView {

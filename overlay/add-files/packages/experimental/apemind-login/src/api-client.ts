@@ -62,7 +62,7 @@ export class ApeMindClient {
       })
     } catch { throw new AccountError('network', '无法连接 ApeMind，请检查服务地址和网络后重试。') }
     if (!response.ok) {
-      if (response.status === 400) throw new AccountError('oauth', '浏览器登录未完成或已过期，请重新开始登录。')
+      if (response.status === 400) throw new AccountError('oauth_expired', '登录授权已过期或被撤销，请重新登录。')
       throw new AccountError('server', `ApeMind 请求失败（HTTP ${response.status}），请稍后重试。`)
     }
     try { return await response.json() } catch { throw new AccountError('protocol', '服务响应格式不正确，请确认地址指向 ApeMind。') }
