@@ -68,6 +68,23 @@ jobs:
           command -v pnpm
           pnpm --version
 
+      - name: 派生 lockfile（add-files 引入新的 workspace 包）
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: |
+          set -euo pipefail
+          # 为何必须单独一步、且必须在 pnpm 激活之后：
+          # add-files 里的插件是新的 workspace 包，会使上游 pnpm-lock.yaml 失效；
+          # 而下面 `pnpm install --frozen-lockfile` 会因此报 ERR_PNPM_OUTDATED_LOCKFILE。
+          # sync-upstream.sh 里也有一段派生尝试，但它可能在 pnpm 未就绪时静默跳过
+          # （CI 里 sync 跑在 corepack 之前，实测就是这种情况）——所以这里显式跑。
+          # lock 是**派生**的，不作为补丁入库。
+          if [ -d "$(git rev-parse --show-toplevel)/overlay/add-files" ] \
+             && [ -n "$(find "$(git rev-parse --show-toplevel)/overlay/add-files" -type f -print -quit)" ]; then
+            pnpm install --lockfile-only --ignore-scripts
+          else
+            echo "add-files 为空，无需派生 lock"
+          fi
+
       - name: 安装依赖
         working-directory: ${{ runner.temp }}/dsh-desktop
         run: pnpm install --frozen-lockfile
