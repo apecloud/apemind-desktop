@@ -98,11 +98,13 @@ Electron 二进制（`electron@44.0.0`）**首次调用时按需下载**，不�
 
 ```bash
 DSH_DESKTOP_UNSIGNED=1 DSH_DESKTOP_APP_ID=com.apemind.desktop \
+DOWNLOAD_TEST_ORIGIN=https://apemind.ai \
 ELECTRON_MIRROR=https://registry.npmmirror.com/-/binary/electron/ \
 pnpm --filter @deepseek-ai/dsh-desktop run package:mac:arm64:dir
 ```
 
 该构建没有 Apple Developer 签名与公证；完成本机测试不等于已具备公共发行安装包。
+`DOWNLOAD_TEST_ORIGIN` 是上游打包配置必填的更新源地址；目前该地址尚未提供 Desktop 更新 feed，本机验收仍通过手工启动新构建进行升级。不要改为上游 DeepSeek 的生产更新源。
 
 ## 打包需要外网 —— 国内网络必须配 Electron 镜像（硬阻塞，非偶发）
 
