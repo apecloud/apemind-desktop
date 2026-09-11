@@ -125,7 +125,8 @@ patches:
 #
 # 当前用途：ApeMind 登录插件（@猫猫 实现，注册 dsh credential/authorization flow）。
 add-files:
-  - target: packages/experimental/apemind-login/src/index.ts
+  # 目前为空：插件作为一个 workspace 包会让 pnpm-lock.yaml 失效，
+  # 而 CI/打包链用 --frozen-lockfile（见 06 的说明）。待与 @猫猫 对齐后再放。
 
 resources:
   - source: apps/desktop/resources/README.md
