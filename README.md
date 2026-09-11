@@ -26,15 +26,27 @@ upstream.lock  ──►  checkout 上游锁定 commit  ──►  应用 overla
 3. **依赖不自建版本表。** 全部继承上游 lockfile；`upstream.lock` 记录其 sha256，
    用于确认我们拿到的确实是被验证过的那份依赖图。
 
-## 状态（2026-09-10）
+## 状态（2026-09-11）
 
 | 项 | 状态 |
 |---|---|
 | 仓骨架 / `upstream.lock` / overlay 机制 | ✅ 已建并实测（`sync-upstream.sh` 跑通） |
 | dev 模式本机运行 | ✅ 已实测（macOS arm64，无需任何 Apple 凭据） |
 | 未签名 `.app` 本机可用 | ✅ 已产出（[见下](#未签名构建)） |
-| 图标资源 | ⚠️ **待品牌/美术提供**（上游仓库一个图标都没有，需从零做） |
+| 品牌（五处用户可见位） | ✅ 已完成：窗口标题 / 侧栏字标 / 侧栏 mark / 中间 hero / app 图标 |
 | 可分发正式安装包 | ⛔ 阻塞于 Apple Developer 凭据 |
+
+### 品牌改造怎么生效（安装前必读）
+
+桌面版按「**版本相同即复用已装 profile**」决定是否重装（见 `apps/desktop/README.md`
+的 seed 安装流程第 2 步）。如果只改品牌而不改版本号，app **会继续加载旧 profile 里的旧 web UI**，
+看起来像“改了没生效”，而构建日志仍然全绿。
+
+本仓已根治：`upstream.lock` 的 **`brand_revision`** 会被 `sync-upstream.sh` 拼进两个
+`package.json` 的 version（如 `0.1.5-rc.1-apemind.1`）。**改品牌就把 `brand_revision` +1**，
+版本随之变化 → 复用条件不成立 → 自动重装。
+
+> 注：上游校验版本号的正则**不接受 `+build` 元数据**，所以用 `-` 前缀形式拼接。
 
 ## 快速开始（dev 模式，零凭据）
 
