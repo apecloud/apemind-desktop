@@ -1,0 +1,7 @@
+{
+  "name": "apemind-desktop-overlay-tests",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "tsx --test tests/*.test.ts" },
+  "devDependencies": { "tsx": "4.22.0", "zod": "4.4.3" }
+}

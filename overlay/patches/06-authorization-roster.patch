@@ -2,18 +2,11 @@ diff --git a/packages/bundle/base/cordis.patch.yml b/packages/bundle/base/cordis
 index f906ea860..eab75db00 100644
 --- a/packages/bundle/base/cordis.patch.yml
 +++ b/packages/bundle/base/cordis.patch.yml
-@@ -97,6 +97,17 @@
+@@ -97,6 +97,10 @@
      - id: credentials
        name: '@deepseek-ai/dsh-credentials-local'
  
-+    # ApeMind: the authorization seam (human-guided sign-in / code entry).
-+    # Upstream mounts it nowhere, but llm-pi-ai already waits for it via
-+    # ctx.inject(['authorization']); our ApeMind login flow registers here.
-+    - id: authorization
-+      name: '@deepseek-ai/dsh-authorization'
-+
-+    # ApeMind login flow: registers an `apemind/account` credential
-+    # (API key now; browser sign-in once a human-facing entry point exists).
++    # ApeMind workspace connections and server-verified API keys.
 +    - id: apemind-login
 +      name: '@deepseek-ai/dsh-apemind-login'
 +
@@ -24,11 +17,10 @@ diff --git a/packages/bundle/base/package.json b/packages/bundle/base/package.js
 index 39bdacbcd..9cf35a476 100644
 --- a/packages/bundle/base/package.json
 +++ b/packages/bundle/base/package.json
-@@ -39,6 +39,8 @@
+@@ -39,6 +39,7 @@
      "@deepseek-ai/dsh-agent": "workspace:^",
      "@deepseek-ai/dsh-agent-default-model": "workspace:^",
      "@deepseek-ai/dsh-agent-loop": "workspace:^",
-+    "@deepseek-ai/dsh-authorization": "workspace:^",
 +    "@deepseek-ai/dsh-apemind-login": "workspace:^",
      "@deepseek-ai/dsh-attachment-local": "workspace:^",
      "@deepseek-ai/dsh-shell-env": "workspace:^",

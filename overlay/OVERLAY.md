@@ -41,17 +41,14 @@ patches:
       - target: tsconfig.host.json
     upstream_logic_changed: false   # 只新增一个 roster 条目，不改任何现有行
     reason: >
-      ApeMind 登录 flow 要注册到 `ctx.authorization`。上游把该缝挂在哪里都没有
-      （全仓 roster grep 0 命中），而 llm-pi-ai/src/index.ts:219 已经
-      `ctx.inject(['authorization'], …)` 在等它 —— 即当前是空的。
-      不挂它，任何 authorization flow 都注册不上。
-    note: 新增而非修改：只在 credentials 之后插入一个条目，未触碰任何现有行。
+      注册 ApeMind Host 插件及其 workspace 包依赖，提供账户连接与凭据操作。
+    note: 登录使用现有服务端 API Key 验证，不注册通用交互授权服务。
 
   # ── 07-apemind-login-wiring.patch：把登录控制器/UI 接到两端 ─────────────
   #    06 挂了 authorization 缝（host roster）。本补丁把**同一个命名空间**
   #    暴露给浏览器（api/remotes 挂 remote contribution），并把前端设置分区
   #    注册进 web-app roster。缺任一条，UI 就会卡在
-  #    `pending (waiting for service: remote.authorization)`。
+  #    `pending (waiting for service: remote.apemindAuth)`。
   - file: patches/07-apemind-login-wiring.patch
     kind: login-wiring
     targets:
@@ -62,9 +59,9 @@ patches:
       - target: tsconfig.client.json
     upstream_logic_changed: false   # 只新增依赖、roster 行、挂载项与 tsconfig 引用
     reason: >
-      host 侧 typert 已自动生成 `ctx.remote.authorization`，但浏览器侧要显式
+      host 侧 typert 已自动生成 `ctx.remote.apemindAuth`，但浏览器侧要显式
       `$mount` 该 remote contribution（`api/remotes/src/client/index.ts` 的清单），
-      否则前端拿不到 `remote.authorization`；同理 web-app roster 要注册设置分区，
+      否则前端拿不到 `remote.apemindAuth`；同理 web-app roster 要注册设置分区，
       tsconfig.client 要引用新前端包。三条缺一即白屏/卡 pending。
     note: 全部是"新增行"，未修改任何上游既有行。
 
@@ -147,7 +144,7 @@ patches:
 # 与 patches/ 的分界：patches 改上游已有文件；add-files 只放**我们新增**的文件。
 # 每个文件都必须在此登记（未登记则不拷且报错，见 scripts/sync-upstream.sh 3c 段）。
 #
-# 当前用途：ApeMind 登录插件（@猫猫 实现，注册 dsh credential/authorization flow）。
+# 当前用途：ApeMind 账户连接插件。
 # ── 派生文件：sync 时由脚本重新生成，不是我们手写的补丁 ────────────────
 # pnpm-lock.yaml 需随 add-files 的 workspace 包一起变化；
 # 我们存的是"派生规则"而不是 lock 内容本身（见 sync-upstream.sh 5 段）。
@@ -155,19 +152,26 @@ derived:
   - target: pnpm-lock.yaml
 
 add-files:
-  # ApeMind 登录插件（@猫猫 实现）：注册 `apemind/account` credential flow。
+  # ApeMind 账户连接，凭据记录使用 apemind/connections。
   # 作为 workspace 包分发，因此 pnpm-lock.yaml 需在 sync 时**派生**（见 sync-upstream.sh 5 段）。
   - target: packages/experimental/apemind-login/package.json
   - target: packages/experimental/apemind-login/tsconfig.json
   - target: packages/experimental/apemind-login/src/index.ts
   - target: packages/experimental/apemind-login/src/controller.ts
   - target: packages/experimental/apemind-login/src/types.ts
-  # 前端设置分区（@猫猫）：设置页 "ApeMind 登录" 分区，驱动 remote.authorization。
+  - target: packages/experimental/apemind-login/src/api-client.ts
+  - target: packages/experimental/apemind-login/src/account-service.ts
+  - target: packages/experimental/apemind-login/src/oauth-service.ts
+  # ApeMind 设置分区，通过 remote.apemindAuth 操作 Host。
   - target: packages/client/ui-apemind-login/package.json
   - target: packages/client/ui-apemind-login/tsconfig.json
   - target: packages/client/ui-apemind-login/tsdown.config.ts
+  - target: packages/client/ui-apemind-login/src/css.d.ts
   - target: packages/client/ui-apemind-login/src/index.ts
   - target: packages/client/ui-apemind-login/src/client/index.tsx
+  - target: packages/client/ui-apemind-login/src/client/locales.ts
+  - target: packages/client/ui-brand-official/src/client/locales.ts
+  - target: packages/client/ui-apemind-login/src/client/style.css
 
 resources:
   - source: apps/desktop/resources/README.md

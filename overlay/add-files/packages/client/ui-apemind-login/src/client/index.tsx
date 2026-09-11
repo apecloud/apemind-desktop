@@ -1,155 +1,225 @@
-/**
- * ApeMind sign-in settings section, browser half. It lists the ApeMind
- * credential flow and runs one attempt at a time, driving the host
- * `authorization` Remote namespace: start an attempt, poll its pending
- * prompt, and answer it.
- *
- * @module @deepseek-ai/dsh-client-ui-apemind-login/client
- */
-
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
-// Type-only: pulls the shell's SlotMap merge (the 'settings.section' entry) and InjectFace.
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
-// Type-only: pulls the generated `ctx.remote.authorization` namespace into this program.
 import type {} from '@deepseek-ai/dsh-apemind-login/remote'
-import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { AuthorizationAttemptView, AuthorizationFlowView } from '@deepseek-ai/dsh-apemind-login/types'
+import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { AccountState, KnowledgeBaseView } from '@deepseek-ai/dsh-apemind-login/types'
+import type {} from '@deepseek-ai/dsh-client-locale/client'
+import { zh, en, type LoginLocaleKey } from './locales.ts'
+import './style.css'
 
-/** Required services (cordis fiber inject). */
-export const inject = ['slots', 'remote', 'remote.authorization']
-
-/** The credential key the ApeMind flow owns. */
-const APEMIND_KEY = 'apemind/account'
-
-/** What the section component is injected with (spread directly onto props). */
-export interface LoginSectionInjected {
-  /** The plugin context, carrying `ctx.remote.authorization`. */
-  readonly login: ClientContext
+declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface LocaleNamespaceMap { 'settings.apemind': LoginLocaleKey }
 }
+const NS = 'settings.apemind'
 
-/** Full component props. */
-export type LoginSectionProps = PropsRuntime<'settings.section'> & InjectFace<LoginSectionInjected>
+export const inject = ['slots', 'locale', 'remote', 'remote.apemindAuth']
+export interface LoginSectionInjected { readonly login: ClientContext }
+export type LoginSectionProps = PropsRuntime<'settings.section'> & PropsLocale<'settings.apemind'> & InjectFace<LoginSectionInjected>
 
-/**
- * Mount the ApeMind sign-in settings section.
- * @param ctx - the browser plugin context.
- */
 export function apply(ctx: ClientContext): void {
-  const injected = (): LoginSectionInjected => ({ login: ctx })
+  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'apemind-login: dictionaries')
+  const t = ctx.locale.bind(NS)
   ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section',
-    id: 'apemind-login',
-    order: 30,
-    label: () => 'ApeMind 登录',
-    inject: injected,
+    name: 'settings.section', id: 'apemind-login', order: 30,
+    label: () => t('brand'), locale: NS, inject: (): LoginSectionInjected => ({ login: ctx }),
   }, LoginSection))
 }
 
-const box: Record<string, unknown> = { display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 560 }
-const row: Record<string, unknown> = { display: 'flex', gap: 8, alignItems: 'center' }
-const field: Record<string, unknown> = { flex: 1, padding: '8px 10px', borderRadius: 8 }
-
-/**
- * Render the sign-in section: pick a method, start the attempt, answer prompts.
- * @param props - the runtime props plus this plugin's injected context.
- */
 export function LoginSection(props: LoginSectionProps): ReactNode {
-  const ctx = props.login
-  const [flows, setFlows] = useState<AuthorizationFlowView[]>([])
-  const [method, setMethod] = useState<string>('api-key')
-  const [view, setView] = useState<AuthorizationAttemptView | undefined>(undefined)
-  const [answer, setAnswer] = useState('')
-  const [error, setError] = useState<string | undefined>(undefined)
-  const [status, setStatus] = useState<string>('未登录')
-  const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
+  const { t } = props
+  const remote = useMemo(() => props.login.remote.apemindAuth, [props.login])
+  const [state, setState] = useState<AccountState>({ activeId: null, connections: [] })
+  const [origin, setOrigin] = useState('https://apemind.ai')
+  const [apiKey, setApiKey] = useState('')
+  const [showKey, setShowKey] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  const [keyItems, setKeyItems] = useState<KnowledgeBaseView[] | null>(null)
+  const [oauthItems, setOAuthItems] = useState<KnowledgeBaseView[] | null>(null)
+  const [waiting, setWaiting] = useState(false)
+  const alive = useRef(false)
+  const pending = useRef(false)
+  const active = state.connections.find(item => item.id === state.activeId)
 
-  const refreshFlows = useCallback(async (): Promise<void> => {
-    const res = await ctx.remote.authorization.list()
-    if (res.ok) {
-      setFlows(res.value)
-      const m = res.value.find(f => f.key === APEMIND_KEY)?.methods[0]?.id
-      if (m !== undefined) setMethod(m)
+  useEffect(() => {
+    alive.current = true
+    let cancelled = false
+    pending.current = true
+    setBusy(true)
+    void remote.state().then((result) => {
+      if (cancelled) return
+      if (result.ok) { setState(current => ({ ...current, ...result.value })); setWaiting(result.value.browserLoginPending ?? false) }
+      else setError(result.error.message)
+    }).catch(() => { if (!cancelled) setError(t('readError')) }).finally(() => {
+      if (!cancelled) { pending.current = false; setBusy(false) }
+    })
+    return () => { cancelled = true; alive.current = false }
+  }, [remote])
+
+  async function run(operation: () => Promise<void>): Promise<void> {
+    if (pending.current) return
+    pending.current = true
+    setBusy(true); setError(''); setMessage(''); setKeyItems(null); setOAuthItems(null)
+    try { await operation() } catch { if (alive.current) setError(t('operationError')) }
+    finally {
+      if (alive.current) {
+        const latest = await remote.state().catch(() => undefined)
+        if (latest?.ok) { setState(latest.value); setWaiting(latest.value.browserLoginPending ?? false) }
+        setBusy(false)
+      }
+      pending.current = false
     }
-  }, [ctx])
+  }
 
-  useEffect(() => { void refreshFlows() }, [refreshFlows])
+  async function connect(): Promise<void> {
+    const secret = apiKey
+    setApiKey(''); setShowKey(false)
+    const result = await remote.connect(origin, secret)
+    if (!alive.current) return
+    if (result.ok) { setState(current => ({ ...current, ...result.value })); setMessage(t('keyConnected')) }
+    else setError(result.error.message)
+  }
 
-  const stopPolling = useCallback((): void => {
-    if (timer.current !== undefined) { clearInterval(timer.current); timer.current = undefined }
-  }, [])
+  async function browserLogin(): Promise<void> {
+    setWaiting(true)
+    const result = await remote.startBrowserLogin(origin)
+    setWaiting(false)
+    if (!alive.current) return
+    if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage(t('loggedIn')) }
+    else if (result.error.code === 'gateway/cancelled') { setError(''); setMessage(t('cancelled')) }
+    else setError(result.error.message)
+  }
 
-  const poll = useCallback(async (): Promise<void> => {
-    const res = await ctx.remote.authorization.view(APEMIND_KEY)
-    if (res.ok) {
-      setView(res.value)
-      if (res.value === undefined) { setStatus('已完成（凭据已提交）'); stopPolling() }
-    }
-  }, [ctx, stopPolling])
+  async function selectWorkspace(id: string): Promise<void> {
+    const result = await remote.selectWorkspace(id)
+    if (!alive.current) return
+    if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage(t('workspaceChanged')) }
+    else setError(result.error.message)
+  }
 
-  const begin = useCallback(async (): Promise<void> => {
-    setError(undefined)
-    setStatus('登录中…')
-    const res = await ctx.remote.authorization.begin(APEMIND_KEY, method)
-    if (!res.ok) { setError(res.error.message); setStatus('未登录'); return }
-    stopPolling()
-    timer.current = setInterval(() => { void poll() }, 500)
-    void poll()
-  }, [ctx, method, poll, stopPolling])
+  async function oauthCollections(): Promise<void> {
+    const result = await remote.oauthCollections()
+    if (!alive.current) return
+    if (result.ok) { setOAuthItems(result.value.items); setMessage(t('knowledgeVerified', { name: result.value.workspace.name })) }
+    else setError(result.error.message)
+  }
 
-  const submit = useCallback(async (): Promise<void> => {
-    const p = view?.prompt
-    if (p === undefined) return
-    const res = await ctx.remote.authorization.answer({ id: p.id, value: answer })
-    setAnswer('')
-    if (!res.ok) { setError(res.error.message); return }
-    void poll()
-  }, [ctx, view, answer, poll])
+  async function oauthLogout(): Promise<void> {
+    const result = await remote.oauthLogout()
+    if (!alive.current) return
+    if (result.ok) { setState(current => ({ ...current, oauth: null })); setOAuthItems(null); setKeyItems(null); setMessage(t('loggedOut')) }
+    else setError(result.error.message)
+  }
 
-  const cancel = useCallback(async (): Promise<void> => {
-    await ctx.remote.authorization.cancel(APEMIND_KEY)
-    stopPolling(); setView(undefined); setStatus('未登录')
-  }, [ctx, stopPolling])
+  async function select(id: string): Promise<void> {
+    const result = await remote.select(id)
+    if (!alive.current) return
+    if (result.ok) { setState(current => ({ ...current, ...result.value })); setMessage(t('keyVerified')) }
+    else setError(result.error.message)
+  }
 
-  const methods = flows.find(f => f.key === APEMIND_KEY)?.methods ?? [{ id: 'api-key', label: '粘贴 API Key' }]
+  async function disconnect(id: string): Promise<void> {
+    const result = await remote.disconnect(id)
+    if (!alive.current) return
+    if (result.ok) { setState(current => ({ ...current, ...result.value })); setMessage(t('keyRemoved')) }
+    else setError(result.error.message)
+  }
 
-  return (
-    <div style={box}>
-      <h3 style={{ margin: 0 }}>ApeMind 登录</h3>
-      <div>状态：{status}</div>
-      <div style={row}>
-        <select value={method} onChange={e => { setMethod(e.target.value) }} style={field}>
-          {methods.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
-        </select>
-        <button type="button" onClick={() => { void begin() }}>开始登录</button>
-        <button type="button" onClick={() => { void cancel() }}>取消</button>
-      </div>
-      {view?.notice !== undefined && (
-        <div style={{ padding: 10, borderRadius: 8 }}>
-          <div>{view.notice.message}</div>
-          {view.notice.url !== undefined && <a href={view.notice.url} target="_blank" rel="noreferrer">{view.notice.url}</a>}
-        </div>
-      )}
-      {view?.prompt !== undefined && (
-        <div style={box}>
-          <div>{view.prompt.message}</div>
-          <div style={row}>
-            <input
-              style={field}
-              type={view.prompt.kind === 'secret' ? 'password' : 'text'}
-              placeholder={view.prompt.placeholder ?? ''}
-              value={answer}
-              onChange={e => { setAnswer(e.target.value) }}
-              onKeyDown={e => { if (e.key === 'Enter') void submit() }}
-            />
-            <button type="button" onClick={() => { void submit() }}>提交</button>
-          </div>
-        </div>
-      )}
-      {error !== undefined && <div style={{ color: '#c00' }}>{error}</div>}
+  async function loadKnowledge(): Promise<void> {
+    const result = await remote.collections()
+    if (!alive.current) return
+    if (result.ok) { setKeyItems(result.value.items); setMessage(t('knowledgeVerified', { name: result.value.account.workspaceName })) }
+    else setError(result.error.message)
+  }
+
+  async function refreshWorkspaces(): Promise<void> {
+    const result = await remote.refreshWorkspaces()
+    if (!alive.current) return
+    if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage(t('workspacesRefreshed')) }
+    else setError(result.error.message)
+  }
+
+  async function cancelLogin(): Promise<void> {
+    const result = await remote.cancelBrowserLogin()
+    if (!alive.current) return
+    if (!result.ok) setError(result.error.message)
+    else { setWaiting(false); setMessage(t('cancelled')) }
+  }
+
+  const disabled = busy || waiting
+  const oauth = state.oauth
+  function knowledgeList(values: KnowledgeBaseView[] | null): ReactNode {
+    return values !== null && <div className="apemind-knowledge">
+      <h4>{t('knowledge')} <small>{t('knowledgeLimit')}</small></h4>
+      {values.length === 0 ? <p className="apemind-muted">{t('knowledgeEmpty')}</p>
+        : <ul>{values.map(item => <li key={item.id}>{item.name}</li>)}</ul>}
     </div>
-  )
+  }
+
+  return <section className="apemind-account" aria-busy={busy}>
+    <header><h2>{t('brand')}</h2><p className="apemind-muted">{t('subtitle')}</p></header>
+    {error && <div className="apemind-error" role="alert">{error}</div>}
+    <div role="status" aria-live="polite">{waiting ? t('waiting') : busy ? t('busy') : message}</div>
+    <section className="apemind-card">
+      <h3>{oauth ? t('connected') : t('signIn')}</h3>
+      {oauth ? <>
+        <div><strong>{oauth.username}</strong><p className="apemind-muted">{oauth.origin}</p></div>
+        <label>{t('currentWorkspace')}
+          <select disabled={disabled} value={oauth.activeWorkspaceId ?? ''} onChange={(event) => { void run(() => selectWorkspace(event.target.value)) }}>
+            <option value="" disabled>{t('chooseWorkspace')}</option>
+            {oauth.workspaces.map(workspace => <option key={workspace.id} value={workspace.id} disabled={workspace.status !== 'active'}>
+              {workspace.name}{workspace.status !== 'active' ? t('suspended') : workspace.type === 'personal' ? t('personal') : t('organization')}
+            </option>)}
+          </select>
+        </label>
+        <p className="apemind-muted">{t('verifiedAt', { time: new Date(oauth.verifiedAt).toLocaleString() })}</p>
+        <div className="apemind-actions">
+          <button className="apemind-primary" disabled={disabled || !oauth.activeWorkspaceId} onClick={() => { void run(oauthCollections) }}>{t('viewKnowledge')}</button>
+          <button disabled={disabled} onClick={() => { void run(refreshWorkspaces) }}>{t('refreshWorkspaces')}</button>
+          <button disabled={disabled} onClick={() => { void run(oauthLogout) }}>{t('signOut')}</button>
+        </div>
+        {knowledgeList(oauthItems)}
+      </> : <>
+        <p>{t('oneSignIn')}</p>
+        <p className="apemind-muted">{t('browserHint')}</p>
+        <div className="apemind-actions">
+          <button className="apemind-primary" disabled={disabled} onClick={() => { void run(browserLogin) }}>{t('browserSignIn')}</button>
+          {waiting && <button onClick={() => { void cancelLogin() }}>{t('cancelSignIn')}</button>}
+        </div>
+        <details><summary>{t('serverAddress')}</summary><label>{t('server')}<input required type="url" disabled={disabled} value={origin} onChange={(event) => { setOrigin(event.target.value) }} /></label></details>
+      </>}
+    </section>
+    <details className="apemind-advanced"><summary>{t('advanced')}{state.connections.length > 0 ? t('connectionCount', { count: String(state.connections.length) }) : ''}</summary>
+      <p className="apemind-muted">{t('advancedHint')}</p>
+      {state.connections.length > 0 && <section className="apemind-card">
+        <label>{t('currentKey')}
+          <select disabled={disabled} value={state.activeId ?? ''} onChange={(event) => { void run(() => select(event.target.value)) }}>
+            <option value="" disabled>{t('chooseConnection')}</option>
+            {state.connections.map(item => <option key={item.id} value={item.id}>{item.workspaceName} · {item.username}</option>)}
+          </select>
+        </label>
+        {active && <>
+          <p>{active.origin}</p>
+          <div className="apemind-actions">
+            <button disabled={disabled} onClick={() => { void run(loadKnowledge) }}>{t('viewKnowledge')}</button>
+            <button disabled={disabled} onClick={() => { void run(() => select(active.id)) }}>{t('reverify')}</button>
+            <button disabled={disabled} onClick={() => { void run(() => disconnect(active.id)) }}>{t('removeConnection')}</button>
+          </div>
+          {knowledgeList(keyItems)}
+        </>}
+      </section>}
+      <form className="apemind-card" onSubmit={(event) => { event.preventDefault(); void run(connect) }}>
+        <h3>{t('addKey')}</h3>
+        <label>{t('serverAddress')}<input required type="url" autoComplete="url" disabled={disabled} value={origin} onChange={(event) => { setOrigin(event.target.value) }} /></label>
+        <label>{t('apiKey')}<input required type={showKey ? 'text' : 'password'} autoComplete="off" spellCheck={false} disabled={disabled} value={apiKey} onChange={(event) => { setApiKey(event.target.value) }} placeholder={t('keyPlaceholder')} /></label>
+        <label className="apemind-checkbox"><input type="checkbox" checked={showKey} disabled={disabled} onChange={(event) => { setShowKey(event.target.checked) }} />{t('showKey')}</label>
+        <div className="apemind-actions"><button type="submit" disabled={disabled || !apiKey.trim() || !origin.trim()}>{t('verifyConnect')}</button></div>
+      </form>
+    </details>
+  </section>
 }

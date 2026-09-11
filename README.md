@@ -3,7 +3,7 @@
 基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）的 ApeMind 品牌桌面客户端。
 
 **本仓不是 dsh 的 fork。** 它持有的是「版本锁 + 品牌 overlay + 发版流水线」，
-上游代码按 `upstream.lock` 取固定 commit，overlay 只覆盖品牌接线，**双方永不产生 merge 冲突**。
+上游代码按 `upstream.lock` 取固定 commit，overlay 保存品牌、登录插件和必要接线。升级时仍可能需要调整补丁，并重新验证构建与功能。
 
 ## 这个仓怎么运作
 
@@ -27,6 +27,8 @@ upstream.lock  ──►  checkout 上游锁定 commit  ──►  应用 overla
    用于确认我们拿到的确实是被验证过的那份依赖图。
 
 ## 状态（2026-09-11）
+
+登录产品与技术合同见 [登录与工作空间设计](docs/engineering-process/2026-09-11-apemind-desktop-oauth-workspace.md)，文档入口见 [docs](docs/README.md)。
 
 | 项 | 状态 |
 |---|---|

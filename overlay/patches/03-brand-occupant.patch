@@ -17,7 +17,7 @@ index 9ac6dd7ce..3fc3d08e6 100644
 +  // 字体用 `inherit`（= app 原生 UI 字体）：与上游组件一致，
 +  // 不用 brand-spec 的 Fraunces —— 实测该字体并未随包分发（全客户端 0 处引用），
 +  // 写上去只会回退成普通衬线，观感更差。
-+  return <span style={{ fontWeight: 600 }}>ApeMind</span>
++  return <span style={{ fontWeight: 600 }}>{brandName}</span>
  }
 diff --git a/packages/client/ui-brand-official/src/client/index.ts b/packages/client/ui-brand-official/src/client/index.ts
 index 332a5f600..fd3446b04 100644
