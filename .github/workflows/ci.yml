@@ -78,9 +78,14 @@ jobs:
           # sync-upstream.sh 里也有一段派生尝试，但它可能在 pnpm 未就绪时静默跳过
           # （CI 里 sync 跑在 corepack 之前，实测就是这种情况）——所以这里显式跑。
           # lock 是**派生**的，不作为补丁入库。
-          if [ -d "$(git rev-parse --show-toplevel)/overlay/add-files" ] \
-             && [ -n "$(find "$(git rev-parse --show-toplevel)/overlay/add-files" -type f -print -quit)" ]; then
+          # 注意：本步的 CWD 是**上游工作树**，不是我们的仓库；
+          # 用 git rev-parse --show-toplevel 会解析到工作树（那里没有 overlay/），
+          # 守卫会因此静默为假 —— 实测撞到过。这里用 GITHUB_WORKSPACE 显式指向本仓。
+          OVERLAY="${GITHUB_WORKSPACE}/overlay/add-files"
+          echo "overlay add-files: ${OVERLAY}"
+          if [ -d "${OVERLAY}" ] && [ -n "$(find "${OVERLAY}" -type f -print -quit)" ]; then
             pnpm install --lockfile-only --ignore-scripts
+            echo "lock 已派生"
           else
             echo "add-files 为空，无需派生 lock"
           fi
