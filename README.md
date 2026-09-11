@@ -38,15 +38,25 @@ upstream.lock  ──►  checkout 上游锁定 commit  ──►  应用 overla
 
 ### 品牌改造怎么生效（安装前必读）
 
-桌面版按「**版本相同即复用已装 profile**」决定是否重装（见 `apps/desktop/README.md`
-的 seed 安装流程第 2 步）。如果只改品牌而不改版本号，app **会继续加载旧 profile 里的旧 web UI**，
-看起来像“改了没生效”，而构建日志仍然全绿。
+桌面版运行时加载的是 `$DSH_HOME/profiles/desktop` 里的**已安装 profile**，不是构建树。
+它的复用判据是「**版本相同即复用、不重装**」（`apps/desktop/src/project-manager.ts`
+的 `applyRelease`：seed 版本 = app 版本 = 已装 dsh 版本 = 已装 host 包版本）。
 
-本仓已根治：`upstream.lock` 的 **`brand_revision`** 会被 `sync-upstream.sh` 拼进两个
-`package.json` 的 version（如 `0.1.5-rc.1-apemind.1`）。**改品牌就把 `brand_revision` +1**，
-版本随之变化 → 复用条件不成立 → 自动重装。
+**因此：改完品牌后，如果版本没变，app 会继续用旧 profile 里的旧 UI** ——
+看起来像“改了没生效”，而构建日志全绿。
 
-> 注：上游校验版本号的正则**不接受 `+build` 元数据**，所以用 `-` 前缀形式拼接。
+**处置（一步，手工）**：改品牌后清一次 profile 再启动：
+```bash
+mv ~/.dsh/profiles/desktop ~/.dsh/profiles/desktop.bak   # 先备份，不直接删
+# 重开 app → 自动按新构建重建 profile
+```
+
+> ⚠️ **为什么不做成自动**：曾尝试把品牌修订号拼进版本号来“自动触发重装”，
+> 但实测**不可行** —— 上游要求**整个 monorepo（266 个包）共享同一个 version**
+> （`scripts/release/families.ts` 的 `verifyVersions`），
+> 只改少数几个 package.json 会让 `release:pack` 直接失败。
+> 要真正自动，得改上游的 profile 复用逻辑（属应用逻辑，非品牌呈现），
+> 成本大于收益，故**保留为一步手工操作**并在此写明。
 
 ## 快速开始（dev 模式，零凭据）
 

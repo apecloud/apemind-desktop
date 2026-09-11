@@ -91,32 +91,6 @@ if [[ -d "${RES_DIR}" ]]; then
   done < <(cd "${RES_DIR}" && find . -type f -print | sed 's|^\./||' | sort | sed 's|^|apps/desktop/resources/|')
 fi
 
-# ── 3c. 品牌修订号写入版本（防“改了品牌但不生效”）───────────────────
-# 桌面版按“版本相同即复用已装 profile”决定是否重装
-# （apps/desktop/README.md:44）。版本不变时改品牌不会生效，
-# 且构建日志全绿、极难发现。把 brand_revision 附到版本后，
-# 复用条件自然不成立 → 自动重装。（不是新增检查，是让旧条件失效。）
-BRAND_REV="$(./scripts/lock-get.sh brand_revision)"
-if [[ -n "${BRAND_REV}" ]]; then
-  echo "==> 写入品牌修订号 ${BRAND_REV}"
-  for f in package.json apps/desktop/package.json; do
-    python3 - "${WORK_DIR}/${f}" "${BRAND_REV}" <<'PY'
-import json, sys
-path, rev = sys.argv[1], sys.argv[2]
-d = json.load(open(path, encoding='utf-8'))
-# 注意：上游校验版本号的正则**不允许 `+build` 元数据**
-# （scripts/client-build-environment.ts:78 只接受 X.Y.Z 或 X.Y.Z-prerelease），
-# 所以这里用 prerelease 形式拼接，不能用 `+`。
-base = d['version'].split('-apemind', 1)[0]
-d['version'] = f"{base}-{rev}"
-with open(path, 'w', encoding='utf-8') as fh:
-    json.dump(d, fh, indent=2)
-    fh.write('\n')
-print(f"    {path}: {d['version']}")
-PY
-  done
-fi
-
 # ── 4. 校验改动范围 ────────────────────────────────────────────────────
 # overlay 只允许改 OVERLAY.md 里声明的文件（单一事实源，不在这里重复维护清单）。
 echo "==> 校验 overlay 范围"

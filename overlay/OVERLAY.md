@@ -31,13 +31,6 @@ patches:
       副作用：hero 原有的 hover 游泳动画随静态图消失（owner 未要求保留）。
       由 @猫猫 提供并在本机实测生效；我已复核 apply 干净、build 通过。
 
-  # ── 品牌修订号：把 brand_revision 附到版本号（非补丁，由 sync 直接写入）──
-  #    ⚠️ 目的：让桌面版的「版本相同即复用 profile」条件不成立（README:44），
-  #       否则改品牌后 app 仍加载旧 profile，看起来"改了没生效"。
-  versions:
-    - target: package.json
-    - target: apps/desktop/package.json
-
   # ── 04-title.patch：窗口/标签页标题 ────────────────────────────────
   - file: patches/04-title.patch
     kind: branding
