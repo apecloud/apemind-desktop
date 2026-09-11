@@ -16,6 +16,10 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { AuthorizationSession } from '@deepseek-ai/dsh-authorization'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import { AuthorizationController } from './controller.ts'
+
+export { AuthorizationController } from './controller.ts'
+export type * from './types.ts'
 
 /** Service injection: the authorization registry and the credential seam. */
 export const inject = ['authorization', 'credentials']
@@ -42,6 +46,8 @@ function looksLikeKey(value: string): boolean {
  * @param ctx - root context carrying `authorization` and `credentials`.
  */
 export function apply(ctx: Context): void {
+  // Host Remote namespace (ctx.remote.authorization) for the in-web sign-in UI.
+  ctx.plugin(AuthorizationController)
   process.stdout.write('[apemind-login] apply() called — registering ApeMind authorization flow\n')
   ctx.authorization.registerFlow({
     key: KEY,

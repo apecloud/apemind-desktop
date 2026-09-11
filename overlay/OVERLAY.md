@@ -47,6 +47,27 @@ patches:
       不挂它，任何 authorization flow 都注册不上。
     note: 新增而非修改：只在 credentials 之后插入一个条目，未触碰任何现有行。
 
+  # ── 07-apemind-login-wiring.patch：把登录控制器/UI 接到两端 ─────────────
+  #    06 挂了 authorization 缝（host roster）。本补丁把**同一个命名空间**
+  #    暴露给浏览器（api/remotes 挂 remote contribution），并把前端设置分区
+  #    注册进 web-app roster。缺任一条，UI 就会卡在
+  #    `pending (waiting for service: remote.authorization)`。
+  - file: patches/07-apemind-login-wiring.patch
+    kind: login-wiring
+    targets:
+      - target: packages/api/remotes/package.json
+      - target: packages/api/remotes/src/client/index.ts
+      - target: packages/bundle/web-app/cordis.patch.yml
+      - target: packages/bundle/web-app/package.json
+      - target: tsconfig.client.json
+    upstream_logic_changed: false   # 只新增依赖、roster 行、挂载项与 tsconfig 引用
+    reason: >
+      host 侧 typert 已自动生成 `ctx.remote.authorization`，但浏览器侧要显式
+      `$mount` 该 remote contribution（`api/remotes/src/client/index.ts` 的清单），
+      否则前端拿不到 `remote.authorization`；同理 web-app roster 要注册设置分区，
+      tsconfig.client 要引用新前端包。三条缺一即白屏/卡 pending。
+    note: 全部是"新增行"，未修改任何上游既有行。
+
   # ── 04-title.patch：窗口/标签页标题 ────────────────────────────────
   - file: patches/04-title.patch
     kind: branding
@@ -138,8 +159,15 @@ add-files:
   # 作为 workspace 包分发，因此 pnpm-lock.yaml 需在 sync 时**派生**（见 sync-upstream.sh 5 段）。
   - target: packages/experimental/apemind-login/package.json
   - target: packages/experimental/apemind-login/tsconfig.json
-  - target: packages/experimental/apemind-login/tsdown.config.ts
   - target: packages/experimental/apemind-login/src/index.ts
+  - target: packages/experimental/apemind-login/src/controller.ts
+  - target: packages/experimental/apemind-login/src/types.ts
+  # 前端设置分区（@猫猫）：设置页 "ApeMind 登录" 分区，驱动 remote.authorization。
+  - target: packages/client/ui-apemind-login/package.json
+  - target: packages/client/ui-apemind-login/tsconfig.json
+  - target: packages/client/ui-apemind-login/tsdown.config.ts
+  - target: packages/client/ui-apemind-login/src/index.ts
+  - target: packages/client/ui-apemind-login/src/client/index.tsx
 
 resources:
   - source: apps/desktop/resources/README.md
