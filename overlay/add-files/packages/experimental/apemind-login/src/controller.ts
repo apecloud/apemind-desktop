@@ -56,7 +56,8 @@ export class AuthorizationController extends TypertRemoteService {
 
   private async call<T>(operation: () => Promise<T>): Promise<T> {
     try { return await operation() } catch (error) {
-      throw new RemoteError('gateway/bad-request', error instanceof AccountError ? error.message : '本地连接操作失败，请重试。', {})
+      const code = error instanceof AccountError && error.code === 'cancelled' ? 'gateway/cancelled' : 'gateway/bad-request'
+      throw new RemoteError(code, error instanceof AccountError ? error.message : '本地连接操作失败，请重试。', {})
     }
   }
 

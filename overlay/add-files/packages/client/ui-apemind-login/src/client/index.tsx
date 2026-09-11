@@ -91,7 +91,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     setWaiting(false)
     if (!alive.current) return
     if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage(t('loggedIn')) }
-    else if (result.error.code === 'cancelled') { setError(''); setMessage(t('cancelled')) }
+    else if (result.error.code === 'gateway/cancelled') { setError(''); setMessage(t('cancelled')) }
     else setError(result.error.message)
   }
 
