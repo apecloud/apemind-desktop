@@ -81,7 +81,7 @@ if [[ -d "${RES_DIR}" ]]; then
   while IFS= read -r rel; do
     [[ -z "$rel" ]] && continue
     rel="${rel#./}"
-    if ! grep -q "^\s*target:\s*${rel}\s*$" "${OVERLAY_DIR}/OVERLAY.md"; then
+    if ! grep -qE "^\s*(-\s*)?target:\s*${rel}\s*$" "${OVERLAY_DIR}/OVERLAY.md"; then
       echo "    ✗ 未在 OVERLAY.md 声明的资源: ${rel}" >&2
       exit 1
     fi
@@ -89,6 +89,26 @@ if [[ -d "${RES_DIR}" ]]; then
     cp "${RES_DIR}/${rel#apps/desktop/resources/}" "${WORK_DIR}/${rel}"
     echo "    resource -> ${rel}"
   done < <(cd "${RES_DIR}" && find . -type f -print | sed 's|^\./||' | sort | sed 's|^|apps/desktop/resources/|')
+fi
+
+# ── 3c. 应用 add-files（我们自己新增的源码文件）─────────────────────
+# 与 resources/ 的区别：resources 是图标类资产（全路径写在 apps/desktop/resources 下）；
+# add-files 是**我们自己的源码包**（如 ApeMind 登录插件），路径即上游树里的真实落点。
+# 两者共用同一条纪律：未在 OVERLAY.md 声明的文件**不拷且报错**。
+ADD_DIR="${OVERLAY_DIR}/add-files"
+if [[ -d "${ADD_DIR}" ]]; then
+  echo "==> 应用 overlay add-files"
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    rel="${rel#./}"
+    if ! grep -qE "^\s*(-\s*)?target:\s*${rel}\s*$" "${OVERLAY_DIR}/OVERLAY.md"; then
+      echo "    ✗ 未在 OVERLAY.md 声明的 add-files: ${rel}" >&2
+      exit 1
+    fi
+    mkdir -p "$(dirname "${WORK_DIR}/${rel}")"
+    cp "${ADD_DIR}/${rel}" "${WORK_DIR}/${rel}"
+    echo "    add-files -> ${rel}"
+  done < <(cd "${ADD_DIR}" && find . -type f -print | sed 's|^\./||' | sort)
 fi
 
 # ── 4. 校验改动范围 ────────────────────────────────────────────────────

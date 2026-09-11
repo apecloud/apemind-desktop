@@ -106,6 +106,14 @@ patches:
 
 # ── 非补丁类资源（新增文件，非上游逻辑）──────────────────────────────
 # 注意：即使是资源也**逐文件**列出（不用目录），与脚本 ALLOWED 一致。
+# ── add-files：我们自己的源码包（新增文件，非改动上游）──────────────────
+# 与 patches/ 的分界：patches 改上游已有文件；add-files 只放**我们新增**的文件。
+# 每个文件都必须在此登记（未登记则不拷且报错，见 scripts/sync-upstream.sh 3c 段）。
+#
+# 当前用途：ApeMind 登录插件（@猫猫 实现，注册 dsh credential/authorization flow）。
+add-files:
+  - target: packages/experimental/apemind-login/src/index.ts
+
 resources:
   - source: apps/desktop/resources/README.md
     target: apps/desktop/resources/README.md
