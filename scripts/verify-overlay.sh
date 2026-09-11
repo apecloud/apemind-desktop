@@ -17,7 +17,7 @@ OVERLAY_DIR="${REPO_ROOT}/overlay"
 fail=0
 
 # ── 1. overlay 顶层只允许这些（其余一律视为可疑的上游副本）────────────
-ALLOWED_TOP=("OVERLAY.md" "patches" "apps")
+ALLOWED_TOP=("OVERLAY.md" "patches" "apps" "add-files")
 echo "==> overlay 顶层文件"
 while IFS= read -r f; do
   [[ -z "$f" ]] && continue
