@@ -31,6 +31,19 @@ patches:
       副作用：hero 原有的 hover 游泳动画随静态图消失（owner 未要求保留）。
       由 @猫猫 提供并在本机实测生效；我已复核 apply 干净、build 通过。
 
+  # ── 06-authorization-roster.patch：挂上 authorization 缝 ──────────────
+  - file: patches/06-authorization-roster.patch
+    kind: seam-mount
+    targets:
+      - target: packages/bundle/base/cordis.patch.yml
+    upstream_logic_changed: false   # 只新增一个 roster 条目，不改任何现有行
+    reason: >
+      ApeMind 登录 flow 要注册到 `ctx.authorization`。上游把该缝挂在哪里都没有
+      （全仓 roster grep 0 命中），而 llm-pi-ai/src/index.ts:219 已经
+      `ctx.inject(['authorization'], …)` 在等它 —— 即当前是空的。
+      不挂它，任何 authorization flow 都注册不上。
+    note: 新增而非修改：只在 credentials 之后插入一个条目，未触碰任何现有行。
+
   # ── 04-title.patch：窗口/标签页标题 ────────────────────────────────
   - file: patches/04-title.patch
     kind: branding

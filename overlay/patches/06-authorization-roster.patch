@@ -1,0 +1,17 @@
+diff --git a/packages/bundle/base/cordis.patch.yml b/packages/bundle/base/cordis.patch.yml
+index f906ea860..8e243de3d 100644
+--- a/packages/bundle/base/cordis.patch.yml
++++ b/packages/bundle/base/cordis.patch.yml
+@@ -97,6 +97,12 @@
+     - id: credentials
+       name: '@deepseek-ai/dsh-credentials-local'
+ 
++    # ApeMind: the authorization seam (human-guided sign-in / code entry).
++    # Upstream mounts it nowhere, but llm-pi-ai already waits for it via
++    # ctx.inject(['authorization']); our ApeMind login flow registers here.
++    - id: authorization
++      name: '@deepseek-ai/dsh-authorization'
++
+     # The pi-ai multi-provider twin, mounted dormant: zero routes (and no extra
+     # models in the picker) until a `llm-pi-ai:` settings section supplies provider
+     # profiles — then those routes register live, keys resolving per request
