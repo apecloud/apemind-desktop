@@ -2,9 +2,10 @@ diff --git a/packages/client/ui-brand-official/src/client/Brand.tsx b/packages/c
 index 3fc3d08..0c79a8c 100644
 --- a/packages/client/ui-brand-official/src/client/Brand.tsx
 +++ b/packages/client/ui-brand-official/src/client/Brand.tsx
-@@ -1,13 +1,25 @@
+@@ -1,13 +1,26 @@
 -import { FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
  import type { SidebarBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
++import { brandName } from './locales.ts'
  
 +/** ApeMind square brand mark (inlined; ApeMind Desktop overlay). */
 +const APEMIND_MARK_DATA_URI =

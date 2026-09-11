@@ -98,6 +98,10 @@ jobs:
         working-directory: ${{ runner.temp }}/dsh-desktop
         run: pnpm run build
 
+      - name: 校验界面文案接入语言字典
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: pnpm run verify-client-ui-i18n
+
       - name: 断言品牌已生效（overlay 确实被应用）
         working-directory: ${{ runner.temp }}/dsh-desktop
         run: |

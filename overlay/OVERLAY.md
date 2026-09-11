@@ -169,6 +169,8 @@ add-files:
   - target: packages/client/ui-apemind-login/src/css.d.ts
   - target: packages/client/ui-apemind-login/src/index.ts
   - target: packages/client/ui-apemind-login/src/client/index.tsx
+  - target: packages/client/ui-apemind-login/src/client/locales.ts
+  - target: packages/client/ui-brand-official/src/client/locales.ts
   - target: packages/client/ui-apemind-login/src/client/style.css
 
 resources:
