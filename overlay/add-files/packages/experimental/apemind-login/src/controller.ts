@@ -73,6 +73,9 @@ export class AuthorizationController extends TypertRemoteService {
   async startBrowserLogin(origin: string): Promise<OAuthAccountView> { return this.call(() => this.oauth.login(origin)) }
 
   @Remote
+  async startDeviceLogin(origin: string): Promise<OAuthAccountView> { return this.call(() => this.oauth.deviceLogin(origin)) }
+
+  @Remote
   async cancelBrowserLogin(): Promise<void> { this.oauth.cancelLogin() }
 
   @Remote

@@ -19,6 +19,12 @@ const workspaceListSchema = z.object({
     status: z.string(), role: z.string().nullable().optional(), permissions: z.array(z.string()).default([]),
   })),
 })
+const deviceAuthorizationSchema = z.object({
+  device_code: z.string().min(1), user_code: z.string().min(1),
+  verification_uri: z.string().url(), verification_uri_complete: z.string().url(),
+  expires_in: z.number().int().positive(), interval: z.number().int().positive(),
+})
+const deviceTokenErrorSchema = z.object({ error: z.string(), error_description: z.string().optional() })
 
 /** Errors contain fixed product messages, never server bodies or credential values. */
 export class AccountError extends Error {
@@ -109,6 +115,36 @@ export class ApeMindClient {
 
   async revoke(origin: string, refreshToken: string): Promise<void> {
     await this.post(origin, '/auth/desktop/revoke', new URLSearchParams({ token: refreshToken }))
+  }
+
+  async startDevice(origin: string): Promise<z.infer<typeof deviceAuthorizationSchema>> {
+    const data = await this.post(origin, '/auth/desktop/device', new URLSearchParams({ client_id: 'apemind-desktop', scope: 'profile workspace.read collection.read' }))
+    const parsed = deviceAuthorizationSchema.safeParse(data)
+    if (!parsed.success) throw new AccountError('protocol', '服务未返回有效的设备登录信息。')
+    return parsed.data
+  }
+
+  async pollDevice(origin: string, deviceCode: string): Promise<{ status: 'pending'; interval: number } | { status: 'approved'; tokens: z.infer<typeof tokenSchema> }> {
+    let response: Response
+    try {
+      response = await this.transport(`${normalizeOrigin(origin)}/api/v2/auth/desktop/token`, {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+        body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:device_code', client_id: 'apemind-desktop', device_code: deviceCode }),
+        redirect: 'error', credentials: 'omit', signal: AbortSignal.timeout(15_000),
+      })
+    } catch { throw new AccountError('network', '无法连接 ApeMind，请检查服务地址和网络后重试。') }
+    const data: unknown = await response.json().catch(() => undefined)
+    if (response.ok) {
+      const parsed = tokenSchema.safeParse(data)
+      if (!parsed.success) throw new AccountError('protocol', '服务未返回有效的登录令牌。')
+      return { status: 'approved', tokens: parsed.data }
+    }
+    const error = deviceTokenErrorSchema.safeParse(data)
+    if (error.success && error.data.error === 'authorization_pending') return { status: 'pending', interval: 5 }
+    if (error.success && error.data.error === 'slow_down') return { status: 'pending', interval: 10 }
+    if (error.success && error.data.error === 'access_denied') throw new AccountError('denied', '你已取消 ApeMind 登录。')
+    if (error.success && error.data.error === 'expired_token') throw new AccountError('oauth_expired', '设备登录已过期，请重新开始。')
+    throw new AccountError(response.status === 401 ? 'oauth_expired' : 'server', '设备登录失败，请重新开始。')
   }
 
   async workspaces(origin: string, accessToken: string): Promise<z.infer<typeof workspaceListSchema>> {

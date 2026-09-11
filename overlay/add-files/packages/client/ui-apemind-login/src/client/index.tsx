@@ -95,6 +95,16 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     else setError(result.error.message)
   }
 
+  async function deviceLogin(): Promise<void> {
+    setWaiting(true)
+    const result = await remote.startDeviceLogin(origin)
+    setWaiting(false)
+    if (!alive.current) return
+    if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage(t('loggedIn')) }
+    else if (result.error.code === 'gateway/cancelled') { setError(''); setMessage(t('cancelled')) }
+    else setError(result.error.message)
+  }
+
   async function selectWorkspace(id: string): Promise<void> {
     const result = await remote.selectWorkspace(id)
     if (!alive.current) return
@@ -189,8 +199,10 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
         <p className="apemind-muted">{t('browserHint')}</p>
         <div className="apemind-actions">
           <button className="apemind-primary" disabled={disabled} onClick={() => { void run(browserLogin) }}>{t('browserSignIn')}</button>
+          <button disabled={disabled} onClick={() => { void run(deviceLogin) }}>{t('deviceSignIn')}</button>
           {waiting && <button onClick={() => { void cancelLogin() }}>{t('cancelSignIn')}</button>}
         </div>
+        <p className="apemind-muted">{t('deviceHint')}</p>
         <details><summary>{t('serverAddress')}</summary><label>{t('server')}<input required type="url" disabled={disabled} value={origin} onChange={(event) => { setOrigin(event.target.value) }} /></label></details>
       </>}
     </section>

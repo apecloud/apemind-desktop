@@ -129,23 +129,10 @@ export class OAuthService {
         checkCancelled()
         const tokens = await this.client.exchangeCode(normalized, code, verifier, redirectUri)
         issuedRefresh = tokens.refresh_token
-        checkCancelled()
-        const [account, workspaces] = await Promise.all([
-          this.client.oauthUser(normalized, tokens.access_token), this.client.workspaces(normalized, tokens.access_token),
-        ])
-        checkCancelled()
-        const selected = workspaces.items.find(item => item.type === 'personal' && item.status === 'active')
-          ?? workspaces.items.find(item => item.status === 'active')
-        const stored: StoredOAuth = {
-          origin: normalized, userId: account.id, username: account.username, verifiedAt: new Date().toISOString(),
-          activeWorkspaceId: selected?.id ?? null,
-          workspaces: workspaces.items.map(item => ({ ...item, role: item.role ?? null })), refreshToken: tokens.refresh_token,
-        }
-        await this.store.write(stored, undefined)
+        const view = await this.persistLogin(normalized, tokens, signal)
         saved = true
-        this.rememberAccess(stored, tokens)
         complete?.(true)
-        return this.publicView(stored)
+        return view
       } finally {
         clearTimeout(timer)
         signal.removeEventListener('abort', abort)
@@ -163,6 +150,67 @@ export class OAuthService {
     this.access = { token: tokens.access_token, expiresAt: Date.now() + tokens.expires_in * 1000,
       refreshToken: stored.refreshToken, origin: stored.origin }
   }
+  private async persistLogin(normalized: string, tokens: { access_token: string; refresh_token: string; expires_in: number }, signal: AbortSignal): Promise<OAuthAccountView> {
+    if (signal.aborted) throw new AccountError('cancelled', '已取消登录。')
+    const [account, workspaces] = await Promise.all([
+      this.client.oauthUser(normalized, tokens.access_token), this.client.workspaces(normalized, tokens.access_token),
+    ])
+    if (signal.aborted) throw new AccountError('cancelled', '已取消登录。')
+    const selected = workspaces.items.find(item => item.type === 'personal' && item.status === 'active')
+      ?? workspaces.items.find(item => item.status === 'active')
+    const stored: StoredOAuth = {
+      origin: normalized, userId: account.id, username: account.username, verifiedAt: new Date().toISOString(),
+      activeWorkspaceId: selected?.id ?? null,
+      workspaces: workspaces.items.map(item => ({ ...item, role: item.role ?? null })), refreshToken: tokens.refresh_token,
+    }
+    await this.store.write(stored, undefined)
+    this.rememberAccess(stored, tokens)
+    return this.publicView(stored)
+  }
+
+  deviceLogin(origin: string): Promise<OAuthAccountView> {
+    if (this.loginAttempt) return Promise.reject(new AccountError('busy', '登录正在进行。'))
+    const attempt = new AbortController()
+    this.loginAttempt = attempt
+    return this.serial(async () => {
+      const signal = attempt.signal
+      const checkCancelled = (): void => { if (signal.aborted) throw new AccountError('cancelled', '已取消设备登录。') }
+      checkCancelled()
+      if (await this.read()) throw new AccountError('connected', '请先退出当前账户，再登录其他账户。')
+      const normalized = normalizeOrigin(origin)
+      let issuedRefresh: string | undefined
+      let saved = false
+      try {
+        const device = await this.client.startDevice(normalized)
+        await this.launch(device.verification_uri_complete)
+        const deadline = Date.now() + Math.min(this.timeoutMs, device.expires_in * 1000)
+        let interval = device.interval * 1000
+        let firstPoll = true
+        let tokens: Awaited<ReturnType<ApeMindClient['exchangeCode']>> | undefined
+        while (!tokens) {
+          checkCancelled()
+          if (Date.now() >= deadline) throw new AccountError('oauth_timeout', '设备登录等待超时，请重试。')
+          if (!firstPoll) await new Promise<void>((resolve, reject) => {
+            let timer: ReturnType<typeof setTimeout>
+            const abort = (): void => { clearTimeout(timer); reject(new AccountError('cancelled', '已取消设备登录。')) }
+            timer = setTimeout(() => { signal.removeEventListener('abort', abort); resolve() }, interval)
+            signal.addEventListener('abort', abort, { once: true })
+          })
+          firstPoll = false
+          const result = await this.client.pollDevice(normalized, device.device_code)
+          if (result.status === 'approved') tokens = result.tokens
+          else interval = Math.max(interval, result.interval * 1000)
+        }
+        issuedRefresh = tokens.refresh_token
+        const view = await this.persistLogin(normalized, tokens, signal)
+        saved = true
+        return view
+      } finally {
+        if (!saved && issuedRefresh) await this.client.revoke(normalized, issuedRefresh).catch(() => undefined)
+      }
+    }).finally(() => { if (this.loginAttempt === attempt) this.loginAttempt = undefined })
+  }
+
   private async authenticated(): Promise<{ stored: StoredOAuth; token: string }> {
     let stored = await this.read()
     if (!stored) throw new AccountError('missing', '请先登录 ApeMind。')
