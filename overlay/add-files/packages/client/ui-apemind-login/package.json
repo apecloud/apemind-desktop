@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-apemind-login",
-  "description": "ApeMind Desktop overlay: settings section to sign in to ApeMind (API key / browser).",
+  "description": "ApeMind account connections with server-verified, workspace-bound API keys.",
   "version": "0.1.5-rc.1",
   "publishConfig": {
     "access": "public"

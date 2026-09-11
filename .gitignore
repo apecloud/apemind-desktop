@@ -26,3 +26,5 @@ node_modules/
 *.swp
 .idea/
 .vscode/
+
+node_modules/

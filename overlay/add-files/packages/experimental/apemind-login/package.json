@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-apemind-login",
-  "description": "ApeMind Desktop overlay: registers the ApeMind authorization flow (API key + browser sign-in) into dsh-authorization.",
+  "description": "ApeMind account connections with server-verified, workspace-bound API keys.",
   "version": "0.1.5-rc.1",
   "type": "module",
   "main": "lib/index.js",
@@ -33,14 +33,12 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-authorization": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-typert-protocol": "workspace:^",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-authorization": "workspace:^",
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-typert-protocol": "workspace:^",
