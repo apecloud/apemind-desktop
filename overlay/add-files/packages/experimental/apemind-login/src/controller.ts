@@ -4,9 +4,11 @@ import { credentialKey } from '@deepseek-ai/dsh-credentials'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { AccountService } from './account-service.ts'
 import { AccountError } from './api-client.ts'
-import type { AccountState, AccountView, KnowledgeBaseView } from './types.ts'
+import { OAuthService } from './oauth-service.ts'
+import type { AccountState, AccountView, KnowledgeBaseView, OAuthAccountView, WorkspaceView } from './types.ts'
 
 const KEY = credentialKey('apemind', 'connections')
+const OAUTH_KEY = credentialKey('apemind', 'oauth')
 
 declare module '@deepseek-ai/cordis' {
   interface Context { authorizationController: AuthorizationController }
@@ -15,6 +17,7 @@ declare module '@deepseek-ai/cordis' {
 /** ApeMind-specific Remote API. Secrets are accepted only on connect, never returned. */
 export class AuthorizationController extends TypertRemoteService {
   private readonly accounts: AccountService
+  private readonly oauth: OAuthService
 
   constructor(ctx: Context) {
     super(ctx, 'authorizationController', { namespace: 'apemindAuth' })
@@ -33,6 +36,18 @@ export class AuthorizationController extends TypertRemoteService {
         })
       },
     })
+    this.oauth = new OAuthService({
+      read: async () => {
+        const record = await ctx.credentials.readRecord(OAUTH_KEY)
+        if (record === undefined) return undefined
+        if (record.kind !== 'grant') throw new AccountError('storage', '本地登录记录格式不正确。')
+        return record.payload as never
+      },
+      write: async (value) => {
+        if (value === undefined) { await ctx.credentials.deleteRecord(OAUTH_KEY); return }
+        await ctx.credentials.modifyRecord(OAUTH_KEY, () => Promise.resolve({ kind: 'grant', payload: value }))
+      },
+    })
   }
 
   private async call<T>(operation: () => Promise<T>): Promise<T> {
@@ -42,7 +57,24 @@ export class AuthorizationController extends TypertRemoteService {
   }
 
   @Remote
-  async state(): Promise<AccountState> { return this.call(() => this.accounts.state()) }
+  async state(): Promise<AccountState> {
+    return this.call(async () => ({ ...(await this.accounts.state()), oauth: await this.oauth.state() }))
+  }
+
+  @Remote
+  async oauthState(): Promise<OAuthAccountView | null> { return this.call(() => this.oauth.state()) }
+
+  @Remote
+  async startBrowserLogin(origin: string): Promise<OAuthAccountView> { return this.call(() => this.oauth.login(origin)) }
+
+  @Remote
+  async selectWorkspace(id: string): Promise<OAuthAccountView> { return this.call(() => this.oauth.select(id)) }
+
+  @Remote
+  async oauthCollections(): Promise<{ workspace: WorkspaceView; items: KnowledgeBaseView[] }> { return this.call(() => this.oauth.collections()) }
+
+  @Remote
+  async oauthLogout(): Promise<void> { return this.call(() => this.oauth.logout()) }
 
   @Remote
   async connect(origin: string, apiKey: string): Promise<AccountState> {

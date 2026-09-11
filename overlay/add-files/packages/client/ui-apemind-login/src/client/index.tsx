@@ -66,6 +66,34 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     else setError(result.error.message)
   }
 
+  async function browserLogin(): Promise<void> {
+    const result = await remote.startBrowserLogin(origin)
+    if (!alive.current) return
+    if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage('已登录 ApeMind，并同步工作空间。') }
+    else setError(result.error.message)
+  }
+
+  async function selectWorkspace(id: string): Promise<void> {
+    const result = await remote.selectWorkspace(id)
+    if (!alive.current) return
+    if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage('工作空间已切换。') }
+    else setError(result.error.message)
+  }
+
+  async function oauthCollections(): Promise<void> {
+    const result = await remote.oauthCollections()
+    if (!alive.current) return
+    if (result.ok) { setItems(result.value.items); setMessage(`已验证 ${result.value.workspace.name} 的知识库访问权限。`) }
+    else setError(result.error.message)
+  }
+
+  async function oauthLogout(): Promise<void> {
+    const result = await remote.oauthLogout()
+    if (!alive.current) return
+    if (result.ok) { setState(current => ({ ...current, oauth: null })); setItems(null); setMessage('已退出 ApeMind。') }
+    else setError(result.error.message)
+  }
+
   async function select(id: string): Promise<void> {
     const result = await remote.select(id)
     if (!alive.current) return
@@ -128,6 +156,21 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
         </div>}
       </>}
     </section>}
+    <section className="apemind-card">
+      <h3>{state.oauth ? 'ApeMind 已登录' : '浏览器登录 ApeMind'}</h3>
+      {state.oauth ? <>
+        <p>{state.oauth.username}</p>
+        <label>当前工作空间
+          <select disabled={busy} value={state.oauth.activeWorkspaceId ?? ''} onChange={(event) => { void run(() => selectWorkspace(event.target.value)) }}>
+            {state.oauth.workspaces.map(workspace => <option key={workspace.id} value={workspace.id}>{workspace.name} · {workspace.type === 'personal' ? '个人空间' : workspace.role ?? '组织'}</option>)}
+          </select>
+        </label>
+        <div className="apemind-actions"><button disabled={busy} onClick={() => { void run(oauthCollections) }}>查看知识库</button><button disabled={busy} onClick={() => { void run(oauthLogout) }}>退出</button></div>
+      </> : <>
+        <p className="apemind-muted">将在系统浏览器中完成登录，登录后自动同步个人空间和组织。</p>
+        <button disabled={busy} onClick={() => { void run(browserLogin) }}>在浏览器中登录</button>
+      </>}
+    </section>
     <form className="apemind-card" onSubmit={(event) => { event.preventDefault(); void run(connect) }}>
       <h3>{state.connections.length ? '连接另一个工作空间' : '连接 ApeMind'}</h3>
       <label>服务地址<input required type="url" autoComplete="url" disabled={busy} value={origin} onChange={(event) => { setOrigin(event.target.value) }} placeholder="https://你的 ApeMind 服务地址" /></label>

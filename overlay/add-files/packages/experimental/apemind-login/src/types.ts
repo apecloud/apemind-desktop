@@ -14,6 +14,25 @@ export interface AccountView {
 export interface AccountState {
   activeId: string | null
   connections: AccountView[]
+  oauth?: OAuthAccountView | null
+}
+
+export interface WorkspaceView {
+  id: string
+  type: 'personal' | 'organization'
+  name: string
+  status: string
+  role: string | null
+  permissions: string[]
+}
+
+export interface OAuthAccountView {
+  origin: string
+  userId: string
+  username: string
+  verifiedAt: string
+  activeWorkspaceId: string | null
+  workspaces: WorkspaceView[]
 }
 
 export interface KnowledgeBaseView {
