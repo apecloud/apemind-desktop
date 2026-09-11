@@ -57,6 +57,23 @@ test('browser scope, real loopback callback, durable success and secret-free vie
   assert.ok(s.calls.includes('/api/v2/auth/desktop/revoke'))
 })
 
+test('device login opens verification URI, exchanges the device code and stores no secret in the view', async () => {
+  const s = setup(undefined, async path => {
+    if (path.endsWith('/device')) return Response.json({
+      device_code: 'device-secret', user_code: 'ABCD-EFGH', verification_uri: `${ORIGIN}/api/v2/auth/desktop/device`,
+      verification_uri_complete: `${ORIGIN}/api/v2/auth/desktop/device?user_code=ABCD-EFGH`, expires_in: 600, interval: 1,
+    })
+    if (path.endsWith('/token')) return Response.json({ access_token: 'access-secret', refresh_token: 'refresh-device-secret', expires_in: 600, scope: 'profile workspace.read collection.read' })
+  })
+  const login = s.service.deviceLogin(ORIGIN)
+  const opened = await s.opened.promise
+  assert.equal(opened.pathname, '/api/v2/auth/desktop/device')
+  const view = await login
+  assert.equal(view.activeWorkspaceId, workspace.id)
+  assert.ok(!JSON.stringify(view).includes('refresh-device-secret'))
+  assert.ok(s.calls.includes('/api/v2/auth/desktop/device'))
+})
+
 test('invalid and duplicate state are rejected without completing the valid attempt', async () => {
   const s = setup()
   const login = s.service.login(ORIGIN)

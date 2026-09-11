@@ -42,7 +42,7 @@ patches:
     upstream_logic_changed: false   # 只新增一个 roster 条目，不改任何现有行
     reason: >
       注册 ApeMind Host 插件及其 workspace 包依赖，提供账户连接与凭据操作。
-    note: 登录使用现有服务端 API Key 验证，不注册通用交互授权服务。
+    note: 登录包同时提供 OAuth 2.0 Authorization Code + PKCE、设备码兼容路径和高级 API Key 入口；不会在后台创建隐藏 API Key，也不把浏览器 Cookie 带回桌面端。
 
   # ── 07-apemind-login-wiring.patch：把登录控制器/UI 接到两端 ─────────────
   #    06 挂了 authorization 缝（host roster）。本补丁把**同一个命名空间**
@@ -64,6 +64,18 @@ patches:
       否则前端拿不到 `remote.apemindAuth`；同理 web-app roster 要注册设置分区，
       tsconfig.client 要引用新前端包。三条缺一即白屏/卡 pending。
     note: 全部是"新增行"，未修改任何上游既有行。
+
+  # ── 08-seed-build-policy.patch：保证干净环境可生成桌面 seed ─────────────
+  - file: patches/08-seed-build-policy.patch
+    kind: build-policy
+    targets:
+      - target: apps/desktop/src/project-manager.ts
+    upstream_logic_changed: true
+    reason: >
+      桌面 seed 会在独立临时 workspace 执行 pnpm install。pnpm 11 默认拒绝
+      esbuild 的原生安装脚本；若只在上游根 workspace 允许，干净打包仍会失败。
+      将 esbuild 明确加入 seed 的 allowBuilds，确保从零构建与本地增量构建一致。
+    guardrail: 默认只允许 esbuild 这个已审核的原生构建脚本，不放宽其他依赖。
 
   # ── 04-title.patch：窗口/标签页标题 ────────────────────────────────
   - file: patches/04-title.patch
@@ -144,7 +156,7 @@ patches:
 # 与 patches/ 的分界：patches 改上游已有文件；add-files 只放**我们新增**的文件。
 # 每个文件都必须在此登记（未登记则不拷且报错，见 scripts/sync-upstream.sh 3c 段）。
 #
-# 当前用途：ApeMind 账户连接插件。
+# 当前用途：ApeMind 账户连接插件。登录态使用短期 Access Token + 可轮换 Refresh Token；组织与个人空间通过服务端工作空间接口发现。
 # ── 派生文件：sync 时由脚本重新生成，不是我们手写的补丁 ────────────────
 # pnpm-lock.yaml 需随 add-files 的 workspace 包一起变化；
 # 我们存的是"派生规则"而不是 lock 内容本身（见 sync-upstream.sh 5 段）。
