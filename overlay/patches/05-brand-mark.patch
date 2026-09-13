@@ -20,7 +20,7 @@ index 3fc3d08..0c79a8c 100644
  export function OfficialBrandMark({ size }: SidebarBrandMarkOwnerProps) {
 -  return <FishLogo size={size} />
 +  return (
-+    <svg width={size} height={size} viewBox="0 0 1264 1264" role="img" aria-label="ApeMind">
++    <svg width={size} height={size} viewBox="0 0 1264 1264" role="img">
 +      <image href={APEMIND_MARK_DATA_URI} x="0" y="0" width="1264" height="1264" preserveAspectRatio="xMidYMid meet" />
 +    </svg>
 +  )

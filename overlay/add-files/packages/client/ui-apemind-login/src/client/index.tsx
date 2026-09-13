@@ -49,12 +49,13 @@ function KnowledgeList({ values, title, limit, empty }: {
   </div>
 }
 
-function WorkspaceRow({ workspace, current, disabled, onSelect, roleLabel }: {
+function WorkspaceRow({ workspace, current, disabled, onSelect, roleLabel, currentLabel }: {
   workspace: WorkspaceView
   current: boolean
   disabled: boolean
   onSelect: () => void
   roleLabel: string
+  currentLabel: string
 }): ReactNode {
   const initials = workspace.name.trim().slice(0, 1).toUpperCase() || 'A'
   const content = <>
@@ -63,7 +64,7 @@ function WorkspaceRow({ workspace, current, disabled, onSelect, roleLabel }: {
       <strong>{workspace.name}</strong>
       <small>{workspace.type === 'organization' ? roleLabel : ''}</small>
     </span>
-    {current && <span className="apemind-current-badge">当前使用</span>}
+    {current && <span className="apemind-current-badge">{currentLabel}</span>}
     {!current && <span className="apemind-chevron" aria-hidden="true">›</span>}
   </>
   if (current) return <div className="apemind-workspace-row is-current">{content}</div>
@@ -127,17 +128,17 @@ function ConnectedPanel({ t, oauth, disabled, onSelectWorkspace, onRefresh, onLo
     <section className="apemind-current-space">
       <h4>{t('currentWorkspace')}</h4>
       {active
-        ? <WorkspaceRow workspace={active} current disabled={disabled} onSelect={() => undefined} roleLabel={t('member')} />
+        ? <WorkspaceRow workspace={active} current disabled={disabled} onSelect={() => undefined} roleLabel={t('member')} currentLabel={t('currentBadge')} />
         : <p className="apemind-muted">{t('chooseWorkspace')}</p>}
       <p className="apemind-workspace-hint">{t('workspaceHint')}</p>
       <button type="button" className="apemind-quiet-action" disabled={disabled || !active} onClick={onKnowledge}>{t('viewKnowledge')}</button>
     </section>
     <section className="apemind-workspace-list">
       <h4>{t('availableSpaces')}</h4>
-      {personal && personal.id !== active?.id && <WorkspaceRow workspace={personal} current={false} disabled={disabled} onSelect={() => onSelectWorkspace(personal.id)} roleLabel={t('personalSpace')} />}
+      {personal && personal.id !== active?.id && <WorkspaceRow workspace={personal} current={false} disabled={disabled} onSelect={() => onSelectWorkspace(personal.id)} roleLabel={t('personalSpace')} currentLabel={t('currentBadge')} />}
       {organizations.length === 0 && !personal
         ? <p className="apemind-muted">{t('noOrganizations')}</p>
-        : organizations.map(workspace => <WorkspaceRow key={workspace.id} workspace={workspace} current={workspace.id === active?.id} disabled={disabled} onSelect={() => onSelectWorkspace(workspace.id)} roleLabel={workspace.role ?? t('member')} />)}
+        : organizations.map(workspace => <WorkspaceRow key={workspace.id} workspace={workspace} current={workspace.id === active?.id} disabled={disabled} onSelect={() => onSelectWorkspace(workspace.id)} roleLabel={workspace.role ?? t('member')} currentLabel={t('currentBadge')} />)}
     </section>
     <div className="apemind-connected-actions">
       <button type="button" className="apemind-secondary" disabled={disabled} onClick={onRefresh}>{t('refreshWorkspaces')}</button>
