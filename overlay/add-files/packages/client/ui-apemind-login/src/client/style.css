@@ -1,26 +1,128 @@
-.apemind-account { max-width: 680px; display: grid; gap: 16px; color: inherit; font: inherit; }
-.apemind-account h2, .apemind-account h3, .apemind-account h4 { margin: 0 0 10px; font-weight: 600; }
-.apemind-account p { margin: 6px 0; line-height: 1.6; }
-.apemind-card { padding: 20px; border: 1px solid color-mix(in srgb, currentColor 18%, transparent); border-radius: 12px; display: grid; gap: 14px; }
-.apemind-account label { display: grid; gap: 7px; font-weight: 500; }
-.apemind-account input:not([type=checkbox]), .apemind-account select { box-sizing: border-box; width: 100%; min-width: 0; padding: 10px 12px; color: inherit; background: transparent; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 7px; font: inherit; }
-.apemind-account option { color: CanvasText; background: Canvas; }
-.apemind-account button { padding: 9px 14px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 7px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-.apemind-account button[type=submit], .apemind-account .apemind-primary { background: #205c52; color: white; border-color: #205c52; }
-.apemind-account :focus-visible { outline: 2px solid #398bca; outline-offset: 3px; }
-.apemind-account :disabled { opacity: .55; cursor: wait; }
-.apemind-account .apemind-checkbox { display: flex; flex-direction: row; align-items: center; gap: 8px; }
-.apemind-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.apemind-muted { opacity: .75; font-size: .9em; }
-.apemind-error { padding: 12px; border: 1px solid #c04b40; border-radius: 8px; }
-.apemind-account dl { display: grid; grid-template-columns: 90px 1fr; gap: 8px; margin: 0; }
-.apemind-account dd { margin: 0; overflow-wrap: anywhere; }
-.apemind-account dt { opacity: .7; }
-@media (max-width: 480px) { .apemind-card { padding: 14px; } .apemind-account dl { grid-template-columns: 1fr; } }
+.apemind-account {
+  max-width: 680px;
+  display: grid;
+  gap: 18px;
+  color: inherit;
+  font: inherit;
+  --apemind-accent: #1f6a5c;
+  --apemind-accent-soft: color-mix(in srgb, var(--apemind-accent) 12%, transparent);
+  --apemind-border: color-mix(in srgb, currentColor 15%, transparent);
+  --apemind-muted: color-mix(in srgb, currentColor 68%, transparent);
+}
 
-.apemind-advanced > summary { cursor: pointer; padding: 12px 0; opacity: .8; }
-.apemind-advanced[open] { display: grid; gap: 14px; }
-.apemind-knowledge { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); padding-top: 18px; }
-.apemind-knowledge small { font-weight: 400; opacity: .6; }
-.apemind-knowledge ul { list-style: none; padding: 0; margin: 0; }
-.apemind-knowledge li { padding: 10px 0; overflow-wrap: anywhere; }
+.apemind-account h2,
+.apemind-account h3,
+.apemind-account h4,
+.apemind-account p { margin: 0; }
+.apemind-account h2 { font-size: 1.45rem; font-weight: 650; letter-spacing: -.02em; }
+.apemind-account h3 { font-size: 1.2rem; font-weight: 650; letter-spacing: -.015em; }
+.apemind-account h4 { font-size: .94rem; font-weight: 650; }
+.apemind-account p { line-height: 1.55; }
+.apemind-muted { color: var(--apemind-muted); font-size: .9rem; }
+
+.apemind-header { display: grid; gap: 4px; }
+.apemind-heading-row { display: flex; align-items: center; gap: 12px; }
+.apemind-heading-mark { width: 28px; height: 28px; object-fit: contain; }
+.apemind-mark { display: block; object-fit: contain; }
+
+.apemind-message,
+.apemind-error { padding: 10px 12px; border-radius: 10px; font-size: .88rem; }
+.apemind-message { color: var(--apemind-accent); background: var(--apemind-accent-soft); }
+.apemind-error { color: #a43832; background: color-mix(in srgb, #c04b40 9%, transparent); border: 1px solid color-mix(in srgb, #c04b40 32%, transparent); }
+
+.apemind-state-panel,
+.apemind-connected-panel {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 42px 46px 36px;
+  border: 1px solid var(--apemind-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, Canvas 96%, currentColor 4%);
+  text-align: center;
+}
+.apemind-state-mark { width: 52px; height: 52px; margin-bottom: 2px; }
+.apemind-state-panel > p { max-width: 410px; color: var(--apemind-muted); }
+.apemind-connect-panel { min-height: 260px; align-content: center; }
+.apemind-waiting-panel { min-height: 280px; align-content: center; }
+.apemind-waiting-panel .apemind-state-mark { opacity: .82; }
+.apemind-spinner { width: 28px; height: 28px; border: 3px solid color-mix(in srgb, var(--apemind-accent) 16%, transparent); border-top-color: var(--apemind-accent); border-radius: 50%; corner-shape: round; animation: apemind-spin .9s linear infinite; }
+@keyframes apemind-spin { to { transform: rotate(360deg); } }
+
+.apemind-account button,
+.apemind-account input,
+.apemind-account select { font: inherit; }
+.apemind-account button { cursor: pointer; }
+.apemind-account button:disabled { opacity: .55; cursor: wait; }
+.apemind-account :focus-visible { outline: 2px solid color-mix(in srgb, var(--apemind-accent) 70%, #398bca); outline-offset: 3px; }
+.apemind-primary,
+.apemind-secondary,
+.apemind-quiet-action,
+.apemind-danger-link,
+.apemind-link-action { border: 0; }
+.apemind-primary { color: white; background: var(--apemind-accent); }
+.apemind-main-action { width: min(100%, 360px); padding: 12px 18px; border-radius: 9px; font-weight: 620; }
+.apemind-main-action span { margin-left: 8px; font-size: .9em; }
+.apemind-secondary { padding: 9px 14px; color: inherit; background: transparent; border: 1px solid var(--apemind-border); border-radius: 8px; }
+.apemind-link-action,
+.apemind-quiet-action { padding: 3px 0; color: var(--apemind-accent); background: transparent; }
+.apemind-link-action { font-size: .9rem; }
+.apemind-link-action span { margin-left: 4px; }
+.apemind-quiet-action { font-size: .85rem; }
+.apemind-security-note { color: var(--apemind-muted); font-size: .82rem !important; }
+.apemind-security-note span { color: var(--apemind-accent); margin-right: 4px; }
+
+.apemind-connected-panel { justify-items: stretch; padding: 26px 28px 24px; text-align: left; gap: 0; }
+.apemind-connected-heading { display: flex; align-items: center; gap: 12px; padding-bottom: 22px; border-bottom: 1px solid var(--apemind-border); }
+.apemind-connected-heading p { color: var(--apemind-muted); font-size: .9rem; margin-top: 3px; }
+.apemind-connected-mark { width: 42px; height: 42px; }
+.apemind-connected-status { margin-left: auto; padding: 5px 9px; color: var(--apemind-accent); background: var(--apemind-accent-soft); border-radius: 999px; corner-shape: round; font-size: .78rem; white-space: nowrap; }
+.apemind-connected-status span { font-size: .7rem; }
+.apemind-current-space,
+.apemind-workspace-list { display: grid; gap: 10px; padding: 20px 0; border-bottom: 1px solid var(--apemind-border); }
+.apemind-workspace-hint { color: var(--apemind-muted); font-size: .82rem; }
+.apemind-workspace-row { display: flex; align-items: center; gap: 11px; width: 100%; padding: 11px 12px; color: inherit; text-align: left; background: transparent; border: 1px solid var(--apemind-border); border-radius: 10px; }
+.apemind-workspace-row:hover:not(:disabled) { background: color-mix(in srgb, currentColor 4%, transparent); }
+.apemind-workspace-row.is-current { background: color-mix(in srgb, var(--apemind-accent) 5%, transparent); }
+.apemind-workspace-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex: 0 0 32px; color: var(--apemind-accent); background: var(--apemind-accent-soft); border-radius: 9px; font-size: .84rem; font-weight: 650; }
+.apemind-workspace-icon-organization { color: #5965b9; background: color-mix(in srgb, #5965b9 13%, transparent); }
+.apemind-workspace-copy { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.apemind-workspace-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; }
+.apemind-workspace-copy small { color: var(--apemind-muted); font-size: .78rem; }
+.apemind-current-badge { padding: 4px 8px; color: var(--apemind-accent); background: var(--apemind-accent-soft); border-radius: 999px; corner-shape: round; font-size: .72rem; white-space: nowrap; }
+.apemind-chevron { color: var(--apemind-muted); font-size: 1.25rem; line-height: 1; }
+.apemind-connected-actions { display: flex; align-items: center; gap: 14px; padding-top: 18px; }
+.apemind-danger-link { padding: 9px 0; color: #b33b34; background: transparent; }
+
+.apemind-advanced { border-top: 1px solid var(--apemind-border); }
+.apemind-advanced > summary,
+.apemind-service-address > summary { cursor: pointer; list-style: none; color: var(--apemind-muted); }
+.apemind-advanced > summary::-webkit-details-marker,
+.apemind-service-address > summary::-webkit-details-marker { display: none; }
+.apemind-advanced > summary { padding: 14px 0 4px; font-size: .88rem; }
+.apemind-advanced-content { display: grid; gap: 14px; padding-top: 12px; }
+.apemind-service-address { padding: 0 0 12px; border-bottom: 1px solid var(--apemind-border); }
+.apemind-service-address > summary { padding: 5px 0 10px; color: inherit; font-size: .88rem; }
+.apemind-account label { display: grid; gap: 7px; font-size: .86rem; font-weight: 550; }
+.apemind-account input:not([type=checkbox]),
+.apemind-account select { box-sizing: border-box; width: 100%; min-width: 0; padding: 10px 11px; color: inherit; background: transparent; border: 1px solid color-mix(in srgb, currentColor 25%, transparent); border-radius: 8px; }
+.apemind-account select { appearance: auto; }
+.apemind-account option { color: CanvasText; background: Canvas; }
+.apemind-card { display: grid; gap: 13px; padding: 16px; border: 1px solid var(--apemind-border); border-radius: 12px; }
+.apemind-key-connection > p { overflow-wrap: anywhere; color: var(--apemind-muted); font-size: .82rem; }
+.apemind-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.apemind-actions button { padding: 8px 11px; color: inherit; background: transparent; border: 1px solid var(--apemind-border); border-radius: 8px; }
+.apemind-checkbox { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 8px !important; }
+.apemind-checkbox input { margin: 0; }
+.apemind-knowledge { padding-top: 12px; border-top: 1px solid var(--apemind-border); }
+.apemind-knowledge small { color: var(--apemind-muted); font-size: .78rem; font-weight: 400; }
+.apemind-knowledge ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.apemind-knowledge li { padding: 8px 0; overflow-wrap: anywhere; border-bottom: 1px solid color-mix(in srgb, currentColor 9%, transparent); font-size: .85rem; }
+
+@media (max-width: 560px) {
+  .apemind-state-panel { padding: 32px 22px 28px; }
+  .apemind-connected-panel { padding: 20px 16px; }
+  .apemind-connected-status { font-size: 0; }
+  .apemind-connected-status span { font-size: .7rem; }
+}
+@media (prefers-reduced-motion: reduce) { .apemind-spinner { animation: none; } }

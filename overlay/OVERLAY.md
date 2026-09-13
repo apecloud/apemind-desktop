@@ -13,6 +13,29 @@
 # 变更清单（与 docs/branding.md 一致，改这里必须同步改那边）：
 
 patches:
+  # ── 09-apemind-snapshots.patch：同步设置导航的可访问性快照 ─────────────
+  - file: patches/09-apemind-snapshots.patch
+    kind: test-contract
+    targets:
+      - target: apps/web/tests/expected/agent-preset-authoring/created.expected.md
+      - target: apps/web/tests/expected/agent-preset-authoring/damaged.expected.md
+      - target: apps/web/tests/expected/agent-preset-authoring/section.expected.md
+      - target: apps/web/tests/expected/models-settings-recovery/stored-error.expected.md
+      - target: apps/web/tests/expected/models-settings/configured.expected.md
+      - target: apps/web/tests/expected/models-settings/declared-edit.expected.md
+      - target: apps/web/tests/expected/models-settings/declared.expected.md
+      - target: apps/web/tests/expected/models-settings/empty.expected.md
+      - target: apps/web/tests/expected/onboarding-deepseek-config/default-models.expected.md
+      - target: apps/web/tests/expected/onboarding-deepseek-config/models.expected.md
+      - target: apps/web/tests/expected/onboarding-usable-provider/dismissed.expected.md
+      - target: apps/web/tests/expected/plugin-config/section.expected.md
+      - target: apps/web/tests/expected/settings-chrome/dialog-en.expected.md
+      - target: apps/web/tests/expected/settings-chrome/dialog.expected.md
+    upstream_logic_changed: false
+    reason: >
+      ApeMind 登录插件是设置导航中的正式分区；这些上游可访问性快照需要
+      记录新增的 ApeMind 导航项，否则 Web 测试会把预期的品牌入口误报为回归。
+
   # ── 05-brand-mark.patch：侧栏 mark + 中间 hero 的图形（用户可见）──────
   - file: patches/05-brand-mark.patch
     kind: brand-occupant
@@ -21,7 +44,7 @@ patches:
       - target: packages/client/ui-conversation/src/client/skeleton/EmptyHero.tsx
     upstream_logic_changed: true
     reason: >
-      侧栏 mark 与对话中间 hero 的图形仍是上游的鱼（用户可见）。
+      侧栏 mark 与对话中间 hero 的图形仍是上游图形（用户可见）。
       换成 ApeMind 方标（内联 data-URI：**web 客户端 bundle 读不到
       apps/desktop/resources/**，那是桌面壳的资源）。
     guardrail: >
@@ -99,13 +122,13 @@ patches:
     reason: >
       上游侧栏品牌位是插件占位的（ui-brand-official），且只在
       DSH_CLIENT_BUILD_PROFILE==='official' 时注册。我们的客户端构建没设该 profile
-      （已实测：构建记录里无此变量），所以槽位空着 → 侧栏显示回退（本地构建标签 + 鱼）。
+      （已实测：构建记录里无此变量），所以槽位空着 → 侧栏显示回退（本地构建标签 + 上游图形）。
       要显示 ApeMind，必须让 occupant 注册并改其内容。
     guardrail: >
       改动仅限两个 occupant 函数的实现 + 那道 profile 门所在的一行：
       · index.ts：门改为 official | apemind（未设 profile 时上游行为不变）
       · Brand.tsx：name 槽改为文字 "ApeMind"（字体栈取自 brand-spec.md）
-      mark 槽**仍指向上游 FishLogo**（未提供 ApeMind mark 前不伪造）。
+      mark 槽由后续品牌补丁统一替换为 ApeMind 方形标。
     note: >
       这是 owner 明确的“改 logo”一步；侧栏 mark 图标待 asset 到位后单独处理。
 
@@ -164,6 +187,7 @@ derived:
   - target: pnpm-lock.yaml
 
 add-files:
+  - target: .agents/notes/implemented/ui/2026-09-14-apemind-login-ui.md
   # ApeMind 账户连接，凭据记录使用 apemind/connections。
   # 作为 workspace 包分发，因此 pnpm-lock.yaml 需在 sync 时**派生**（见 sync-upstream.sh 5 段）。
   - target: packages/experimental/apemind-login/package.json
@@ -181,6 +205,7 @@ add-files:
   - target: packages/client/ui-apemind-login/src/css.d.ts
   - target: packages/client/ui-apemind-login/src/index.ts
   - target: packages/client/ui-apemind-login/src/client/index.tsx
+  - target: packages/client/ui-apemind-login/src/client/brand-mark.ts
   - target: packages/client/ui-apemind-login/src/client/locales.ts
   - target: packages/client/ui-brand-official/src/client/locales.ts
   - target: packages/client/ui-apemind-login/src/client/style.css
@@ -190,7 +215,7 @@ resources:
     target: apps/desktop/resources/README.md
     kind: add-files
     touches:
-      - "占位说明（当前无真实图标）"
+      - "ApeMind 品牌资源说明"
     upstream_logic_changed: false
     status: PROVIDED
 
@@ -218,12 +243,9 @@ resources:
     kind: add-files        # 侧栏 mark（2x）
     upstream_logic_changed: false
     status: PROVIDED
-    status: PENDING-ASSET
 
   - note: >
-      ⚠️ 上游仓库**一个图标文件都没有**，所以这是**新增**资源而不是替换。
-      缺失不阻塞构建：builder 无 icon 键时 fallback 到 Electron 默认图标（已实测）。
-      因此图标是**发版门槛**，不是开发门槛。
+      这些是 overlay 注入的 ApeMind 品牌资源；构建配置已引用桌面图标，UI 使用同一方形标。
 
 # ── 新增 overlay 补丁的双登记规则（重要）──────────────────────────────
 #

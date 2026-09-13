@@ -6,14 +6,16 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-apemind-login/remote'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { AccountState, KnowledgeBaseView } from '@deepseek-ai/dsh-apemind-login/types'
+import type { AccountState, KnowledgeBaseView, OAuthAccountView, WorkspaceView } from '@deepseek-ai/dsh-apemind-login/types'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import { zh, en, type LoginLocaleKey } from './locales.ts'
+import { APEMIND_MARK_DATA_URI } from './brand-mark.ts'
 import './style.css'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap { 'settings.apemind': LoginLocaleKey }
 }
+
 const NS = 'settings.apemind'
 
 export const inject = ['slots', 'locale', 'remote', 'remote.apemindAuth']
@@ -27,6 +29,123 @@ export function apply(ctx: ClientContext): void {
     name: 'settings.section', id: 'apemind-login', order: 30,
     label: () => t('brand'), locale: NS, inject: (): LoginSectionInjected => ({ login: ctx }),
   }, LoginSection))
+}
+
+function Mark({ className = '' }: { className?: string }): ReactNode {
+  return <img className={`apemind-mark ${className}`} src={APEMIND_MARK_DATA_URI} alt="" aria-hidden="true" />
+}
+
+function KnowledgeList({ values, title, limit, empty }: {
+  values: KnowledgeBaseView[] | null
+  title: string
+  limit: string
+  empty: string
+}): ReactNode {
+  if (values === null) return null
+  return <div className="apemind-knowledge">
+    <h4>{title} <small>{limit}</small></h4>
+    {values.length === 0 ? <p className="apemind-muted">{empty}</p>
+      : <ul>{values.map(item => <li key={item.id}>{item.name}</li>)}</ul>}
+  </div>
+}
+
+function WorkspaceRow({ workspace, current, disabled, onSelect, roleLabel, currentLabel }: {
+  workspace: WorkspaceView
+  current: boolean
+  disabled: boolean
+  onSelect: () => void
+  roleLabel: string
+  currentLabel: string
+}): ReactNode {
+  const initials = workspace.name.trim().slice(0, 1).toUpperCase() || 'A'
+  const content = <>
+    <span className={`apemind-workspace-icon apemind-workspace-icon-${workspace.type}`} aria-hidden="true">{initials}</span>
+    <span className="apemind-workspace-copy">
+      <strong>{workspace.name}</strong>
+      <small>{workspace.type === 'organization' ? roleLabel : ''}</small>
+    </span>
+    {current && <span className="apemind-current-badge">{currentLabel}</span>}
+    {!current && <span className="apemind-chevron" aria-hidden="true">›</span>}
+  </>
+  if (current) return <div className="apemind-workspace-row is-current">{content}</div>
+  return <button
+    type="button"
+    className="apemind-workspace-row"
+    disabled={disabled || workspace.status !== 'active'}
+    onClick={onSelect}
+  >{content}</button>
+}
+
+function WaitingPanel({ t, disabled, onCancel }: {
+  t: LoginSectionProps['t']
+  disabled: boolean
+  onCancel: () => void
+}): ReactNode {
+  return <section className="apemind-state-panel apemind-waiting-panel" aria-live="polite">
+    <Mark className="apemind-state-mark" />
+    <span className="apemind-spinner" aria-hidden="true" />
+    <h3>{t('waitingTitle')}</h3>
+    <p>{t('waitingDescription')}</p>
+    <button type="button" className="apemind-secondary" disabled={disabled} onClick={onCancel}>{t('cancelSignIn')}</button>
+  </section>
+}
+
+function SignedOutPanel({ t, disabled, onBrowserLogin, onDeviceLogin }: {
+  t: LoginSectionProps['t']
+  disabled: boolean
+  onBrowserLogin: () => void
+  onDeviceLogin: () => void
+}): ReactNode {
+  return <section className="apemind-state-panel apemind-connect-panel">
+    <Mark className="apemind-state-mark" />
+    <h3>{t('connectTitle')}</h3>
+    <p>{t('connectDescription')}</p>
+    <button type="button" className="apemind-primary apemind-main-action" disabled={disabled} onClick={onBrowserLogin}>{t('browserSignIn')} <span aria-hidden="true">↗</span></button>
+    <button type="button" className="apemind-link-action" disabled={disabled} onClick={onDeviceLogin}>{t('deviceFallback')} <span aria-hidden="true">›</span></button>
+    <p className="apemind-security-note"><span aria-hidden="true">▣</span> {t('localOnly')}</p>
+  </section>
+}
+
+function ConnectedPanel({ t, oauth, disabled, onSelectWorkspace, onRefresh, onLogout, onKnowledge, oauthItems }: {
+  t: LoginSectionProps['t']
+  oauth: OAuthAccountView
+  disabled: boolean
+  onSelectWorkspace: (id: string) => void
+  onRefresh: () => void
+  onLogout: () => void
+  onKnowledge: () => void
+  oauthItems: KnowledgeBaseView[] | null
+}): ReactNode {
+  const active = oauth.workspaces.find(item => item.id === oauth.activeWorkspaceId && item.status === 'active')
+  const organizations = oauth.workspaces.filter(item => item.type === 'organization')
+  const personal = oauth.workspaces.find(item => item.type === 'personal')
+  return <section className="apemind-connected-panel">
+    <div className="apemind-connected-heading">
+      <Mark className="apemind-connected-mark" />
+      <div><h3>{t('connected')}</h3><p>{oauth.username}</p></div>
+      <span className="apemind-connected-status"><span aria-hidden="true">●</span> {t('connectedStatus')}</span>
+    </div>
+    <section className="apemind-current-space">
+      <h4>{t('currentWorkspace')}</h4>
+      {active
+        ? <WorkspaceRow workspace={active} current disabled={disabled} onSelect={() => undefined} roleLabel={t('member')} currentLabel={t('currentBadge')} />
+        : <p className="apemind-muted">{t('chooseWorkspace')}</p>}
+      <p className="apemind-workspace-hint">{t('workspaceHint')}</p>
+      <button type="button" className="apemind-quiet-action" disabled={disabled || !active} onClick={onKnowledge}>{t('viewKnowledge')}</button>
+    </section>
+    <section className="apemind-workspace-list">
+      <h4>{t('availableSpaces')}</h4>
+      {personal && personal.id !== active?.id && <WorkspaceRow workspace={personal} current={false} disabled={disabled} onSelect={() => onSelectWorkspace(personal.id)} roleLabel={t('personalSpace')} currentLabel={t('currentBadge')} />}
+      {organizations.length === 0 && !personal
+        ? <p className="apemind-muted">{t('noOrganizations')}</p>
+        : organizations.map(workspace => <WorkspaceRow key={workspace.id} workspace={workspace} current={workspace.id === active?.id} disabled={disabled} onSelect={() => onSelectWorkspace(workspace.id)} roleLabel={workspace.role ?? t('member')} currentLabel={t('currentBadge')} />)}
+    </section>
+    <div className="apemind-connected-actions">
+      <button type="button" className="apemind-secondary" disabled={disabled} onClick={onRefresh}>{t('refreshWorkspaces')}</button>
+      <button type="button" className="apemind-danger-link" disabled={disabled} onClick={onLogout}>{t('signOut')}</button>
+    </div>
+    <KnowledgeList values={oauthItems} title={t('knowledge')} limit={t('knowledgeLimit')} empty={t('knowledgeEmpty')} />
+  </section>
 }
 
 export function LoginSection(props: LoginSectionProps): ReactNode {
@@ -163,75 +282,39 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
 
   const disabled = busy || waiting
   const oauth = state.oauth
-  function knowledgeList(values: KnowledgeBaseView[] | null): ReactNode {
-    return values !== null && <div className="apemind-knowledge">
-      <h4>{t('knowledge')} <small>{t('knowledgeLimit')}</small></h4>
-      {values.length === 0 ? <p className="apemind-muted">{t('knowledgeEmpty')}</p>
-        : <ul>{values.map(item => <li key={item.id}>{item.name}</li>)}</ul>}
-    </div>
-  }
 
   return <section className="apemind-account" aria-busy={busy}>
-    <header><h2>{t('brand')}</h2><p className="apemind-muted">{t('subtitle')}</p></header>
+    <header className="apemind-header">
+      <div className="apemind-heading-row"><Mark className="apemind-heading-mark" /><div><h2>{t('brand')}</h2><p className="apemind-muted">{t('subtitle')}</p></div></div>
+    </header>
     {error && <div className="apemind-error" role="alert">{error}</div>}
-    <div role="status" aria-live="polite">{waiting ? t('waiting') : busy ? t('busy') : message}</div>
-    <section className="apemind-card">
-      <h3>{oauth ? t('connected') : t('signIn')}</h3>
-      {oauth ? <>
-        <div><strong>{oauth.username}</strong><p className="apemind-muted">{oauth.origin}</p></div>
-        <label>{t('currentWorkspace')}
-          <select disabled={disabled} value={oauth.activeWorkspaceId ?? ''} onChange={(event) => { void run(() => selectWorkspace(event.target.value)) }}>
-            <option value="" disabled>{t('chooseWorkspace')}</option>
-            {oauth.workspaces.map(workspace => <option key={workspace.id} value={workspace.id} disabled={workspace.status !== 'active'}>
-              {workspace.name}{workspace.status !== 'active' ? t('suspended') : workspace.type === 'personal' ? t('personal') : t('organization')}
-            </option>)}
-          </select>
-        </label>
-        <p className="apemind-muted">{t('verifiedAt', { time: new Date(oauth.verifiedAt).toLocaleString() })}</p>
-        <div className="apemind-actions">
-          <button className="apemind-primary" disabled={disabled || !oauth.activeWorkspaceId} onClick={() => { void run(oauthCollections) }}>{t('viewKnowledge')}</button>
-          <button disabled={disabled} onClick={() => { void run(refreshWorkspaces) }}>{t('refreshWorkspaces')}</button>
-          <button disabled={disabled} onClick={() => { void run(oauthLogout) }}>{t('signOut')}</button>
-        </div>
-        {knowledgeList(oauthItems)}
-      </> : <>
-        <p>{t('oneSignIn')}</p>
-        <p className="apemind-muted">{t('browserHint')}</p>
-        <div className="apemind-actions">
-          <button className="apemind-primary" disabled={disabled} onClick={() => { void run(browserLogin) }}>{t('browserSignIn')}</button>
-          <button disabled={disabled} onClick={() => { void run(deviceLogin) }}>{t('deviceSignIn')}</button>
-          {waiting && <button onClick={() => { void cancelLogin() }}>{t('cancelSignIn')}</button>}
-        </div>
-        <p className="apemind-muted">{t('deviceHint')}</p>
-        <details><summary>{t('serverAddress')}</summary><label>{t('server')}<input required type="url" disabled={disabled} value={origin} onChange={(event) => { setOrigin(event.target.value) }} /></label></details>
-      </>}
-    </section>
-    <details className="apemind-advanced"><summary>{t('advanced')}{state.connections.length > 0 ? t('connectionCount', { count: String(state.connections.length) }) : ''}</summary>
-      <p className="apemind-muted">{t('advancedHint')}</p>
-      {state.connections.length > 0 && <section className="apemind-card">
-        <label>{t('currentKey')}
-          <select disabled={disabled} value={state.activeId ?? ''} onChange={(event) => { void run(() => select(event.target.value)) }}>
-            <option value="" disabled>{t('chooseConnection')}</option>
-            {state.connections.map(item => <option key={item.id} value={item.id}>{item.workspaceName} · {item.username}</option>)}
-          </select>
-        </label>
-        {active && <>
-          <p>{active.origin}</p>
-          <div className="apemind-actions">
-            <button disabled={disabled} onClick={() => { void run(loadKnowledge) }}>{t('viewKnowledge')}</button>
-            <button disabled={disabled} onClick={() => { void run(() => select(active.id)) }}>{t('reverify')}</button>
-            <button disabled={disabled} onClick={() => { void run(() => disconnect(active.id)) }}>{t('removeConnection')}</button>
-          </div>
-          {knowledgeList(keyItems)}
-        </>}
-      </section>}
-      <form className="apemind-card" onSubmit={(event) => { event.preventDefault(); void run(connect) }}>
-        <h3>{t('addKey')}</h3>
-        <label>{t('serverAddress')}<input required type="url" autoComplete="url" disabled={disabled} value={origin} onChange={(event) => { setOrigin(event.target.value) }} /></label>
-        <label>{t('apiKey')}<input required type={showKey ? 'text' : 'password'} autoComplete="off" spellCheck={false} disabled={disabled} value={apiKey} onChange={(event) => { setApiKey(event.target.value) }} placeholder={t('keyPlaceholder')} /></label>
-        <label className="apemind-checkbox"><input type="checkbox" checked={showKey} disabled={disabled} onChange={(event) => { setShowKey(event.target.checked) }} />{t('showKey')}</label>
-        <div className="apemind-actions"><button type="submit" disabled={disabled || !apiKey.trim() || !origin.trim()}>{t('verifyConnect')}</button></div>
-      </form>
+    {!error && (message || busy) && <div className="apemind-message" role="status" aria-live="polite">{busy ? t('busy') : message}</div>}
+    {waiting && !oauth
+      ? <WaitingPanel t={t} disabled={busy} onCancel={() => { void run(cancelLogin) }} />
+      : oauth
+        ? <ConnectedPanel t={t} oauth={oauth} disabled={disabled} onSelectWorkspace={(id) => { void run(() => selectWorkspace(id)) }} onRefresh={() => { void run(refreshWorkspaces) }} onLogout={() => { void run(oauthLogout) }} onKnowledge={() => { void run(oauthCollections) }} oauthItems={oauthItems} />
+        : <SignedOutPanel t={t} disabled={disabled} onBrowserLogin={() => { void run(browserLogin) }} onDeviceLogin={() => { void run(deviceLogin) }} />}
+    <details className="apemind-advanced">
+      <summary><span aria-hidden="true">⚙</span> {t('advanced')}</summary>
+      <div className="apemind-advanced-content">
+        <details className="apemind-service-address"><summary>{t('serverAddress')}</summary><label>{t('server')}<input required type="url" disabled={disabled} value={origin} onChange={(event) => { setOrigin(event.target.value) }} /></label></details>
+        {state.connections.length > 0 && <section className="apemind-card apemind-key-connection">
+          <label>{t('currentKey')}
+            <select disabled={disabled} value={state.activeId ?? ''} onChange={(event) => { void run(() => select(event.target.value)) }}>
+              <option value="" disabled>{t('chooseConnection')}</option>
+              {state.connections.map(item => <option key={item.id} value={item.id}>{item.workspaceName} · {item.username}</option>)}
+            </select>
+          </label>
+          {active && <><p>{active.origin}</p><div className="apemind-actions"><button disabled={disabled} onClick={() => { void run(loadKnowledge) }}>{t('viewKnowledge')}</button><button disabled={disabled} onClick={() => { void run(() => select(active.id)) }}>{t('reverify')}</button><button disabled={disabled} onClick={() => { void run(() => disconnect(active.id)) }}>{t('removeConnection')}</button></div><KnowledgeList values={keyItems} title={t('knowledge')} limit={t('knowledgeLimit')} empty={t('knowledgeEmpty')} /></>}
+        </section>}
+        <form className="apemind-card" onSubmit={(event) => { event.preventDefault(); void run(connect) }}>
+          <h3>{t('addKey')}</h3>
+          <p className="apemind-muted">{t('advancedHint')}</p>
+          <label>{t('apiKey')}<input required type={showKey ? 'text' : 'password'} autoComplete="off" spellCheck={false} disabled={disabled} value={apiKey} onChange={(event) => { setApiKey(event.target.value) }} placeholder={t('keyPlaceholder')} /></label>
+          <label className="apemind-checkbox"><input type="checkbox" checked={showKey} disabled={disabled} onChange={(event) => { setShowKey(event.target.checked) }} />{t('showKey')}</label>
+          <div className="apemind-actions"><button type="submit" disabled={disabled || !apiKey.trim() || !origin.trim()}>{t('verifyConnect')}</button></div>
+        </form>
+      </div>
     </details>
   </section>
 }

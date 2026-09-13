@@ -40,3 +40,6 @@ export interface KnowledgeBaseView {
   id: string
   name: string
 }
+
+/** Runtime marker keeps the public ./types export resolvable in webworker packs. */
+export const APEMIND_LOGIN_TYPES = true
