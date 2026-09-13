@@ -13,11 +13,11 @@ index 9ac6dd7ce..3fc3d08e6 100644
   */
  export function OfficialBrandName() {
 -  return <BrandWordmark includeMark={false} />
-+  // ApeMind：尚无 ApeMind 字标美术资产，先用文字渲染。
-+  // 字体用 `inherit`（= app 原生 UI 字体）：与上游组件一致，
-+  // 不用 brand-spec 的 Fraunces —— 实测该字体并未随包分发（全客户端 0 处引用），
-+  // 写上去只会回退成普通衬线，观感更差。
-+  return <span style={{ fontWeight: 600 }}>{brandName}</span>
++  return (
++    <svg width="156" height="24" viewBox="26 0 156 24" role="img" aria-label={brandName}>
++      <text x="26" y="18" fill="currentColor" fontSize="16" fontWeight="600">{brandName}</text>
++    </svg>
++  )
  }
 diff --git a/packages/client/ui-brand-official/src/client/index.ts b/packages/client/ui-brand-official/src/client/index.ts
 index 332a5f600..fd3446b04 100644

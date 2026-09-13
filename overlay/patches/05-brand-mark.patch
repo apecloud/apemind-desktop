@@ -2,7 +2,7 @@ diff --git a/packages/client/ui-brand-official/src/client/Brand.tsx b/packages/c
 index 3fc3d08..0c79a8c 100644
 --- a/packages/client/ui-brand-official/src/client/Brand.tsx
 +++ b/packages/client/ui-brand-official/src/client/Brand.tsx
-@@ -1,13 +1,26 @@
+@@ -1,13 +1,22 @@
 -import { FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
  import type { SidebarBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
 +import { brandName } from './locales.ts'
@@ -20,13 +20,9 @@ index 3fc3d08..0c79a8c 100644
  export function OfficialBrandMark({ size }: SidebarBrandMarkOwnerProps) {
 -  return <FishLogo size={size} />
 +  return (
-+    <img
-+      src={APEMIND_MARK_DATA_URI}
-+      alt=""
-+      width={size}
-+      height={size}
-+      style={{ width: size, height: size, objectFit: 'contain', display: 'block' }}
-+    />
++    <svg width={size} height={size} viewBox="0 0 1264 1264" role="img" aria-label="ApeMind">
++      <image href={APEMIND_MARK_DATA_URI} x="0" y="0" width="1264" height="1264" preserveAspectRatio="xMidYMid meet" />
++    </svg>
 +  )
  }
  
@@ -137,7 +133,7 @@ index 9ac7ae5..68e8ff7 100644
 +          <span className={css.fishHitbox}>
              {renderSlot('conversation.hero.brand.mark', { size: 34, className: css.fish }, {
 -              fallback: <HeroFish hovering={hovering} />,
-+              fallback: <img src={APEMIND_MARK_DATA_URI} alt="" width={34} height={34} style={{ width: 34, height: 34, objectFit: 'contain' }} />,
++              fallback: <svg className={css.fish} width={34} height={34} viewBox="0 0 1264 1264" aria-hidden="true"><image href={APEMIND_MARK_DATA_URI} x="0" y="0" width="1264" height="1264" preserveAspectRatio="xMidYMid meet" /></svg>,
              })}
            </span>
            <span className={css.titleGroup}>
