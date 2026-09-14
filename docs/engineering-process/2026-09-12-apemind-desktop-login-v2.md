@@ -1,5 +1,7 @@
 # ApeMind Desktop 登录与工作空间设计
 
+> 本文记录现有 Desktop OAuth 与工作空间实现。后续产品边界、CLI 认证归属、Agent 调用方式和服务端接口收敛以 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md) 为准。
+
 本文是 ApeMind Desktop 登录功能的当前设计。它覆盖产品行为、桌面端实现、ApeMind 服务端接口、私有化兼容性、组织权限和验收标准。所有服务端接口统一使用 `/api/v2`。
 
 ## 目标和边界
@@ -266,4 +268,3 @@ Desktop 自动化测试必须覆盖：
 ## 后续事项
 
 系统凭据库迁移、设备管理页、设备名称、单设备撤销、更多组织操作 scope、组织切换后的业务导航和审计报表应作为独立需求实现。它们不能通过默认创建隐藏 API Key 或共享浏览器 Cookie 解决。
-
