@@ -28,7 +28,7 @@ upstream.lock  ──►  checkout 上游锁定 commit  ──►  应用 overla
 
 ## 状态（2026-09-11）
 
-登录产品与技术合同见 [登录与工作空间设计](docs/engineering-process/2026-09-11-apemind-desktop-oauth-workspace.md)，文档入口见 [docs](docs/README.md)。
+登录与 Agent 集成合同见 [CLI-first 集成设计](docs/engineering-process/2026-09-14-apemind-cli-first-integration.md)，文档入口见 [docs](docs/README.md)。
 
 | 项 | 状态 |
 |---|---|
@@ -38,27 +38,15 @@ upstream.lock  ──►  checkout 上游锁定 commit  ──►  应用 overla
 | 品牌（五处用户可见位） | ✅ 已完成：窗口标题 / 侧栏字标 / 侧栏 mark / 中间 hero / app 图标 |
 | 可分发正式安装包 | ⛔ 阻塞于 Apple Developer 凭据 |
 
-### 品牌改造怎么生效（安装前必读）
+### 构建内容如何更新到运行目录
 
-桌面版运行时加载的是 `$DSH_HOME/profiles/desktop` 里的**已安装 profile**，不是构建树。
-它的复用判据是「**版本相同即复用、不重装**」（`apps/desktop/src/project-manager.ts`
-的 `applyRelease`：seed 版本 = app 版本 = 已装 dsh 版本 = 已装 host 包版本）。
+桌面版运行时加载 `$DSH_HOME/profiles/desktop` 中安装的插件。启动新安装包时，
+应用校验内置核心包与已安装包的内容清单；即使上游版本号相同，只要包内容变化，
+也会通过上游已有的安装事务更新运行目录，保留用户插件，并在激活失败时回滚。
+相同包内容再次启动时不重复安装，无需手工清理 profile。
 
-**因此：改完品牌后，如果版本没变，app 会继续用旧 profile 里的旧 UI** ——
-看起来像“改了没生效”，而构建日志全绿。
-
-**处置（一步，手工）**：改品牌后清一次 profile 再启动：
-```bash
-mv ~/.dsh/profiles/desktop ~/.dsh/profiles/desktop.bak   # 先备份，不直接删
-# 重开 app → 自动按新构建重建 profile
-```
-
-> ⚠️ **为什么不做成自动**：曾尝试把品牌修订号拼进版本号来“自动触发重装”，
-> 但实测**不可行** —— 上游要求**整个 monorepo（266 个包）共享同一个 version**
-> （`scripts/release/families.ts` 的 `verifyVersions`），
-> 只改少数几个 package.json 会让 `release:pack` 直接失败。
-> 要真正自动，得改上游的 profile 复用逻辑（属应用逻辑，非品牌呈现），
-> 成本大于收益，故**保留为一步手工操作**并在此写明。
+构建目录里的新文件尚未进入正在运行的旧应用。修改后需要重新打包，并启动该产物；
+具体命令与 CLI 版本锁见 [本机运行指南](docs/dev-runbook.md)。
 
 ## 快速开始（dev 模式，零凭据）
 
@@ -68,7 +56,9 @@ cd work/dsh-desktop
 corepack prepare pnpm@11.7.0 --activate   # 必须匹配上游 packageManager
 pnpm install --frozen-lockfile
 pnpm run build
-pnpm run dev:desktop                # 拉起 Electron 窗口
+APEMIND_CLI_BIN="$(node --input-type=module -e "import { prepareApeMindCli } from './apps/desktop/scripts/apemind-cli-runtime.mjs'; console.log(await prepareApeMindCli())")" \
+APEMIND_CONFIG_DIR="$PWD/apps/desktop/.desktop-build/development/apemind" \
+pnpm run dev:desktop
 ```
 
 预期：窗口标题为品牌名；渲染走自定义协议 `dsh-app://app/index.html`（不是 localhost）。
@@ -92,7 +82,7 @@ Harness state 落在 `apps/desktop/.desktop-build/development/home`，**不污�
 | 依赖 | 形态 |
 |---|---|
 | dsh / Electron / Node / pnpm / 预置插件 | **锁精确版本的产物**（npm 包 / 官方归档），版本表继承上游 lockfile |
-| ApeMind CLI | **Go 单二进制** + per-arch sha256 |
+| ApeMind CLI | `overlay/apps/desktop/resources/apemind-cli.lock.json` 固定发布版本、源码提交和各平台 SHA-256，打包时自动下载并校验 |
 | 本仓自有代码 | 只有品牌 + 登录 + 接线，且刻意保持薄 |
 
 构建**需要外网**（`prepare:runtime` 下载 Node、`prepare:seed` 拉 npm），不是离线构建。

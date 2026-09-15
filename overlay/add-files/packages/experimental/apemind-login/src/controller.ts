@@ -1,7 +1,7 @@
 import { Context } from '@deepseek-ai/cordis'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { CliError, CliProcess } from './cli-process.ts'
-import type { AccountState, AccountView, KnowledgeBaseView, LoginProgress, OAuthAccountView, WorkspaceView } from './types.ts'
+import type { AccountState, AccountView, KnowledgeBaseView, KnowledgePage, LoginProgress, OAuthAccountView, WorkspaceView } from './types.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context { authorizationController: AuthorizationController }
@@ -55,15 +55,34 @@ export class AuthorizationController extends TypertRemoteService {
   }
 
   private oauthView(connection: CliConnection): OAuthAccountView {
-    return { origin: connection.server, userId: connection.user_id, username: connection.username,
+    return { id: connection.id, origin: connection.server, userId: connection.user_id, username: connection.username,
       verifiedAt: connection.verified_at, activeWorkspaceId: connection.workspace_id || null,
       workspaces: connection.workspaces ?? [] }
   }
 
   private async snapshot(): Promise<{ list: ConnectionList; status: Status }> {
     const list = await this.run<ConnectionList>(['connection', 'list'])
-    const status = await this.run<Status>(['auth', 'status'])
+    const status = list.current
+      ? await this.run<Status>(['auth', 'status', '--connection', list.current])
+      : { logged_in: false, connection: null }
     return { list, status }
+  }
+
+  private async connection(id: string, kind: CliConnection['kind']): Promise<CliConnection> {
+    if (!id) throw new RemoteError('gateway/bad-request', '请选择 ApeMind 连接。', {})
+    const status = await this.run<Status>(['auth', 'status', '--connection', id])
+    if (!status.logged_in || !status.connection || status.connection.id !== id || status.connection.kind !== kind) {
+      throw new RemoteError('gateway/bad-request', '此连接已不可用，请重新登录或选择连接。', {})
+    }
+    return status.connection
+  }
+
+  private async knowledge(connectionId: string, workspaceId: string, cursor?: string): Promise<KnowledgePage> {
+    if (!workspaceId) throw new RemoteError('gateway/bad-request', '请选择工作空间。', {})
+    const args = ['knowledge', 'list', '--connection', connectionId, '--workspace', workspaceId, '--limit', '20']
+    if (cursor) args.push('--cursor', cursor)
+    const result = await this.run<KnowledgeResult>(args)
+    return { items: result.items, nextCursor: result.next_cursor }
   }
 
   @Remote
@@ -72,6 +91,7 @@ export class AuthorizationController extends TypertRemoteService {
     const connections = list.items.filter(item => item.kind === 'api-key').map(item => this.view(item))
     const active = status.logged_in && status.connection ? status.connection : null
     return { activeId: active?.kind === 'api-key' ? active.id : null, connections,
+      oauthConnections: list.items.filter(item => item.kind === 'oauth').map(item => this.oauthView(item)),
       oauth: active?.kind === 'oauth' ? this.oauthView(active) : null,
       browserLoginPending: Boolean(this.loginAbort), loginProgress: this.loginProgress }
   }
@@ -114,48 +134,31 @@ export class AuthorizationController extends TypertRemoteService {
   @Remote async cancelBrowserLogin(): Promise<void> { this.loginAbort?.abort() }
 
   @Remote
-  async refreshWorkspaces(): Promise<OAuthAccountView> {
-    const current = await this.oauthState()
-    if (!current) throw new RemoteError('gateway/bad-request', '请先登录 ApeMind。', {})
-    const status = await this.run<Status>(['auth', 'status'])
-    if (!status.connection || status.connection.kind !== 'oauth') {
-      throw new RemoteError('gateway/bad-request', '请先登录 ApeMind。', {})
-    }
-    await this.run<WorkspaceResult>(['workspace', 'list', '--connection', status.connection.id])
-    const next = await this.oauthState()
-    if (!next) throw new RemoteError('gateway/bad-request', '请先登录 ApeMind。', {})
-    return next
+  async refreshWorkspaces(connectionId: string): Promise<OAuthAccountView> {
+    await this.connection(connectionId, 'oauth')
+    await this.run<WorkspaceResult>(['workspace', 'list', '--connection', connectionId])
+    return this.oauthView(await this.connection(connectionId, 'oauth'))
   }
 
   @Remote
-  async selectWorkspace(id: string): Promise<OAuthAccountView> {
-    const status = await this.run<Status>(['auth', 'status'])
-    if (!status.connection || status.connection.kind !== 'oauth') {
-      throw new RemoteError('gateway/bad-request', '请先登录 ApeMind。', {})
-    }
-    await this.run<CliConnection>(['workspace', 'use', id, '--connection', status.connection.id])
-    const next = await this.oauthState()
-    if (!next) throw new RemoteError('gateway/bad-request', '请先登录 ApeMind。', {})
-    return next
+  async selectWorkspace(connectionId: string, id: string): Promise<OAuthAccountView> {
+    await this.connection(connectionId, 'oauth')
+    const next = await this.run<CliConnection>(['workspace', 'use', id, '--connection', connectionId])
+    return this.oauthView(next)
   }
 
   @Remote
-  async oauthCollections(): Promise<{ workspace: WorkspaceView; items: KnowledgeBaseView[] }> {
-    const current = await this.oauthState()
-    if (!current) throw new RemoteError('gateway/bad-request', '请先登录 ApeMind。', {})
-    const workspace = current.workspaces.find(item => item.id === current.activeWorkspaceId)
+  async oauthCollections(connectionId: string, workspaceId: string, cursor?: string): Promise<KnowledgePage & { workspace: WorkspaceView }> {
+    const current = await this.connection(connectionId, 'oauth')
+    const workspace = current.workspaces.find(item => item.id === workspaceId)
     if (!workspace) throw new RemoteError('gateway/bad-request', '当前工作空间不可用。', {})
-    const status = await this.run<Status>(['auth', 'status'])
-    if (!status.connection || status.connection.kind !== 'oauth') {
-      throw new RemoteError('gateway/bad-request', '请先登录 ApeMind。', {})
-    }
-    const result = await this.run<KnowledgeResult>([
-      'knowledge', 'list', '--connection', status.connection.id, '--workspace', workspace.id,
-    ])
-    return { workspace, items: result.items }
+    return { workspace, ...await this.knowledge(connectionId, workspaceId, cursor) }
   }
 
-  @Remote async oauthLogout(): Promise<void> { await this.run(['auth', 'logout']) }
+  @Remote async oauthLogout(connectionId: string): Promise<void> {
+    await this.connection(connectionId, 'oauth')
+    await this.run(['auth', 'logout', '--connection', connectionId])
+  }
 
   @Remote
   async connect(origin: string, apiKey: string): Promise<AccountState> {
@@ -167,13 +170,9 @@ export class AuthorizationController extends TypertRemoteService {
   @Remote async disconnect(id: string): Promise<AccountState> { await this.run(['connection', 'remove', id]); return this.state() }
 
   @Remote
-  async collections(): Promise<{ account: AccountView; items: KnowledgeBaseView[] }> {
-    const { status } = await this.snapshot()
-    if (!status.logged_in || !status.connection) throw new RemoteError('gateway/bad-request', '请先连接 ApeMind。', {})
-    const result = await this.run<KnowledgeResult>([
-      'knowledge', 'list', '--connection', status.connection.id, '--workspace', status.connection.workspace_id,
-    ])
-    return { account: this.view(status.connection), items: result.items }
+  async collections(connectionId: string, cursor?: string): Promise<KnowledgePage & { account: AccountView }> {
+    const connection = await this.connection(connectionId, 'api-key')
+    return { account: this.view(connection), ...await this.knowledge(connectionId, connection.workspace_id, cursor) }
   }
 }
 

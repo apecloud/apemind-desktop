@@ -14,6 +14,7 @@ export interface AccountView {
 export interface AccountState {
   activeId: string | null
   connections: AccountView[]
+  oauthConnections?: OAuthAccountView[]
   oauth?: OAuthAccountView | null
   browserLoginPending?: boolean
   loginProgress?: LoginProgress | null
@@ -37,6 +38,7 @@ export interface WorkspaceView {
 }
 
 export interface OAuthAccountView {
+  id: string
   origin: string
   userId: string
   username: string
@@ -48,6 +50,11 @@ export interface OAuthAccountView {
 export interface KnowledgeBaseView {
   id: string
   name: string
+}
+
+export interface KnowledgePage {
+  items: KnowledgeBaseView[]
+  nextCursor: string | null
 }
 
 /** Runtime marker keeps the public ./types export resolvable in webworker packs. */

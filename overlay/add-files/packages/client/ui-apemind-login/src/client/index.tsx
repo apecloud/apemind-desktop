@@ -35,17 +35,21 @@ function Mark({ className = '' }: { className?: string }): ReactNode {
   return <img className={`apemind-mark ${className}`} src={APEMIND_MARK_DATA_URI} alt="" aria-hidden="true" />
 }
 
-function KnowledgeList({ values, title, limit, empty }: {
+function KnowledgeList({ values, title, empty, hasMore, loadMoreLabel, disabled, onLoadMore }: {
   values: KnowledgeBaseView[] | null
   title: string
-  limit: string
   empty: string
+  hasMore: boolean
+  loadMoreLabel: string
+  disabled: boolean
+  onLoadMore: () => void
 }): ReactNode {
   if (values === null) return null
   return <div className="apemind-knowledge">
-    <h4>{title} <small>{limit}</small></h4>
+    <h4>{title} <small>({values.length})</small></h4>
     {values.length === 0 ? <p className="apemind-muted">{empty}</p>
       : <ul>{values.map(item => <li key={item.id}>{item.name}</li>)}</ul>}
+    {hasMore && <button type="button" className="apemind-quiet-action" disabled={disabled} onClick={onLoadMore}>{loadMoreLabel}</button>}
   </div>
 }
 
@@ -111,7 +115,7 @@ function SignedOutPanel({ t, disabled, onBrowserLogin, onDeviceLogin }: {
   </section>
 }
 
-function ConnectedPanel({ t, oauth, disabled, onSelectWorkspace, onRefresh, onLogout, onKnowledge, oauthItems }: {
+function ConnectedPanel({ t, oauth, disabled, onSelectWorkspace, onRefresh, onLogout, onKnowledge, oauthItems, hasMore, onLoadMore }: {
   t: LoginSectionProps['t']
   oauth: OAuthAccountView
   disabled: boolean
@@ -120,6 +124,8 @@ function ConnectedPanel({ t, oauth, disabled, onSelectWorkspace, onRefresh, onLo
   onLogout: () => void
   onKnowledge: () => void
   oauthItems: KnowledgeBaseView[] | null
+  hasMore: boolean
+  onLoadMore: () => void
 }): ReactNode {
   const active = oauth.workspaces.find(item => item.id === oauth.activeWorkspaceId && item.status === 'active')
   const organizations = oauth.workspaces.filter(item => item.type === 'organization')
@@ -127,7 +133,7 @@ function ConnectedPanel({ t, oauth, disabled, onSelectWorkspace, onRefresh, onLo
   return <section className="apemind-connected-panel">
     <div className="apemind-connected-heading">
       <Mark className="apemind-connected-mark" />
-      <div><h3>{t('connected')}</h3><p>{oauth.username}</p></div>
+      <div><h3>{t('connected')}</h3><p>{oauth.username}</p><p>{oauth.origin}</p></div>
       <span className="apemind-connected-status"><span aria-hidden="true">●</span> {t('connectedStatus')}</span>
     </div>
     <section className="apemind-current-space">
@@ -149,7 +155,7 @@ function ConnectedPanel({ t, oauth, disabled, onSelectWorkspace, onRefresh, onLo
       <button type="button" className="apemind-secondary" disabled={disabled} onClick={onRefresh}>{t('refreshWorkspaces')}</button>
       <button type="button" className="apemind-danger-link" disabled={disabled} onClick={onLogout}>{t('signOut')}</button>
     </div>
-    <KnowledgeList values={oauthItems} title={t('knowledge')} limit={t('knowledgeLimit')} empty={t('knowledgeEmpty')} />
+    <KnowledgeList values={oauthItems} title={t('knowledge')} empty={t('knowledgeEmpty')} hasMore={hasMore} loadMoreLabel={t('loadMore')} disabled={disabled} onLoadMore={onLoadMore} />
   </section>
 }
 
@@ -165,11 +171,18 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
   const [message, setMessage] = useState('')
   const [keyItems, setKeyItems] = useState<KnowledgeBaseView[] | null>(null)
   const [oauthItems, setOAuthItems] = useState<KnowledgeBaseView[] | null>(null)
+  const [keyCursor, setKeyCursor] = useState<string | null>(null)
+  const [oauthCursor, setOAuthCursor] = useState<string | null>(null)
   const [waiting, setWaiting] = useState(false)
   const [loginProgress, setLoginProgress] = useState<LoginProgress | null>(null)
   const alive = useRef(false)
   const pending = useRef(false)
   const active = state.connections.find(item => item.id === state.activeId)
+
+  useEffect(() => {
+    setKeyItems(null); setOAuthItems(null); setKeyCursor(null); setOAuthCursor(null)
+    setMessage('')
+  }, [state.activeId, state.oauth?.id, state.oauth?.activeWorkspaceId])
 
   useEffect(() => {
     alive.current = true
@@ -198,10 +211,11 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     return () => window.clearInterval(timer)
   }, [remote, waiting])
 
-  async function run(operation: () => Promise<void>): Promise<void> {
+  async function run(operation: () => Promise<void>, append = false): Promise<void> {
     if (pending.current) return
     pending.current = true
-    setBusy(true); setError(''); setMessage(''); setKeyItems(null); setOAuthItems(null)
+    setBusy(true); setError(''); setMessage('')
+    if (!append) { setKeyItems(null); setOAuthItems(null); setKeyCursor(null); setOAuthCursor(null) }
     try { await operation() } catch { if (alive.current) setError(t('operationError')) }
     finally {
       if (alive.current) {
@@ -243,21 +257,28 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
   }
 
   async function selectWorkspace(id: string): Promise<void> {
-    const result = await remote.selectWorkspace(id)
+    if (!state.oauth) return
+    const result = await remote.selectWorkspace(state.oauth.id, id)
     if (!alive.current) return
     if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage(t('workspaceChanged')) }
     else setError(result.error.message)
   }
 
-  async function oauthCollections(): Promise<void> {
-    const result = await remote.oauthCollections()
+  async function oauthCollections(cursor?: string): Promise<void> {
+    if (!state.oauth?.activeWorkspaceId) return
+    const result = await remote.oauthCollections(state.oauth.id, state.oauth.activeWorkspaceId, cursor)
     if (!alive.current) return
-    if (result.ok) { setOAuthItems(result.value.items); setMessage(t('knowledgeVerified', { name: result.value.workspace.name })) }
+    if (result.ok) {
+      setOAuthItems(previous => cursor ? [...new Map([...(previous ?? []), ...result.value.items].map(item => [item.id, item])).values()] : result.value.items)
+      setOAuthCursor(result.value.nextCursor)
+      setMessage(t('knowledgeVerified', { name: result.value.workspace.name }))
+    }
     else setError(result.error.message)
   }
 
   async function oauthLogout(): Promise<void> {
-    const result = await remote.oauthLogout()
+    if (!state.oauth) return
+    const result = await remote.oauthLogout(state.oauth.id)
     if (!alive.current) return
     if (result.ok) { setState(current => ({ ...current, oauth: null })); setOAuthItems(null); setKeyItems(null); setMessage(t('loggedOut')) }
     else setError(result.error.message)
@@ -266,7 +287,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
   async function select(id: string): Promise<void> {
     const result = await remote.select(id)
     if (!alive.current) return
-    if (result.ok) { setState(current => ({ ...current, ...result.value })); setMessage(t('keyVerified')) }
+    if (result.ok) { setState(result.value); setMessage(t('connectionSelected')) }
     else setError(result.error.message)
   }
 
@@ -277,15 +298,21 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     else setError(result.error.message)
   }
 
-  async function loadKnowledge(): Promise<void> {
-    const result = await remote.collections()
+  async function loadKnowledge(cursor?: string): Promise<void> {
+    if (!state.activeId) return
+    const result = await remote.collections(state.activeId, cursor)
     if (!alive.current) return
-    if (result.ok) { setKeyItems(result.value.items); setMessage(t('knowledgeVerified', { name: result.value.account.workspaceName })) }
+    if (result.ok) {
+      setKeyItems(previous => cursor ? [...new Map([...(previous ?? []), ...result.value.items].map(item => [item.id, item])).values()] : result.value.items)
+      setKeyCursor(result.value.nextCursor)
+      setMessage(t('knowledgeVerified', { name: result.value.account.workspaceName }))
+    }
     else setError(result.error.message)
   }
 
   async function refreshWorkspaces(): Promise<void> {
-    const result = await remote.refreshWorkspaces()
+    if (!state.oauth) return
+    const result = await remote.refreshWorkspaces(state.oauth.id)
     if (!alive.current) return
     if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage(t('workspacesRefreshed')) }
     else setError(result.error.message)
@@ -307,10 +334,17 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     </header>
     {error && <div className="apemind-error" role="alert">{error}</div>}
     {!error && (message || busy) && <div className="apemind-message" role="status" aria-live="polite">{busy ? t('busy') : message}</div>}
+    {(state.oauthConnections?.length ?? 0) + state.connections.length > 1 && <label>{t('currentConnection')}
+      <select disabled={disabled} value={state.oauth?.id ?? state.activeId ?? ''} onChange={event => { void run(() => select(event.target.value)) }}>
+        <option value="" disabled>{t('chooseConnection')}</option>
+        {state.oauthConnections?.map(item => <option key={item.id} value={item.id}>{item.username} · {item.origin}</option>)}
+        {state.connections.map(item => <option key={item.id} value={item.id}>{item.username} · {item.workspaceName} · API Key</option>)}
+      </select>
+    </label>}
     {waiting && !oauth
       ? <WaitingPanel t={t} disabled={false} progress={loginProgress} onCancel={() => { void cancelLogin() }} />
       : oauth
-        ? <ConnectedPanel t={t} oauth={oauth} disabled={disabled} onSelectWorkspace={(id) => { void run(() => selectWorkspace(id)) }} onRefresh={() => { void run(refreshWorkspaces) }} onLogout={() => { void run(oauthLogout) }} onKnowledge={() => { void run(oauthCollections) }} oauthItems={oauthItems} />
+        ? <ConnectedPanel t={t} oauth={oauth} disabled={disabled} onSelectWorkspace={(id) => { void run(() => selectWorkspace(id)) }} onRefresh={() => { void run(refreshWorkspaces) }} onLogout={() => { void run(oauthLogout) }} onKnowledge={() => { void run(oauthCollections) }} oauthItems={oauthItems} hasMore={Boolean(oauthCursor)} onLoadMore={() => { void run(() => oauthCollections(oauthCursor ?? undefined), true) }} />
         : <SignedOutPanel t={t} disabled={disabled} onBrowserLogin={() => { void run(browserLogin) }} onDeviceLogin={() => { void run(deviceLogin) }} />}
     <details className="apemind-advanced">
       <summary><span aria-hidden="true">⚙</span> {t('advanced')}</summary>
@@ -323,7 +357,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
               {state.connections.map(item => <option key={item.id} value={item.id}>{item.workspaceName} · {item.username}</option>)}
             </select>
           </label>
-          {active && <><p>{active.origin}</p><div className="apemind-actions"><button disabled={disabled} onClick={() => { void run(loadKnowledge) }}>{t('viewKnowledge')}</button><button disabled={disabled} onClick={() => { void run(() => select(active.id)) }}>{t('reverify')}</button><button disabled={disabled} onClick={() => { void run(() => disconnect(active.id)) }}>{t('removeConnection')}</button></div><KnowledgeList values={keyItems} title={t('knowledge')} limit={t('knowledgeLimit')} empty={t('knowledgeEmpty')} /></>}
+          {active && <><p>{active.origin}</p><div className="apemind-actions"><button disabled={disabled} onClick={() => { void run(loadKnowledge) }}>{t('viewKnowledge')}</button><button disabled={disabled} onClick={() => { void run(() => disconnect(active.id)) }}>{t('removeConnection')}</button></div><KnowledgeList values={keyItems} title={t('knowledge')} empty={t('knowledgeEmpty')} hasMore={Boolean(keyCursor)} loadMoreLabel={t('loadMore')} disabled={disabled} onLoadMore={() => { void run(() => loadKnowledge(keyCursor ?? undefined), true) }} /></>}
         </section>}
         <form className="apemind-card" onSubmit={(event) => { event.preventDefault(); void run(connect) }}>
           <h3>{t('addKey')}</h3>

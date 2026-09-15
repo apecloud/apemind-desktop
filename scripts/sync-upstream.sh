@@ -41,7 +41,9 @@ if [[ ! -d "${WORK_DIR}/.git" ]]; then
 fi
 
 echo "==> checkout 锁定 commit"
-git -C "${WORK_DIR}" fetch --filter=blob:none origin "${UPSTREAM_COMMIT}"
+if ! git -C "${WORK_DIR}" cat-file -e "${UPSTREAM_COMMIT}^{commit}" 2>/dev/null; then
+  git -C "${WORK_DIR}" fetch --filter=blob:none origin "${UPSTREAM_COMMIT}"
+fi
 git -C "${WORK_DIR}" checkout --detach "${UPSTREAM_COMMIT}"
 
 # ── 2. 回到纯净上游（幂等）─────────────────────────────────────────────
