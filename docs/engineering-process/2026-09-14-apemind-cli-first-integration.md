@@ -2,6 +2,8 @@
 
 本文定义 ApeMind CLI、ApeMind Desktop 和 ApeMind 服务端的统一产品与技术边界，回答一个问题：如何让 DSH Agent 稳定地读写 ApeMind，同时只维护一套面向 Agent 的能力接口。
 
+后续命令体验、通用 API、MCP 和业务能力扩展见 [ApeMind CLI 对标 gh 的能力分析与产品技术设计](2026-09-16-apemind-cli-gh-capability-design.md)。本文继续定义统一身份、凭据与进程调用边界；通用 API 的开放范围以该扩展设计为准。
+
 ## 现状与目标
 
 ApeMind Desktop 是 DeepSeek Harness 的品牌化发行版。它的核心用户是 Agent，用户通过 Desktop 完成登录、配置和授权，Agent 通过 Desktop 内置的工具执行任务。ApeMind CLI 尚未正式发布，现有命令、认证和本地状态模型不承担兼容性责任。
@@ -411,7 +413,7 @@ OpenAPI 生成代码在 CI 中校验，不手工修改。业务语义、CLI 命�
 - 增加 knowledge/document 写 scope；
 - 实现 dry-run、确认、幂等键和审计；
 - 先支持单资源变更，再支持批量操作；
-- 不开放任意 HTTP 请求命令作为默认 Agent 能力。
+- 提供复用当前连接、认证和工作空间边界的 `apemind api` 通用入口；默认限定当前服务的 `/api/v2`，高风险写入仍需确认，不允许绕过权限或将凭据发送到其他来源。具体范围见[能力扩展设计](2026-09-16-apemind-cli-gh-capability-design.md)。
 
 ## 验收标准
 
