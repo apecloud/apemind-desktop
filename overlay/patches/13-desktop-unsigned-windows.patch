@@ -1,0 +1,12 @@
+diff --git a/apps/desktop/electron-builder.config.mjs b/apps/desktop/electron-builder.config.mjs
+--- a/apps/desktop/electron-builder.config.mjs
++++ b/apps/desktop/electron-builder.config.mjs
+@@ -35,7 +35,7 @@ export function createElectronBuilderConfig(
+   const packagesWindows = targetPlatform === 'win32'
+   const macOSSigning = packagesMacOS ? resolveMacOSSigningEnvironment(env) : undefined
+   if (packagesMacOS) resolveMacOSNotarizationEnvironment(env)
+-  const windowsSigner = packagesWindows
++  const windowsSigner = packagesWindows && !unsignedBuild
+     ? createWindowsTokenSigner({
+         certificateFile: env.DSH_DESKTOP_WINDOWS_CER_FILE,
+         signTool: env.DSH_DESKTOP_WINDOWS_SIGNTOOL,
