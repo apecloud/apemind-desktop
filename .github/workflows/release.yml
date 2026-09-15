@@ -49,6 +49,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure Git line endings
+        shell: bash
+        run: git config --global core.autocrlf false
+
       - name: Sync upstream and apply ApeMind overlay
         shell: bash
         run: ./scripts/sync-upstream.sh --work-dir "${RUNNER_TEMP}/dsh-desktop"
@@ -61,6 +65,16 @@ jobs:
           corepack enable
           corepack prepare "$PM" --activate
           pnpm --version
+
+      - name: Derive workspace lockfile
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          OVERLAY="${GITHUB_WORKSPACE}/overlay/add-files"
+          if [ -d "$OVERLAY" ] && [ -n "$(find "$OVERLAY" -type f -print -quit)" ]; then
+            pnpm install --lockfile-only --ignore-scripts
+          fi
 
       - name: Install dependencies
         working-directory: ${{ runner.temp }}/dsh-desktop
