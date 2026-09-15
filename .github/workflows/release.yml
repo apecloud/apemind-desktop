@@ -41,7 +41,7 @@ jobs:
             target: package:mac:arm64
             artifact_glob: 'work/dsh-desktop/apps/desktop/.desktop-build/targets/**/artifacts/**/*'
           - name: macOS Intel
-            os: macos-13
+            os: macos-15-intel
             target: package:mac:x64
             artifact_glob: 'work/dsh-desktop/apps/desktop/.desktop-build/targets/**/artifacts/**/*'
           - name: Windows x64
