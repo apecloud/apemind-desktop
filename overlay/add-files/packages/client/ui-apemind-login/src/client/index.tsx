@@ -6,7 +6,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-apemind-login/remote'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { AccountState, KnowledgeBaseView, OAuthAccountView, WorkspaceView } from '@deepseek-ai/dsh-apemind-login/types'
+import type { AccountState, KnowledgeBaseView, LoginProgress, OAuthAccountView, WorkspaceView } from '@deepseek-ai/dsh-apemind-login/types'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import { zh, en, type LoginLocaleKey } from './locales.ts'
 import { APEMIND_MARK_DATA_URI } from './brand-mark.ts'
@@ -76,16 +76,21 @@ function WorkspaceRow({ workspace, current, disabled, onSelect, roleLabel, curre
   >{content}</button>
 }
 
-function WaitingPanel({ t, disabled, onCancel }: {
+function WaitingPanel({ t, disabled, onCancel, progress }: {
   t: LoginSectionProps['t']
   disabled: boolean
   onCancel: () => void
+  progress: LoginProgress | null | undefined
 }): ReactNode {
   return <section className="apemind-state-panel apemind-waiting-panel" aria-live="polite">
     <Mark className="apemind-state-mark" />
     <span className="apemind-spinner" aria-hidden="true" />
     <h3>{t('waitingTitle')}</h3>
     <p>{t('waitingDescription')}</p>
+    {progress?.type === 'device_code' && <div className="apemind-device-code">
+      <strong>{t('deviceCodeLabel')}</strong><code>{progress.userCode}</code>
+      {progress.verificationUriComplete && <a href={progress.verificationUriComplete} target="_blank" rel="noreferrer">{t('openDevicePage')}</a>}
+    </div>}
     <button type="button" className="apemind-secondary" disabled={disabled} onClick={onCancel}>{t('cancelSignIn')}</button>
   </section>
 }
@@ -161,6 +166,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
   const [keyItems, setKeyItems] = useState<KnowledgeBaseView[] | null>(null)
   const [oauthItems, setOAuthItems] = useState<KnowledgeBaseView[] | null>(null)
   const [waiting, setWaiting] = useState(false)
+  const [loginProgress, setLoginProgress] = useState<LoginProgress | null>(null)
   const alive = useRef(false)
   const pending = useRef(false)
   const active = state.connections.find(item => item.id === state.activeId)
@@ -172,13 +178,25 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     setBusy(true)
     void remote.state().then((result) => {
       if (cancelled) return
-      if (result.ok) { setState(current => ({ ...current, ...result.value })); setWaiting(result.value.browserLoginPending ?? false) }
+      if (result.ok) { setState(current => ({ ...current, ...result.value })); setWaiting(result.value.browserLoginPending ?? false); setLoginProgress(result.value.loginProgress ?? null) }
       else setError(result.error.message)
     }).catch(() => { if (!cancelled) setError(t('readError')) }).finally(() => {
       if (!cancelled) { pending.current = false; setBusy(false) }
     })
     return () => { cancelled = true; alive.current = false }
   }, [remote])
+
+  useEffect(() => {
+    if (!waiting) return
+    const timer = window.setInterval(() => {
+      void remote.state().then(result => {
+        if (!result.ok) return
+        setLoginProgress(result.value.loginProgress ?? null)
+        setWaiting(result.value.browserLoginPending ?? false)
+      }).catch(() => undefined)
+    }, 700)
+    return () => window.clearInterval(timer)
+  }, [remote, waiting])
 
   async function run(operation: () => Promise<void>): Promise<void> {
     if (pending.current) return
@@ -188,7 +206,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     finally {
       if (alive.current) {
         const latest = await remote.state().catch(() => undefined)
-        if (latest?.ok) { setState(latest.value); setWaiting(latest.value.browserLoginPending ?? false) }
+        if (latest?.ok) { setState(latest.value); setWaiting(latest.value.browserLoginPending ?? false); setLoginProgress(latest.value.loginProgress ?? null) }
         setBusy(false)
       }
       pending.current = false
@@ -209,7 +227,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     const result = await remote.startBrowserLogin(origin)
     setWaiting(false)
     if (!alive.current) return
-    if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage(t('loggedIn')) }
+    if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setLoginProgress(null); setMessage(t('loggedIn')) }
     else if (result.error.code === 'gateway/cancelled') { setError(''); setMessage(t('cancelled')) }
     else setError(result.error.message)
   }
@@ -219,7 +237,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     const result = await remote.startDeviceLogin(origin)
     setWaiting(false)
     if (!alive.current) return
-    if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage(t('loggedIn')) }
+    if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setLoginProgress(null); setMessage(t('loggedIn')) }
     else if (result.error.code === 'gateway/cancelled') { setError(''); setMessage(t('cancelled')) }
     else setError(result.error.message)
   }
@@ -290,7 +308,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     {error && <div className="apemind-error" role="alert">{error}</div>}
     {!error && (message || busy) && <div className="apemind-message" role="status" aria-live="polite">{busy ? t('busy') : message}</div>}
     {waiting && !oauth
-      ? <WaitingPanel t={t} disabled={busy} onCancel={() => { void run(cancelLogin) }} />
+      ? <WaitingPanel t={t} disabled={false} progress={loginProgress} onCancel={() => { void cancelLogin() }} />
       : oauth
         ? <ConnectedPanel t={t} oauth={oauth} disabled={disabled} onSelectWorkspace={(id) => { void run(() => selectWorkspace(id)) }} onRefresh={() => { void run(refreshWorkspaces) }} onLogout={() => { void run(oauthLogout) }} onKnowledge={() => { void run(oauthCollections) }} oauthItems={oauthItems} />
         : <SignedOutPanel t={t} disabled={disabled} onBrowserLogin={() => { void run(browserLogin) }} onDeviceLogin={() => { void run(deviceLogin) }} />}

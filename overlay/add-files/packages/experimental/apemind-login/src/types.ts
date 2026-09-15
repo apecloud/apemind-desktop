@@ -16,6 +16,15 @@ export interface AccountState {
   connections: AccountView[]
   oauth?: OAuthAccountView | null
   browserLoginPending?: boolean
+  loginProgress?: LoginProgress | null
+}
+
+export interface LoginProgress {
+  type: 'browser_opened' | 'device_code' | 'device_fallback'
+  verificationUri?: string
+  verificationUriComplete?: string
+  userCode?: string
+  reason?: string
 }
 
 export interface WorkspaceView {
