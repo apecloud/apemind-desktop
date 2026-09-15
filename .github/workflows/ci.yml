@@ -98,6 +98,10 @@ jobs:
         working-directory: ${{ runner.temp }}/dsh-desktop
         run: pnpm run build
 
+      - name: 校验账号切换与退出交互
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: pnpm exec vitest run packages/client/ui-apemind-login/tests/login.spec.tsx
+
       - name: 校验界面文案接入语言字典
         working-directory: ${{ runner.temp }}/dsh-desktop
         run: pnpm run verify-client-ui-i18n

@@ -327,6 +327,8 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
 
   const disabled = busy || waiting
   const oauth = state.oauth
+  const connectionCount = (state.oauthConnections?.length ?? 0) + state.connections.length
+  const showConnectionSelector = connectionCount > 1 || (connectionCount > 0 && !oauth && !state.activeId)
 
   return <section className="apemind-account" aria-busy={busy}>
     <header className="apemind-header">
@@ -334,7 +336,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     </header>
     {error && <div className="apemind-error" role="alert">{error}</div>}
     {!error && (message || busy) && <div className="apemind-message" role="status" aria-live="polite">{busy ? t('busy') : message}</div>}
-    {(state.oauthConnections?.length ?? 0) + state.connections.length > 1 && <label>{t('currentConnection')}
+    {showConnectionSelector && <label>{t('currentConnection')}
       <select disabled={disabled} value={state.oauth?.id ?? state.activeId ?? ''} onChange={event => { void run(() => select(event.target.value)) }}>
         <option value="" disabled>{t('chooseConnection')}</option>
         {state.oauthConnections?.map(item => <option key={item.id} value={item.id}>{item.username} · {item.origin}</option>)}

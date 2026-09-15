@@ -225,6 +225,7 @@ add-files:
   - target: packages/client/ui-apemind-login/src/client/locales.ts
   - target: packages/client/ui-brand-official/src/client/locales.ts
   - target: packages/client/ui-apemind-login/src/client/style.css
+  - target: packages/client/ui-apemind-login/tests/login.spec.tsx
 
 resources:
   - source: apps/desktop/resources/apemind-cli.lock.json
