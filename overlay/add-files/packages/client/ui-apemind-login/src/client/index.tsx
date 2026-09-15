@@ -338,7 +338,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
       <select disabled={disabled} value={state.oauth?.id ?? state.activeId ?? ''} onChange={event => { void run(() => select(event.target.value)) }}>
         <option value="" disabled>{t('chooseConnection')}</option>
         {state.oauthConnections?.map(item => <option key={item.id} value={item.id}>{item.username} · {item.origin}</option>)}
-        {state.connections.map(item => <option key={item.id} value={item.id}>{item.username} · {item.workspaceName} · API Key</option>)}
+        {state.connections.map(item => <option key={item.id} value={item.id}>{item.username} · {item.workspaceName} · {t('apiKey')}</option>)}
       </select>
     </label>}
     {waiting && !oauth
