@@ -13,11 +13,20 @@
 # 变更清单（与 docs/branding.md 一致，改这里必须同步改那边）：
 
 patches:
+  - file: patches/11-apemind-profile-package-content.patch
+    targets:
+      - target: apps/desktop/src/project-manager.ts
+      - target: apps/desktop/tests/project-manager.spec.ts
+    reason: 上游版本号相同但 overlay 包内容变化时，通过已校验的包清单触发既有运行目录更新事务，保留用户插件并支持失败回滚。
+    upstream_logic_changed: true
   - file: patches/10-apemind-cli-runtime.patch
     targets:
       - target: apps/desktop/src/main.ts
       - target: apps/desktop/electron-builder.config.mjs
-    reason: Desktop 与 Agent 使用同一份随包 apemind CLI。
+      - target: apps/desktop/electron-builder.config.d.mts
+      - target: apps/desktop/scripts/package-target.ts
+      - target: apps/desktop/tests/macos-signature.spec.ts
+    reason: Desktop 与 Agent 使用同一份随包 apemind CLI；打包前下载锁定版本并校验摘要，缺失或错误的二进制不能进入产物。
     upstream_logic_changed: true
   # ── 09-apemind-snapshots.patch：同步设置导航的可访问性快照 ─────────────
   - file: patches/09-apemind-snapshots.patch
@@ -193,6 +202,8 @@ derived:
   - target: pnpm-lock.yaml
 
 add-files:
+  - target: apps/desktop/scripts/apemind-cli-runtime.mjs
+  - target: apps/desktop/scripts/apemind-cli-runtime.d.mts
   - target: .agents/notes/implemented/ui/2026-09-14-apemind-login-ui.md
   # ApeMind 账户连接，凭据记录使用 apemind/connections。
   # 作为 workspace 包分发，因此 pnpm-lock.yaml 需在 sync 时**派生**（见 sync-upstream.sh 5 段）。
@@ -214,8 +225,14 @@ add-files:
   - target: packages/client/ui-apemind-login/src/client/locales.ts
   - target: packages/client/ui-brand-official/src/client/locales.ts
   - target: packages/client/ui-apemind-login/src/client/style.css
+  - target: packages/client/ui-apemind-login/tests/login.spec.tsx
 
 resources:
+  - source: apps/desktop/resources/apemind-cli.lock.json
+    target: apps/desktop/resources/apemind-cli.lock.json
+    kind: release-lock
+    upstream_logic_changed: false
+
   - source: apps/desktop/resources/README.md
     target: apps/desktop/resources/README.md
     kind: add-files
@@ -252,15 +269,14 @@ resources:
   - note: >
       这些是 overlay 注入的 ApeMind 品牌资源；构建配置已引用桌面图标，UI 使用同一方形标。
 
-# ── 新增 overlay 补丁的双登记规则（重要）──────────────────────────────
+# ── 新增 overlay 内容的登记规则 ────────────────────────────────────
 #
-# 本目录**逐文件授权**，不用目录前缀放行。任何新增补丁必须**同时**完成两道登记：
+# 本目录逐文件授权，不用目录前缀放行。新增或修改补丁时，在本文件列出每个目标路径，
+# 写明原因与是否改变上游逻辑；新增文件与资源也登记在对应清单中。
 #
-#   1. 在 scripts/verify-overlay.sh 的 ALLOWED / ALLOWED_PATCHED 与
-#      scripts/sync-upstream.sh 的 ALLOWED_REGEX 里列出该**确切路径**；
-#   2. 在本文件的 patches 清单里新增对应条目（含理由、是否改上游逻辑）。
+# scripts/allowed-paths.sh 从本文件生成允许路径，校验与同步脚本共用该清单，
+# 不在脚本里维护第二份文件白名单。
 #
-# 两道登记缺一：闸门会拒绝构建（这是有意设计，不是 bug）。
 # 另：图标即使进了白名单，**还必须**给 builder 配 `icon` 键，否则不会生效——
 # 且要注意让品牌断言能覆盖到图标存在性，避免「加了图标但没生效」静默通过。
 

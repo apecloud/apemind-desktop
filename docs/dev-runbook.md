@@ -1,6 +1,6 @@
-# dsh Desktop — dev 模式本机运行指南
+# ApeMind Desktop — 本机运行与打包指南
 
-零源码改动、可复现的 dev 路径。已在 **macOS arm64** 实测通过（2026-09-10）。
+使用锁定上游与 ApeMind overlay 构建 Desktop。开发模式与安装包使用相同的 ApeMind CLI。
 
 用途：**证明 dsh 桌面版能跑、能看见界面**，且不触碰签名门、不需要任何 Apple 凭据。
 出可安装产物是另一条路（需 Apple Developer 凭据），见文末。
@@ -19,9 +19,9 @@
 ## 步骤
 
 ```bash
-# 1. 取代码（pin 到你要的 commit）
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
+# 1. 在 apemind-desktop 仓库应用锁定上游与 overlay
+./scripts/sync-upstream.sh
+cd work/dsh-desktop
 
 # 2. 激活仓库要求的 pnpm（关键，别用系统 pnpm）
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
@@ -34,7 +34,9 @@ pnpm install --frozen-lockfile
 # 4. 构建（dev:desktop 依赖已构建产物）
 pnpm run build
 
-# 5. 启动桌面壳
+# 5. 准备锁定 CLI，使用独立配置目录启动开发环境
+export APEMIND_CLI_BIN="$(node --input-type=module -e "import { prepareApeMindCli } from './apps/desktop/scripts/apemind-cli-runtime.mjs'; console.log(await prepareApeMindCli())")"
+export APEMIND_CONFIG_DIR="$PWD/apps/desktop/.desktop-build/development/apemind"
 pnpm run dev:desktop
 ```
 
@@ -44,7 +46,7 @@ Electron 二进制（`electron@44.0.0`）**首次调用时按需下载**，不�
 
 ## 预期结果
 
-- 弹出一个 Electron 窗口，窗口标题 **`DSH 本地构建`**。
+- 弹出一个 Electron 窗口，窗口标题为 **`ApeMind Desktop`**。
 - 渲染页走自定义协议 `dsh-app://app/index.html`（**不是** localhost 端口）。
 - 后端 host 进程的 inspect 端口默认 **9230**；主进程 9229、渲染进程 9222。
 - 日志会打印一行调试端口信息，形如
@@ -61,8 +63,8 @@ Electron 二进制（`electron@44.0.0`）**首次调用时按需下载**，不�
 - Harness state 默认落在仓库内：
   `apps/desktop/.desktop-build/development/home`
   （含 `.credentials.yaml`、`storages/`；实测约 1.9M）
-- **真实用户 home 不会被触碰**：实测运行后既无 `~/.dsh` 也无 `~/.config/dsh`。
-- 只有**显式设置 `DSH_HOME`** 才会替换 Harness home。
+- `DSH_HOME` 控制 Harness 数据目录；`APEMIND_CONFIG_DIR` 独立控制 CLI 连接、凭据命名空间与刷新锁。
+- 上述开发命令使用独立 CLI 配置目录。省略 `APEMIND_CONFIG_DIR` 时，CLI 使用当前系统用户的默认连接，与安装版共享登录态。
 
 ## 停止
 
@@ -105,6 +107,16 @@ pnpm --filter @deepseek-ai/dsh-desktop run package:mac:arm64:dir
 
 该构建没有 Apple Developer 签名与公证；完成本机测试不等于已具备公共发行安装包。
 `DOWNLOAD_TEST_ORIGIN` 是上游打包配置必填的更新源地址；目前该地址尚未提供 Desktop 更新 feed，本机验收仍通过手工启动新构建进行升级。不要改为上游 DeepSeek 的生产更新源。
+
+## CLI 制品与运行目录更新
+
+`overlay/apps/desktop/resources/apemind-cli.lock.json` 固定 CLI 版本、源码提交与各平台制品的下载地址和 SHA-256。升级 CLI 时，使用已发布制品的真实元数据更新该文件，然后重新同步 overlay 与打包。
+
+打包入口在构建插件前下载对应平台的 CLI，校验缓存与下载内容，并把二进制和发布清单写入安装包的 `apemind/bin` 与 `apemind/release.json`。缺失、平台不匹配或摘要不符会使打包失败。`APEMIND_CLI_BINARY` 可指定已有的制品文件，但仍必须匹配版本锁；开发运行使用的 `APEMIND_CLI_BIN` 不作为打包输入。
+
+启动安装包后，设置页与 Agent 的 `PATH` 都使用包内 CLI。验收时核对包内 `apemind --version` 与 `apemind/release.json`，再从真实 Agent 会话执行命令。
+
+同一上游版本的核心包内容变化也会触发运行目录更新，保留用户插件并支持失败回滚。该判断针对已校验的核心包内容清单；修改构建目录后仍需重新打包、退出旧应用并启动新产物。
 
 ## 打包需要外网 —— 国内网络必须配 Electron 镜像（硬阻塞，非偶发）
 

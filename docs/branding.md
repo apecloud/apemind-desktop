@@ -23,6 +23,13 @@
 | `apps/desktop/electron-builder.config.mjs` | `productName` → `ApeMind Desktop`；`artifactName` → `apemind-desktop-${version}-...` | 产品名与安装包文件名。**`artifactName` 必须同步改**：它与 electron-updater 的 channel 元数据、上传校验耦合，只改 `productName` 会把更新链改断。 |
 | `apps/desktop/src/locale.ts` | 4 个 key × en/zh = 8 处文案 | 窗口标题与更新弹窗等用户可见文案。这是**唯一**需要改文案的文件 —— renderer（`plugin-manager.js`）全部走 `api.locale()` 取 messages，HTML/JS 里 0 处品牌字面量。 |
 | `apps/desktop/resources/` | 新增 `icon.icns` / `icon.ico` | ⚠️ 上游仓库**一个图标文件都没有**，`electron-builder` 配置里也没有 `icon` 键。所以这是**新增**资源，须从零制作并给 builder 加 `icon` 键。 |
+| `apps/desktop/src/main.ts` | 设置包内 CLI 路径与 Agent 的 `PATH` | 设置页和 Agent 使用同一二进制。 |
+| `apps/desktop/scripts/package-target.ts`、`apps/desktop/scripts/apemind-cli-runtime.mjs` | 根据版本锁下载并校验 CLI，交给打包配置收录 | 防止产物缺少 CLI 或带入错误平台、错误版本的二进制。 |
+| `apps/desktop/resources/apemind-cli.lock.json` | 固定 CLI 版本、源码提交、平台制品与摘要 | 构建不依赖本机偶然存在的 CLI。 |
+| `apps/desktop/src/project-manager.ts` | 比较已校验的核心包内容清单，触发既有安装事务 | 上游版本相同但 overlay 内容变化时，更新运行目录并保留用户插件，失败时回滚。 |
+
+ApeMind 登录插件及其界面位于 `overlay/add-files/`，通过上游插件与设置导航扩展点接入。
+完整的补丁目标、新增文件及资源仍以 `overlay/OVERLAY.md` 为唯一清单。
 
 ## 明确**不**动的（已由上游 env 化）
 
@@ -41,18 +48,10 @@
 要断言"overlay 只改了那几处"，必须对**纯净上游**比，**不能对 work tree 比**：
 
 ```bash
-# ✅ 正确：HEAD 就是锁定的上游 commit（sync-upstream.sh 用 checkout --detach）
+# HEAD 是锁定的上游 commit；显示全部补丁差异。
 git -C work/dsh-desktop diff --stat
-#   → apps/desktop/electron-builder.config.mjs | 4 ++--   (2 行)
-#   → apps/desktop/src/locale.ts               | 16 ++++--- (8 处)
-
-# ✅ 也可：逐文件对纯净上游看
-git -C work/dsh-desktop show HEAD:apps/desktop/electron-builder.config.mjs > /tmp/pristine
- diff /tmp/pristine overlay/apps/desktop/electron-builder.config.mjs
-
-# ❌ 错误：work tree 已应用过 overlay，两者本来就相同 → 0 差异假阴性
-diff work/dsh-desktop/apps/desktop/electron-builder.config.mjs \
-     overlay/apps/desktop/electron-builder.config.mjs      # 恒为 IDENTICAL
+# 逐文件核对上游与已应用补丁的内容。
+git -C work/dsh-desktop diff -- apps/desktop/electron-builder.config.mjs
 ```
 
 原因：`sync-upstream.sh` 做的是 `checkout --detach <upstream_commit>`，
@@ -62,18 +61,15 @@ diff work/dsh-desktop/apps/desktop/electron-builder.config.mjs \
 
 （仓内的 `verify-overlay.sh` / `sync-upstream.sh` 不受此影响：它们读 `git status`，不读 diff。）
 
-1. **overlay 不得包含上游逻辑改动。** 出现任何非品牌改动，`sync-upstream.sh` 的校验闸门会失败。
-   若确有功能需求，**先评估能不能用上游官方扩展点**（`--patch` 配置叠加、官方插件、
-   provider 投影、MCP），而不是改上游代码。
+1. **功能优先使用上游扩展点。** 打包、进程环境和运行目录更新等没有合适扩展点的行为，
+   可以使用最小补丁，但必须在 `overlay/OVERLAY.md` 声明目标文件、原因与逻辑影响，
+   并验证真实构建或运行路径。未登记的文件改动会使校验失败。
 2. **图标缺失不阻塞开发。** `electron-builder` 无 `icon` 键时会 fallback 到 Electron 默认图标
    （已实测）。所以图标是**发版门槛**，不是开发门槛 —— 但**可分发正式包必须有正式图标**，
    不要用自造图标冒充品牌资产。
 
 ## 图标的处理状态
 
-**待品牌/美术提供**。在位点就绪前：
-
-- 构建照常（用 Electron 默认图标）；
-- 产物**不可对外分发**（缺品牌资产 + 未签名，两者都拦着）；
-- 拿到正式 `.icns` / `.ico` 后：放进 `overlay/apps/desktop/resources/`，
-  并在 overlay 的 `electron-builder.config.mjs` 里给 `mac` / `win` 段加 `icon` 键。
+`overlay/apps/desktop/resources/` 已提供 ApeMind 的 `.icns`、`.ico` 与 PNG 资源，
+打包配置引用应用图标，侧栏与首页使用 ApeMind 方形标。公共发行的签名、公证和更新源
+要求见 [本机运行与打包指南](dev-runbook.md)。

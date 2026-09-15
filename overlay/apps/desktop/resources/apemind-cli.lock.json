@@ -1,0 +1,18 @@
+{
+  "version": "v0.3.7",
+  "commit": "781d1462890a9fe94add0283369736796477f0f1",
+  "artifacts": {
+    "darwin-arm64": {
+      "url": "https://apemind.ai/api/v2/public/apemind-cli/releases/v0.3.7/apemind-darwin-arm64",
+      "sha256": "62814ba2cdb4574f5cc09e31b8f5d56272cf67b272088b414ec0520b124ad79f"
+    },
+    "darwin-x64": {
+      "url": "https://apemind.ai/api/v2/public/apemind-cli/releases/v0.3.7/apemind-darwin-amd64",
+      "sha256": "e44bb5984f01088882022a3d81e246ba89b76238746c3b2121a96242072f90aa"
+    },
+    "win32-x64": {
+      "url": "https://apemind.ai/api/v2/public/apemind-cli/releases/v0.3.7/apemind-windows-amd64.exe",
+      "sha256": "be271b4d5a58b4234c5a79d524572a10d5270a62237d2b6b0f113687a06bbf41"
+    }
+  }
+}
