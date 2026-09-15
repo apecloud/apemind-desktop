@@ -1,3 +1,25 @@
+diff --git a/apps/desktop/scripts/prepare-package-set.ts b/apps/desktop/scripts/prepare-package-set.ts
+index f67d767e..5445808a 100644
+--- a/apps/desktop/scripts/prepare-package-set.ts
++++ b/apps/desktop/scripts/prepare-package-set.ts
+@@ -21,7 +21,7 @@ import {
+   parseDesktopCorePackageSet,
+   type DesktopCorePackageRecord,
+ } from '../src/core-package-set.ts'
+-import { capture } from '../../../scripts/release/process.ts'
++import { capture, releaseTarCommand } from '../../../scripts/release/process.ts'
+ import { tarballFiles } from '../../../scripts/release/tarball.ts'
+ import { resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
+ 
+@@ -82,7 +82,7 @@ export function selectDesktopPackageClosure(
+ }
+ 
+ function packedManifest(tarball: string): Record<string, unknown> {
+-  const value: unknown = JSON.parse(capture('tar', ['-xOzf', tarball, 'package/package.json']))
++  const value: unknown = JSON.parse(capture(releaseTarCommand(), ['-xOzf', tarball, 'package/package.json']))
+   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+     throw new Error(`desktop package set: ${tarball} has no package manifest`)
+   }
 diff --git a/scripts/release/process.ts b/scripts/release/process.ts
 index c85ca2c7..91a858b0 100644
 --- a/scripts/release/process.ts
