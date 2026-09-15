@@ -194,9 +194,11 @@ patches:
   targets:
     - target: scripts/release/process.ts
     - target: scripts/release/tarball.ts
+    - target: apps/desktop/scripts/prepare-package-set.ts
   touches:
     - "scripts/release/process.ts：Windows 明确使用原生 tar.exe，避免 POSIX tar 将盘符路径解析成远端归档"
     - "scripts/release/tarball.ts：统一使用平台归档工具读取 npm tarball"
+    - "apps/desktop/scripts/prepare-package-set.ts：读取桌面包清单时使用同一平台归档工具"
   upstream_logic_changed: true
   reason: >
     Windows 发布 runner 的 PATH 中可能优先出现 Git Bash tar；它无法正确处理
