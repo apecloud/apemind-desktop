@@ -25,6 +25,9 @@ env:
   DSH_DESKTOP_APP_ID: com.apemind.desktop
   DOWNLOAD_TEST_ORIGIN: https://apemind.ai
   ELECTRON_MIRROR: https://registry.npmmirror.com/-/binary/electron/
+  GIT_CONFIG_COUNT: '1'
+  GIT_CONFIG_KEY_0: core.autocrlf
+  GIT_CONFIG_VALUE_0: 'false'
 
 jobs:
   build:
