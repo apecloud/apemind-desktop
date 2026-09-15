@@ -213,6 +213,7 @@ add-files:
   - target: packages/experimental/apemind-login/src/controller.ts
   - target: packages/experimental/apemind-login/src/cli-process.ts
   # Desktop 启动与 Agent 相同的 apemind CLI；不在插件内复制认证或业务 API。
+  # 设置页显示 CLI 版本与凭据存储状态，保留读取失败的连接并提供对应恢复入口。
   - target: packages/experimental/apemind-login/src/types.ts
   # ApeMind 设置分区，通过 remote.apemindAuth 操作 Host。
   - target: packages/client/ui-apemind-login/package.json
@@ -226,6 +227,7 @@ add-files:
   - target: packages/client/ui-brand-official/src/client/locales.ts
   - target: packages/client/ui-apemind-login/src/client/style.css
   - target: packages/client/ui-apemind-login/tests/login.spec.tsx
+  # 真实组件覆盖账号选择、凭据读取失败恢复、重新登录和内置 CLI 状态展示。
 
 resources:
   - source: apps/desktop/resources/apemind-cli.lock.json
