@@ -91,7 +91,18 @@ jobs:
       - name: Prefer native Windows tar
         if: runner.os == 'Windows'
         shell: bash
-        run: echo 'C:/Windows/System32' >> "$GITHUB_PATH"
+        run: |
+          mkdir -p "$RUNNER_TEMP/native-tools"
+          cat > "$RUNNER_TEMP/native-tools/tar" <<'SCRIPT'
+          #!/usr/bin/env bash
+          exec /c/Windows/System32/tar.exe "$@"
+          SCRIPT
+          chmod +x "$RUNNER_TEMP/native-tools/tar"
+          cat > "$RUNNER_TEMP/native-tools/tar.cmd" <<'SCRIPT'
+          @echo off
+          C:\Windows\System32\tar.exe %*
+          SCRIPT
+          echo "$RUNNER_TEMP/native-tools" >> "$GITHUB_PATH"
 
       - name: Package application
         working-directory: ${{ runner.temp }}/dsh-desktop
