@@ -1,0 +1,51 @@
+diff --git a/scripts/release/process.ts b/scripts/release/process.ts
+index c85ca2c7..91a858b0 100644
+--- a/scripts/release/process.ts
++++ b/scripts/release/process.ts
+@@ -21,6 +21,15 @@ export interface CommandResult {
+   readonly stderr: string
+ }
+ 
++/**
++ * Resolve the tar implementation used to inspect release archives. Windows
++ * runners may expose a POSIX ``tar`` first in PATH; that binary interprets a
++ * drive-letter path as a remote archive. Use the native implementation there.
++ */
++export function releaseTarCommand(): string {
++  return process.platform === 'win32' ? (process.env.DSH_DESKTOP_TAR ?? 'C:\\Windows\\System32\\tar.exe') : 'tar'
++}
++
+ /**
+  * Run a command and capture its output without judging the exit status.
+  * @param command - executable name.
+diff --git a/scripts/release/tarball.ts b/scripts/release/tarball.ts
+index b8a005e7..79c7c2a4 100644
+--- a/scripts/release/tarball.ts
++++ b/scripts/release/tarball.ts
+@@ -8,7 +8,7 @@
+ 
+ import { readFileSync } from 'node:fs'
+ import { join } from 'node:path'
+-import { capture } from './process.ts'
++import { capture, releaseTarCommand } from './process.ts'
+ 
+ /** Name of the file recording the order in which a packed family uploads. */
+ export const PUBLISH_ORDER_FILE = 'publish-order.txt'
+@@ -27,7 +27,7 @@ export interface PackedIdentity {
+  * @returns Every path inside the archive.
+  */
+ export function tarballFiles(tarball: string): string[] {
+-  return capture('tar', ['-tzf', tarball]).split(/\r?\n/u).filter(line => line !== '')
++  return capture(releaseTarCommand(), ['-tzf', tarball]).split(/\r?\n/u).filter(line => line !== '')
+ }
+ 
+ /**
+@@ -36,7 +36,7 @@ export function tarballFiles(tarball: string): string[] {
+  * @returns The name and version the tarball declares.
+  */
+ export function packedIdentity(tarball: string): PackedIdentity {
+-  const manifest: unknown = JSON.parse(capture('tar', ['-xOzf', tarball, 'package/package.json']))
++  const manifest: unknown = JSON.parse(capture(releaseTarCommand(), ['-xOzf', tarball, 'package/package.json']))
+   if (manifest === null || typeof manifest !== 'object') throw new Error(`${tarball} has no manifest`)
+   const { name, version } = manifest as Record<string, unknown>
+   if (typeof name !== 'string' || typeof version !== 'string') throw new Error(`${tarball} manifest lacks name/version`)

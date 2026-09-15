@@ -188,6 +188,21 @@ patches:
     note: >
       未签名产物是 ad-hoc 签名（TeamIdentifier=not set），**只能本机使用、不可分发**。
 
+# ── 12-release-cross-platform.patch：发布脚本跨平台归档 ───────────────
+- file: patches/12-release-cross-platform.patch
+  kind: release-tooling
+  targets:
+    - target: scripts/release/process.ts
+    - target: scripts/release/tarball.ts
+  touches:
+    - "scripts/release/process.ts：Windows 明确使用原生 tar.exe，避免 POSIX tar 将盘符路径解析成远端归档"
+    - "scripts/release/tarball.ts：统一使用平台归档工具读取 npm tarball"
+  upstream_logic_changed: true
+  reason: >
+    Windows 发布 runner 的 PATH 中可能优先出现 Git Bash tar；它无法正确处理
+    D:\ 路径，导致打包在 tarball 校验阶段失败。显式选择系统 tar.exe 后，Windows
+    与 macOS/Linux 使用各自可工作的归档实现。
+
 # ── 非补丁类资源（新增文件，非上游逻辑）──────────────────────────────
 # 注意：即使是资源也**逐文件**列出（不用目录），与脚本 ALLOWED 一致。
 # ── add-files：我们自己的源码包（新增文件，非改动上游）──────────────────

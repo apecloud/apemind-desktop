@@ -110,9 +110,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-assets
-          find "${RUNNER_TEMP}/dsh-desktop/apps/desktop/.desktop-build/targets" -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.msi' \) -print -exec cp {} release-assets/ \;
+          find "${RUNNER_TEMP}/dsh-desktop/apps/desktop/.desktop-build/targets" -mindepth 3 -maxdepth 3 -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.msi' \) -print -exec cp {} release-assets/ \;
           test -n "$(find release-assets -type f -print -quit)"
-          sha256sum release-assets/* > release-assets/SHA256SUMS-${{ matrix.os }}.txt
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum release-assets/* > release-assets/SHA256SUMS-${{ matrix.os }}.txt
+          else
+            shasum -a 256 release-assets/* > release-assets/SHA256SUMS-${{ matrix.os }}.txt
+          fi
           tar -czf release-assets/${{ matrix.os }}-build-receipt.tgz -C "${RUNNER_TEMP}/dsh-desktop/apps/desktop/.desktop-build" .
 
       - uses: actions/upload-artifact@v4
