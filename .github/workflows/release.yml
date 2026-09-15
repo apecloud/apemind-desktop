@@ -88,6 +88,11 @@ jobs:
         shell: bash
         run: pnpm install --frozen-lockfile
 
+      - name: Prefer native Windows tar
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo 'C:/Windows/System32' >> "$GITHUB_PATH"
+
       - name: Package application
         working-directory: ${{ runner.temp }}/dsh-desktop
         shell: bash
