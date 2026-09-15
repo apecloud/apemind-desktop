@@ -1,0 +1,63 @@
+diff --git a/apps/desktop/src/main.ts b/apps/desktop/src/main.ts
+--- a/apps/desktop/src/main.ts
++++ b/apps/desktop/src/main.ts
+@@ -1,7 +1,7 @@
+ /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
+ 
+ import { readFile, writeFile } from 'node:fs/promises'
+-import { extname, join, normalize, resolve, sep } from 'node:path'
++import { delimiter, dirname, extname, join, normalize, resolve, sep } from 'node:path'
+ import { fileURLToPath } from 'node:url'
+ import {
+   app,
+@@ -50,6 +50,7 @@
+   readonly node: string
+   readonly pnpm: string
+   readonly seed: string
++  readonly cli: string
+ }
+ 
+ function runtimeResources(): RuntimeResources {
+@@ -59,7 +60,9 @@
+   const pnpm = (development ? process.env.DSH_DESKTOP_PNPM_ENTRY : undefined)
+     ?? join(process.resourcesPath, 'runtime', 'pnpm', 'bin', 'pnpm.mjs')
+   const seed = (development ? process.env.DSH_DESKTOP_SEED_DIR : undefined) ?? join(process.resourcesPath, 'seed')
+-  return { node, pnpm, seed }
++  const cli = (development ? process.env.APEMIND_CLI_BIN : undefined)
++    ?? join(process.resourcesPath, 'apemind', 'bin', process.platform === 'win32' ? 'apemind.exe' : 'apemind')
++  return { node, pnpm, seed, cli }
+ }
+ 
+ function developmentProject(): string | undefined {
+@@ -132,6 +135,8 @@
+ 
+ async function main(): Promise<void> {
+   const resources = runtimeResources()
++  process.env.APEMIND_CLI_BIN = resources.cli
++  process.env.PATH = [dirname(resources.cli), process.env.PATH ?? ''].join(delimiter)
+   const paths = resolveDesktopPaths()
+   const development = developmentProject()
+   const activeProject = development ?? paths.profile
+diff --git a/apps/desktop/electron-builder.config.mjs b/apps/desktop/electron-builder.config.mjs
+--- a/apps/desktop/electron-builder.config.mjs
++++ b/apps/desktop/electron-builder.config.mjs
+@@ -47,6 +47,11 @@
+   }
+   const update = resolveDesktopAutoUpdateConfig(env, resolvedPlatform, resolvedArch)
+   const buildPaths = desktopTargetBuildPaths(update.target)
++  const cliBinary = env.APEMIND_CLI_BINARY ?? env.APEMIND_CLI_BIN
++  const cliResource = cliBinary === undefined ? [] : [{
++    from: cliBinary,
++    to: `apemind/bin/${resolvedPlatform === 'win32' ? 'apemind.exe' : 'apemind'}`,
++  }]
+   return {
+     appId,
+     productName: 'ApeMind Desktop',
+@@ -62,6 +67,7 @@
+     extraResources: [
+       { from: buildPaths.runtime, to: 'runtime' },
+       { from: buildPaths.seed, to: 'seed' },
++      ...cliResource,
+     ],
+     mac: {
+       icon: 'resources/icon.icns',
