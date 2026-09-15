@@ -205,6 +205,22 @@ patches:
     D:\ 路径，导致打包在 tarball 校验阶段失败。显式选择系统 tar.exe 后，Windows
     与 macOS/Linux 使用各自可工作的归档实现。
 
+# ── 13-desktop-unsigned-windows.patch：未签名 Windows 本机构建 ─────────
+- file: patches/13-desktop-unsigned-windows.patch
+  kind: build-switch
+  targets:
+    - target: apps/desktop/electron-builder.config.mjs
+  touches:
+    - "apps/desktop/electron-builder.config.mjs：DSH_DESKTOP_UNSIGNED=1 时不创建 Windows 证书签名器"
+  upstream_logic_changed: true
+  reason: >
+    未签名开关需要在 Windows 目标上完整跳过证书文件校验和签名钩子；
+    否则 electron-builder 配置阶段仍会要求正式 Windows 证书，无法产出本机测试包。
+  guardrail: >
+    开关默认关闭；未设置 DSH_DESKTOP_UNSIGNED 时仍强制要求 Windows 签名器，
+    正式分发构建行为保持不变。
+
+
 # ── 非补丁类资源（新增文件，非上游逻辑）──────────────────────────────
 # 注意：即使是资源也**逐文件**列出（不用目录），与脚本 ALLOWED 一致。
 # ── add-files：我们自己的源码包（新增文件，非改动上游）──────────────────
