@@ -1,0 +1,110 @@
+name: desktop-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag, for example v0.1.5-rc.2'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark the GitHub Release as a prerelease'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  DSH_DESKTOP_UNSIGNED: '1'
+  DSH_DESKTOP_APP_ID: com.apemind.desktop
+  DOWNLOAD_TEST_ORIGIN: https://apemind.ai
+  ELECTRON_MIRROR: https://registry.npmmirror.com/-/binary/electron/
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Apple Silicon
+            os: macos-14
+            target: package:mac:arm64
+            artifact_glob: 'work/dsh-desktop/apps/desktop/.desktop-build/targets/**/artifacts/**/*'
+          - name: macOS Intel
+            os: macos-13
+            target: package:mac:x64
+            artifact_glob: 'work/dsh-desktop/apps/desktop/.desktop-build/targets/**/artifacts/**/*'
+          - name: Windows x64
+            os: windows-latest
+            target: package:win:x64
+            artifact_glob: 'work/dsh-desktop/apps/desktop/.desktop-build/targets/**/artifacts/**/*'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync upstream and apply ApeMind overlay
+        shell: bash
+        run: ./scripts/sync-upstream.sh --work-dir "${RUNNER_TEMP}/dsh-desktop"
+
+      - name: Activate pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          PM="$(./scripts/lock-get.sh toolchain.package_manager)"
+          corepack enable
+          corepack prepare "$PM" --activate
+          pnpm --version
+
+      - name: Install dependencies
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Package application
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        shell: bash
+        run: pnpm --filter @deepseek-ai/dsh-desktop run ${{ matrix.target }}
+
+      - name: Collect release assets and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          find "${RUNNER_TEMP}/dsh-desktop/apps/desktop/.desktop-build/targets" -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.msi' \) -print -exec cp {} release-assets/ \;
+          test -n "$(find release-assets -type f -print -quit)"
+          sha256sum release-assets/* > release-assets/SHA256SUMS-${{ matrix.os }}.txt
+          tar -czf release-assets/${{ matrix.os }}-build-receipt.tgz -C "${RUNNER_TEMP}/dsh-desktop/apps/desktop/.desktop-build" .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}
+          path: release-assets
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: desktop-*
+          merge-multiple: true
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: ApeMind Desktop ${{ inputs.tag }}
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+          files: release-assets/**
