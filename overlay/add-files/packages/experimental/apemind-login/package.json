@@ -34,16 +34,14 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "zod": "^4.4.3"
+    "@deepseek-ai/dsh-skill": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/cordis": "workspace:^",
     "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "zod": "^4.4.3"
+    "@deepseek-ai/dsh-skill": "workspace:^"
   },
   "publishConfig": {
     "access": "public"

@@ -13,6 +13,12 @@
 # 变更清单（与 docs/branding.md 一致，改这里必须同步改那边）：
 
 patches:
+  - file: patches/10-apemind-cli-runtime.patch
+    targets:
+      - target: apps/desktop/src/main.ts
+      - target: apps/desktop/electron-builder.config.mjs
+    reason: Desktop 与 Agent 使用同一份随包 apemind CLI。
+    upstream_logic_changed: true
   # ── 09-apemind-snapshots.patch：同步设置导航的可访问性快照 ─────────────
   - file: patches/09-apemind-snapshots.patch
     kind: test-contract
@@ -194,10 +200,9 @@ add-files:
   - target: packages/experimental/apemind-login/tsconfig.json
   - target: packages/experimental/apemind-login/src/index.ts
   - target: packages/experimental/apemind-login/src/controller.ts
+  - target: packages/experimental/apemind-login/src/cli-process.ts
+  # Desktop 启动与 Agent 相同的 apemind CLI；不在插件内复制认证或业务 API。
   - target: packages/experimental/apemind-login/src/types.ts
-  - target: packages/experimental/apemind-login/src/api-client.ts
-  - target: packages/experimental/apemind-login/src/account-service.ts
-  - target: packages/experimental/apemind-login/src/oauth-service.ts
   # ApeMind 设置分区，通过 remote.apemindAuth 操作 Host。
   - target: packages/client/ui-apemind-login/package.json
   - target: packages/client/ui-apemind-login/tsconfig.json

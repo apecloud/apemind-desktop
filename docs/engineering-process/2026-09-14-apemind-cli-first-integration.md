@@ -159,11 +159,12 @@ apemind document get <document-id> --format json
 第一阶段提供只读能力。写能力采用预览和确认流程：
 
 ```bash
-apemind document update <id> --input change.json --dry-run
-apemind document update <id> --input change.json --confirm
+apemind document update <id> --knowledge-base <kb-id> --input change.json --dry-run
+apemind document update <id> --knowledge-base <kb-id> --input change.json \
+  --confirm --idempotency-key <stable-request-key>
 ```
 
-非交互环境中，写命令不等待终端输入。没有 `--confirm` 时返回结构化的 `confirmation_required` 和待执行变更，Desktop 或 DSH 再向用户展示确认。
+非交互环境中，写命令不等待终端输入。没有 `--confirm` 时返回结构化的 `confirmation_required` 和待执行变更，Desktop 或 DSH 再向用户展示确认。确认执行必须显式提供调用方生成的幂等键；同一个幂等键只能对应同一份请求内容，重试会返回原始结果，不会重复写入。
 
 ## 输出与进程合同
 

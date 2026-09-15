@@ -12,7 +12,7 @@
       "path": "../../../vendor/cordis"
     },
     {
-      "path": "../../credentials/credentials"
+      "path": "../../skill/skill"
     },
     {
       "path": "../../typert/protocol"
