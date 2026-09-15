@@ -46,6 +46,9 @@
 .apemind-connect-panel { min-height: 260px; align-content: center; }
 .apemind-waiting-panel { min-height: 280px; align-content: center; }
 .apemind-waiting-panel .apemind-state-mark { opacity: .82; }
+.apemind-device-code { display: grid; justify-items: center; gap: 12px; width: min(100%, 360px); }
+.apemind-device-code code { padding: 12px 20px; border: 1px solid var(--apemind-border); border-radius: 10px; background: Canvas; color: CanvasText; font: 650 1.6rem ui-monospace, monospace; letter-spacing: .12em; white-space: nowrap; user-select: all; }
+.apemind-device-open-error { display: grid; gap: 10px; width: 100%; color: #a43832; font-size: .88rem; }
 .apemind-spinner { width: 28px; height: 28px; border: 3px solid color-mix(in srgb, var(--apemind-accent) 16%, transparent); border-top-color: var(--apemind-accent); border-radius: 50%; corner-shape: round; animation: apemind-spin .9s linear infinite; }
 @keyframes apemind-spin { to { transform: rotate(360deg); } }
 

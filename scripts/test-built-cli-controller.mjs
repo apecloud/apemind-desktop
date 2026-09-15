@@ -11,6 +11,8 @@ const binary = join(temp, 'apemind')
 const callsFile = join(temp, 'calls.jsonl')
 const statusFile = join(temp, 'status.json')
 const previousBinary = process.env.APEMIND_CLI_BIN
+const previousPath = process.env.PATH
+const openedFile = join(temp, 'opened.jsonl')
 
 try {
   await writeFile(statusFile, '{}')
@@ -39,10 +41,23 @@ else if (args[0]==='auth' && args[1]==='status') {
   data={items:[{id:second?'kb-2':'kb-1',name:second?'Second':'First'}],next_cursor:second?null:'page-two'};
 } else if (args[0]==='workspace') data=args[1]==='list'?{items:[space],next_cursor:null}:a;
 else if (args[0]==='auth' && args[1]==='logout') data={logged_in:false};
+else if (args[0]==='auth' && args[1]==='login') {
+  console.log(JSON.stringify({type:'device_code',data:{user_code:'TEST-CODE',verification_uri_complete:status.deviceUri??'https://example.invalid/api/v2/oauth/device/verify?user_code=TEST-CODE'}}));
+  setInterval(()=>{},1000);
+  await new Promise(()=>{});
+}
 else process.exit(8);
 console.log(JSON.stringify({type:'result',data}));
 `, { mode: 0o700 })
   process.env.APEMIND_CLI_BIN = binary
+  const opener = process.platform === 'darwin' ? 'open' : 'xdg-open'
+  await writeFile(join(temp, opener), `#!${process.execPath}
+import fs from 'node:fs';
+const status=JSON.parse(fs.readFileSync(${JSON.stringify(statusFile)},'utf8'));
+if(status.openFail) { console.error('private-opener-diagnostic'); process.exit(1); }
+fs.appendFileSync(${JSON.stringify(openedFile)},JSON.stringify(process.argv.slice(2))+'\\n');
+`, { mode: 0o700 })
+  process.env.PATH = `${temp}:${previousPath ?? ''}`
   const { Context } = await import(pathToFileURL(join(root, 'vendor/cordis/lib/index.js')).href)
   const { AuthorizationController } = await import(pathToFileURL(join(root, 'packages/experimental/apemind-login/lib/index.js')).href)
   const controller = new AuthorizationController(new Context())
@@ -96,9 +111,39 @@ console.log(JSON.stringify({type:'result',data}));
   const failedVersion = await new AuthorizationController(new Context()).state()
   assert.equal(failedVersion.cliVersion, null)
   assert.equal(failedVersion.oauth.id, 'account-a')
+  await writeFile(statusFile, '{}')
+  await assert.rejects(controller.openDevicePage())
+  const login = controller.startDeviceLogin('https://example.invalid').catch(error => error)
+  for (let attempt = 0; attempt < 20; attempt++) {
+    if ((await controller.state()).loginProgress?.type === 'device_code') break
+  }
+  assert.equal((await controller.state()).loginProgress.userCode, 'TEST-CODE')
+  await controller.openDevicePage()
+  assert.deepEqual(JSON.parse((await readFile(openedFile, 'utf8')).trim()), ['https://example.invalid/api/v2/oauth/device/verify?user_code=TEST-CODE'])
+  await writeFile(statusFile, JSON.stringify({ openFail: true }))
+  await assert.rejects(controller.openDevicePage(), error => !String(error).includes('private-opener-diagnostic'))
+  assert.equal((await controller.state()).browserLoginPending, true)
+  await writeFile(statusFile, '{}')
+  await controller.openDevicePage()
+  await controller.cancelBrowserLogin()
+  await login
+  await assert.rejects(controller.openDevicePage())
+  assert.equal((await controller.state()).loginProgress, null)
+  await writeFile(statusFile, JSON.stringify({ deviceUri: 'file:///tmp/rejected' }))
+  const unsafeLogin = controller.startDeviceLogin('https://example.invalid').catch(error => error)
+  for (let attempt = 0; attempt < 20; attempt++) {
+    if ((await controller.state()).loginProgress?.type === 'device_code') break
+  }
+  await assert.rejects(controller.openDevicePage())
+  await controller.cancelBrowserLogin()
+  await unsafeLogin
+  assert.equal((await readFile(openedFile, 'utf8')).trim().split('\n').length, 2)
   console.log('PASS: compiled Host preserves account/workspace, pagination, logout, CLI version, and credential recovery status without exposing diagnostics.')
+  console.log('PASS: device-page reopening uses the current CLI login, reports opener failure, permits retry, and rejects finished logins and unsafe URLs.')
 } finally {
   if (previousBinary === undefined) delete process.env.APEMIND_CLI_BIN
   else process.env.APEMIND_CLI_BIN = previousBinary
+  if (previousPath === undefined) delete process.env.PATH
+  else process.env.PATH = previousPath
   await rm(temp, { recursive: true, force: true })
 }
