@@ -236,9 +236,9 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     else setError(result.error.message)
   }
 
-  async function browserLogin(): Promise<void> {
+  async function browserLogin(server = origin): Promise<void> {
     setWaiting(true)
-    const result = await remote.startBrowserLogin(origin)
+    const result = await remote.startBrowserLogin(server)
     setWaiting(false)
     if (!alive.current) return
     if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setLoginProgress(null); setMessage(t('loggedIn')) }
@@ -325,8 +325,19 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     else { setWaiting(false); setMessage(t('cancelled')) }
   }
 
+  async function retryConnection(): Promise<void> {
+    const result = await remote.state()
+    if (!alive.current) return
+    if (result.ok) setState(result.value)
+    else setError(result.error.message)
+  }
+
   const disabled = busy || waiting
   const oauth = state.oauth
+  const credential = state.credentialStatus
+  const credentialAccount = [...(state.oauthConnections ?? []), ...state.connections]
+    .find(item => item.id === credential?.connectionId)
+  const needsSignIn = credential?.error === 'reauthentication_required'
   const connectionCount = (state.oauthConnections?.length ?? 0) + state.connections.length
   const showConnectionSelector = connectionCount > 1 || (connectionCount > 0 && !oauth && !state.activeId)
 
@@ -337,7 +348,11 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     {error && <div className="apemind-error" role="alert">{error}</div>}
     {!error && (message || busy) && <div className="apemind-message" role="status" aria-live="polite">{busy ? t('busy') : message}</div>}
     {showConnectionSelector && <label>{t('currentConnection')}
-      <select disabled={disabled} value={state.oauth?.id ?? state.activeId ?? ''} onChange={event => { void run(() => select(event.target.value)) }}>
+      <select
+        disabled={disabled}
+        value={state.oauth?.id ?? state.activeId ?? credential?.connectionId ?? ''}
+        onChange={(event) => { void run(() => select(event.target.value)) }}
+      >
         <option value="" disabled>{t('chooseConnection')}</option>
         {state.oauthConnections?.map(item => <option key={item.id} value={item.id}>{item.username} · {item.origin}</option>)}
         {state.connections.map(item => <option key={item.id} value={item.id}>{item.username} · {item.workspaceName} · {t('apiKey')}</option>)}
@@ -345,9 +360,34 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     </label>}
     {waiting && !oauth
       ? <WaitingPanel t={t} disabled={false} progress={loginProgress} onCancel={() => { void cancelLogin() }} />
-      : oauth
-        ? <ConnectedPanel t={t} oauth={oauth} disabled={disabled} onSelectWorkspace={(id) => { void run(() => selectWorkspace(id)) }} onRefresh={() => { void run(refreshWorkspaces) }} onLogout={() => { void run(oauthLogout) }} onKnowledge={() => { void run(oauthCollections) }} oauthItems={oauthItems} hasMore={Boolean(oauthCursor)} onLoadMore={() => { void run(() => oauthCollections(oauthCursor ?? undefined), true) }} />
-        : <SignedOutPanel t={t} disabled={disabled} onBrowserLogin={() => { void run(browserLogin) }} onDeviceLogin={() => { void run(deviceLogin) }} />}
+      : credential && !credential.available
+        ? <section className="apemind-state-panel">
+          <Mark className="apemind-state-mark" />
+          <h3>{needsSignIn ? t('reauthenticationTitle') : t('credentialUnavailableTitle')}</h3>
+          {credentialAccount && <p>{credentialAccount.username}<br />{credentialAccount.origin}</p>}
+          <p role="alert">{needsSignIn ? t('reauthenticationDescription') : t('credentialUnavailableDescription')}</p>
+          {needsSignIn && credentialAccount
+            ? <button
+              type="button" className="apemind-primary apemind-main-action" disabled={disabled}
+              onClick={() => { void run(() => browserLogin(credentialAccount.origin)) }}
+            >{t('signInAgain')}</button>
+            : <button
+              type="button" className="apemind-secondary" disabled={disabled}
+              onClick={() => { void run(retryConnection) }}
+            >{t('retryConnection')}</button>}
+        </section>
+        : oauth
+          ? <ConnectedPanel
+            t={t} oauth={oauth} disabled={disabled}
+            onSelectWorkspace={(id) => { void run(() => selectWorkspace(id)) }}
+            onRefresh={() => { void run(refreshWorkspaces) }} onLogout={() => { void run(oauthLogout) }}
+            onKnowledge={() => { void run(oauthCollections) }} oauthItems={oauthItems} hasMore={Boolean(oauthCursor)}
+            onLoadMore={() => { void run(() => oauthCollections(oauthCursor ?? undefined), true) }}
+          />
+          : <SignedOutPanel
+            t={t} disabled={disabled} onBrowserLogin={() => { void run(browserLogin) }}
+            onDeviceLogin={() => { void run(deviceLogin) }}
+          />}
     <details className="apemind-advanced">
       <summary><span aria-hidden="true">⚙</span> {t('advanced')}</summary>
       <div className="apemind-advanced-content">
@@ -370,5 +410,11 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
         </form>
       </div>
     </details>
+    <footer className="apemind-runtime-info">
+      <p>{t('cliVersion')} <span>{state.cliVersion ?? t('versionUnavailable')}</span></p>
+      {credential?.storage && <p>
+        {t('credentialStorage')} <span>{credential.storage === 'system' ? t('systemStorage') : t('encryptedFileStorage')}</span>
+      </p>}
+    </footer>
   </section>
 }

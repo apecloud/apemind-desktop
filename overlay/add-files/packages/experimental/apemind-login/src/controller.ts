@@ -1,7 +1,9 @@
 import { Context } from '@deepseek-ai/cordis'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { CliError, CliProcess } from './cli-process.ts'
-import type { AccountState, AccountView, KnowledgeBaseView, KnowledgePage, LoginProgress, OAuthAccountView, WorkspaceView } from './types.ts'
+import type {
+  AccountState, AccountView, CredentialStatus, KnowledgeBaseView, KnowledgePage, LoginProgress, OAuthAccountView, WorkspaceView,
+} from './types.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context { authorizationController: AuthorizationController }
@@ -16,18 +18,25 @@ type CliConnection = {
   workspace_id: string
   workspaces: WorkspaceView[]
   verified_at: string
+  credential_storage?: string
   role?: string | null
   permissions?: string[]
   workspace_name?: string
 }
 type ConnectionList = { current: string; items: CliConnection[] }
-type Status = { logged_in: boolean; connection: CliConnection | null }
+type Status = {
+  logged_in: boolean
+  connection: CliConnection | null
+  credential_available?: boolean
+  credential_error?: string
+}
 type WorkspaceResult = { items: WorkspaceView[]; next_cursor: string | null }
 type KnowledgeResult = { items: KnowledgeBaseView[]; next_cursor: string | null }
 
 /** The Desktop UI is a presentation layer over the same CLI used by agents. */
 export class AuthorizationController extends TypertRemoteService {
   private readonly cli = new CliProcess()
+  private cliVersion: string | null = null
   private loginAbort: AbortController | undefined
   private loginProgress: LoginProgress | null = null
 
@@ -60,6 +69,32 @@ export class AuthorizationController extends TypertRemoteService {
       workspaces: connection.workspaces ?? [] }
   }
 
+  private async version(): Promise<string | null> {
+    if (this.cliVersion) return this.cliVersion
+    try {
+      const version = await this.cli.text(['--version'])
+      if (/^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(version)) {
+        this.cliVersion = version
+      }
+    } catch { /* A version lookup must not hide the account state. */ }
+    return this.cliVersion
+  }
+
+  private credentialStatus(status: Status): CredentialStatus | null {
+    if (!status.connection) return null
+    const available = status.credential_available ?? status.logged_in
+    const error = status.credential_error === 'reauthentication_required'
+      ? 'reauthentication_required'
+      : !available || status.credential_error ? 'credential_unavailable' : null
+    const storage = status.connection.credential_storage
+    return {
+      connectionId: status.connection.id,
+      available: available && !error,
+      error,
+      storage: storage === 'system' || storage === 'encrypted-file' ? storage : null,
+    }
+  }
+
   private async snapshot(): Promise<{ list: ConnectionList; status: Status }> {
     const list = await this.run<ConnectionList>(['connection', 'list'])
     const status = list.current
@@ -89,10 +124,12 @@ export class AuthorizationController extends TypertRemoteService {
   async state(): Promise<AccountState> {
     const { list, status } = await this.snapshot()
     const connections = list.items.filter(item => item.kind === 'api-key').map(item => this.view(item))
-    const active = status.logged_in && status.connection ? status.connection : null
+    const credentialStatus = this.credentialStatus(status)
+    const active = status.logged_in && credentialStatus?.available ? status.connection : null
     return { activeId: active?.kind === 'api-key' ? active.id : null, connections,
       oauthConnections: list.items.filter(item => item.kind === 'oauth').map(item => this.oauthView(item)),
       oauth: active?.kind === 'oauth' ? this.oauthView(active) : null,
+      cliVersion: await this.version(), credentialStatus,
       browserLoginPending: Boolean(this.loginAbort), loginProgress: this.loginProgress }
   }
 

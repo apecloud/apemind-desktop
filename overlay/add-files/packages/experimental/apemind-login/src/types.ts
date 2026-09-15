@@ -16,8 +16,17 @@ export interface AccountState {
   connections: AccountView[]
   oauthConnections?: OAuthAccountView[]
   oauth?: OAuthAccountView | null
+  cliVersion?: string | null
+  credentialStatus?: CredentialStatus | null
   browserLoginPending?: boolean
   loginProgress?: LoginProgress | null
+}
+
+export interface CredentialStatus {
+  connectionId: string
+  available: boolean
+  error: 'credential_unavailable' | 'reauthentication_required' | null
+  storage: 'system' | 'encrypted-file' | null
 }
 
 export interface LoginProgress {

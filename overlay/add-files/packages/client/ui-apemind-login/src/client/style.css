@@ -118,6 +118,9 @@
 .apemind-knowledge small { color: var(--apemind-muted); font-size: .78rem; font-weight: 400; }
 .apemind-knowledge ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
 .apemind-knowledge li { padding: 8px 0; overflow-wrap: anywhere; border-bottom: 1px solid color-mix(in srgb, currentColor 9%, transparent); font-size: .85rem; }
+.apemind-runtime-info { display: grid; gap: 4px; color: var(--apemind-muted); font-size: .8rem; }
+.apemind-runtime-info span { margin-left: 6px; }
+.apemind-state-panel > p { overflow-wrap: anywhere; }
 
 @media (max-width: 560px) {
   .apemind-state-panel { padding: 32px 22px 28px; }
