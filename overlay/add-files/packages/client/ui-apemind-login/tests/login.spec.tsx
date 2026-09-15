@@ -165,3 +165,59 @@ it('shows an unreadable API key connection and its encrypted fallback storage', 
   expect(screen.queryByRole('button', { name: en.signInAgain })).toBeNull()
   expect(screen.queryByRole('button', { name: en.browserSignIn })).toBeNull()
 })
+
+it('opens the current device authorization through the Host while login is pending', async () => {
+  let state: AccountState = { activeId: null, connections: [] }
+  let finishLogin: (value: unknown) => void = () => {}
+  const remote = {
+    state: vi.fn(async () => ({ ok: true as const, value: state })),
+    startDeviceLogin: vi.fn(() => {
+      state = { ...state, browserLoginPending: true, loginProgress: {
+        type: 'device_code', userCode: 'TEST-CODE',
+        verificationUriComplete: 'https://example.invalid/api/v2/oauth/device/verify?user_code=TEST-CODE',
+      } }
+      return new Promise((resolve) => { finishLogin = resolve })
+    }),
+    openDevicePage: vi.fn(async () => ({ ok: true })),
+    cancelBrowserLogin: vi.fn(async () => {
+      state = { activeId: null, connections: [], browserLoginPending: false }
+      finishLogin({ ok: false, error: { code: 'gateway/cancelled' } })
+      return { ok: true }
+    }),
+  }
+  renderLogin(remote)
+  await waitFor(() => { expect(screen.getByRole<HTMLButtonElement>('button', { name: en.deviceFallback }).disabled).toBe(false) })
+  fireEvent.click(screen.getByRole('button', { name: en.deviceFallback }))
+  const open = await screen.findByRole('button', { name: en.openDevicePage })
+  expect(screen.getByRole('heading', { name: en.deviceWaitingTitle })).toBeTruthy()
+  expect(screen.getByText('TEST-CODE').tagName).toBe('CODE')
+  expect(screen.queryByText(en.waitingDescription)).toBeNull()
+  expect(screen.queryByRole('link', { name: en.openDevicePage })).toBeNull()
+  fireEvent.click(open)
+  await waitFor(() => { expect(remote.openDevicePage).toHaveBeenCalledWith() })
+  expect(remote.startDeviceLogin).toHaveBeenCalledTimes(1)
+  fireEvent.click(screen.getByRole('button', { name: en.cancelSignIn }))
+  expect(await screen.findByRole('button', { name: en.browserSignIn })).toBeTruthy()
+  expect(screen.queryByText('TEST-CODE')).toBeNull()
+})
+
+it('keeps the device code and offers a copyable address after opening fails', async () => {
+  const address = 'https://example.invalid/api/v2/oauth/device/verify'
+  const remote = {
+    state: vi.fn(async () => ({ ok: true as const, value: {
+      activeId: null, connections: [], browserLoginPending: true,
+      loginProgress: { type: 'device_code', userCode: 'TEST-CODE', verificationUri: address },
+    } })),
+    openDevicePage: vi.fn().mockRejectedValueOnce(new Error('private-process-diagnostic')).mockResolvedValue({ ok: true }),
+  }
+  renderLogin(remote)
+  fireEvent.click(await screen.findByRole('button', { name: en.openDevicePage }))
+  expect(await screen.findByRole('alert')).toHaveProperty('textContent', en.openDevicePageError)
+  expect(screen.getByLabelText<HTMLInputElement>(en.authorizationAddress).value).toBe(address)
+  expect(screen.getByLabelText<HTMLInputElement>(en.authorizationAddress).readOnly).toBe(true)
+  expect(screen.getByText('TEST-CODE')).toBeTruthy()
+  expect(screen.queryByText('private-process-diagnostic')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: en.openDevicePage }))
+  await waitFor(() => { expect(screen.queryByRole('alert')).toBeNull() })
+  expect(remote.openDevicePage).toHaveBeenCalledTimes(2)
+})

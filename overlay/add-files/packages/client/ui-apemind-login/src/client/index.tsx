@@ -80,20 +80,41 @@ function WorkspaceRow({ workspace, current, disabled, onSelect, roleLabel, curre
   >{content}</button>
 }
 
-function WaitingPanel({ t, disabled, onCancel, progress }: {
+function WaitingPanel({ t, disabled, onCancel, onOpenDevicePage, progress }: {
   t: LoginSectionProps['t']
   disabled: boolean
   onCancel: () => void
+  onOpenDevicePage: () => Promise<boolean>
   progress: LoginProgress | null | undefined
 }): ReactNode {
+  const [opening, setOpening] = useState(false)
+  const [openFailed, setOpenFailed] = useState(false)
+  const device = progress?.type === 'device_code'
+  const address = progress?.verificationUriComplete || progress?.verificationUri
+
+  async function openDevicePage(): Promise<void> {
+    setOpening(true)
+    setOpenFailed(false)
+    try { setOpenFailed(!await onOpenDevicePage()) }
+    catch { setOpenFailed(true) }
+    finally { setOpening(false) }
+  }
+
   return <section className="apemind-state-panel apemind-waiting-panel" aria-live="polite">
     <Mark className="apemind-state-mark" />
     <span className="apemind-spinner" aria-hidden="true" />
-    <h3>{t('waitingTitle')}</h3>
-    <p>{t('waitingDescription')}</p>
-    {progress?.type === 'device_code' && <div className="apemind-device-code">
-      <strong>{t('deviceCodeLabel')}</strong><code>{progress.userCode}</code>
-      {progress.verificationUriComplete && <a href={progress.verificationUriComplete} target="_blank" rel="noreferrer">{t('openDevicePage')}</a>}
+    <h3>{t(device ? 'deviceWaitingTitle' : 'waitingTitle')}</h3>
+    <p>{t(device ? 'deviceWaitingDescription' : 'waitingDescription')}</p>
+    {device && <div className="apemind-device-code">
+      <span className="apemind-muted">{t('deviceCodeLabel')}</span>
+      <code>{progress.userCode}</code>
+      {address && <button type="button" className="apemind-primary apemind-main-action"
+        disabled={opening} onClick={() => { void openDevicePage() }}
+      >{t(opening ? 'openingDevicePage' : 'openDevicePage')} <span aria-hidden="true">↗</span></button>}
+    </div>}
+    {openFailed && <div className="apemind-device-open-error">
+      <p role="alert">{t('openDevicePageError')}</p>
+      <input aria-label={t('authorizationAddress')} value={address ?? ''} readOnly />
     </div>}
     <button type="button" className="apemind-secondary" disabled={disabled} onClick={onCancel}>{t('cancelSignIn')}</button>
   </section>
@@ -341,12 +362,12 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
   const connectionCount = (state.oauthConnections?.length ?? 0) + state.connections.length
   const showConnectionSelector = connectionCount > 1 || (connectionCount > 0 && !oauth && !state.activeId)
 
-  return <section className="apemind-account" aria-busy={busy}>
+  return <section className="apemind-account" aria-busy={busy && !waiting}>
     <header className="apemind-header">
       <div className="apemind-heading-row"><Mark className="apemind-heading-mark" /><div><h2>{t('brand')}</h2><p className="apemind-muted">{t('subtitle')}</p></div></div>
     </header>
     {error && <div className="apemind-error" role="alert">{error}</div>}
-    {!error && (message || busy) && <div className="apemind-message" role="status" aria-live="polite">{busy ? t('busy') : message}</div>}
+    {!error && !waiting && (message || busy) && <div className="apemind-message" role="status" aria-live="polite">{busy ? t('busy') : message}</div>}
     {showConnectionSelector && <label>{t('currentConnection')}
       <select
         disabled={disabled}
@@ -359,7 +380,8 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
       </select>
     </label>}
     {waiting && !oauth
-      ? <WaitingPanel t={t} disabled={false} progress={loginProgress} onCancel={() => { void cancelLogin() }} />
+      ? <WaitingPanel t={t} disabled={false} progress={loginProgress} onCancel={() => { void cancelLogin() }}
+        onOpenDevicePage={async () => (await remote.openDevicePage()).ok} />
       : credential && !credential.available
         ? <section className="apemind-state-panel">
           <Mark className="apemind-state-mark" />

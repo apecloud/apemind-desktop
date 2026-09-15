@@ -1,4 +1,6 @@
 import { Context } from '@deepseek-ai/cordis'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { CliError, CliProcess } from './cli-process.ts'
 import type {
@@ -169,6 +171,27 @@ export class AuthorizationController extends TypertRemoteService {
   @Remote async startBrowserLogin(origin: string): Promise<OAuthAccountView> { return this.login(false, origin) }
   @Remote async startDeviceLogin(origin: string): Promise<OAuthAccountView> { return this.login(true, origin) }
   @Remote async cancelBrowserLogin(): Promise<void> { this.loginAbort?.abort() }
+
+  @Remote
+  async openDevicePage(): Promise<void> {
+    const signal = this.loginAbort?.signal
+    const progress = this.loginProgress
+    const address = progress?.verificationUriComplete || progress?.verificationUri
+    if (!signal || signal.aborted || progress?.type !== 'device_code' || !address) {
+      throw new RemoteError('gateway/bad-request', '设备码登录已结束，请重新开始登录。', {})
+    }
+    const url = new URL(address)
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) {
+      throw new RemoteError('gateway/bad-request', '授权页面地址不可用，请重新开始登录。', {})
+    }
+    const command = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'rundll32' : 'xdg-open'
+    const args = process.platform === 'win32' ? ['url.dll,FileProtocolHandler', url.href] : [url.href]
+    try {
+      await promisify(execFile)(command, args, { signal, timeout: 20_000, windowsHide: true })
+    } catch {
+      throw new RemoteError('gateway/bad-request', '无法打开系统浏览器，请复制授权地址后手动打开。', {})
+    }
+  }
 
   @Remote
   async refreshWorkspaces(connectionId: string): Promise<OAuthAccountView> {
