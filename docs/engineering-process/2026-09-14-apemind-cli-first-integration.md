@@ -52,6 +52,24 @@ CLI 内部可以使用由 OpenAPI 生成的客户端代码，但不另外发布�
 
 API Key 只作为明确的高级连接，用于自动化、CI 或用户主动选择的固定密钥场景。
 
+## 版本命名长期规则
+
+ApeMind Desktop 是 DSH 的品牌化发行版，应用版本必须跟随所锁定的 DSH 上游版本。只要 `upstream.lock` 指向的上游版本没有变化，品牌改动、CLI 更新或其他 overlay 改动都不能擅自改变 Desktop 的应用版本号。
+
+发布时使用下面的版本边界：
+
+| 信息 | 规则 |
+|---|---|
+| Desktop 应用版本 | 使用上游 DSH 的版本，写入 Electron 应用和安装包元数据 |
+| 上游版本 | 由 `upstream.lock` 的 commit 及其对应版本确定 |
+| GitHub Release 标签 | 默认与 Desktop 应用版本一致 |
+| 同版本内部试用 | 使用 GitHub Release 的 prerelease、构建号或发布说明区分，不能伪造一个新的应用版本 |
+| ApeMind CLI 版本 | 独立于 Desktop 版本，由 CLI 自己的发布版本管理 |
+
+例如，Desktop 基于 DSH `0.1.5-rc.1` 时，应用版本和正式 Release 标签应保持 `0.1.5-rc.1`；内置 CLI 可以是 `v0.3.9`。如果同一应用版本需要多次内部试用，应通过 prerelease 或构建元数据区分，不能把 `v0.1.5-rc.8` 当作应用已经升级到该版本。
+
+发布流水线必须在创建 Release 前检查应用版本、`upstream.lock` 对应版本和 Release 标签的一致性；CLI 版本只检查是否符合 Desktop 的 CLI lock，不参与 Desktop 应用版本计算。不得通过给 monorepo 或 Electron 应用追加品牌修订后缀来表达内部构建，避免破坏上游统一版本约束。
+
 ## 产品结构
 
 ### Desktop 的职责
