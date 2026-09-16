@@ -1,17 +1,19 @@
 diff --git a/apps/desktop/src/locale.ts b/apps/desktop/src/locale.ts
-index b666cfd55..4e3553a66 100644
+index e2e4d9e6c..4006bab57 100644
 --- a/apps/desktop/src/locale.ts
 +++ b/apps/desktop/src/locale.ts
-@@ -2,7 +2,7 @@
+@@ -2,8 +2,8 @@
  
  export const en = {
    application: 'Application',
 -  startupFailed: 'DeepSeek Harness could not start',
+-  startupLoading: 'Starting DeepSeek Harness…',
 +  startupFailed: 'ApeMind Desktop could not start',
-   pluginsMenu: 'Desktop Plugins…',
-   pluginsMenuPackagedOnly: 'Desktop Plugins… (available in packaged applications)',
-   checkUpdatesMenu: 'Check for Updates…',
-@@ -10,14 +10,14 @@ export const en = {
++  startupLoading: 'Starting ApeMind Desktop…',
+   startupLoadingDescription: 'Your workspace will open when it is ready.',
+   startupErrorDescription: 'Choose a recovery action below. Disabling third-party plugins retains their files.',
+   startupReinstallAdvice: 'If application files are missing or damaged, close the application and reinstall it. Your tasks are stored separately.',
+@@ -18,14 +18,14 @@ export const en = {
    unknownError: 'Unknown error',
    updateCheckTitle: 'Check for Updates',
    updateCurrent: 'You already have the latest version.',
@@ -28,17 +30,19 @@ index b666cfd55..4e3553a66 100644
 +  pluginWindowTitle: 'ApeMind Desktop — Desktop Plugins',
    pluginManagerDescription: 'Plugins are installed only in the Desktop node_modules and are managed by the bundled pnpm.',
    refresh: 'Refresh',
-   npmPackage: 'npm package',
-@@ -41,7 +41,7 @@ export type DesktopMessages = { readonly [Key in keyof typeof en]: string }
+   enable: 'Enable',
+@@ -56,8 +56,8 @@ export type DesktopMessages = { readonly [Key in keyof typeof en]: string }
  
  export const zh = {
    application: '应用',
 -  startupFailed: 'DeepSeek Harness 无法启动',
+-  startupLoading: '正在启动 DeepSeek Harness…',
 +  startupFailed: 'ApeMind Desktop 无法启动',
-   pluginsMenu: '桌面插件…',
-   pluginsMenuPackagedOnly: '桌面插件…（打包应用中可用）',
-   checkUpdatesMenu: '检查更新…',
-@@ -49,14 +49,14 @@ export const zh = {
++  startupLoading: '正在启动 ApeMind Desktop…',
+   startupLoadingDescription: '准备就绪后将自动打开工作区。',
+   startupErrorDescription: '请选择下方的恢复操作。禁用第三方插件会保留插件文件。',
+   startupReinstallAdvice: '如果应用文件缺失或损坏，请关闭应用并重新安装。任务数据存储在独立位置。',
+@@ -72,14 +72,14 @@ export const zh = {
    unknownError: '未知错误',
    updateCheckTitle: '检查更新',
    updateCurrent: '当前已是最新版本。',
@@ -55,4 +59,4 @@ index b666cfd55..4e3553a66 100644
 +  pluginWindowTitle: 'ApeMind Desktop — 桌面插件',
    pluginManagerDescription: '插件只安装到桌面端自己的 node_modules，并由内置 pnpm 管理。',
    refresh: '刷新',
-   npmPackage: 'npm 包',
+   enable: '启用',

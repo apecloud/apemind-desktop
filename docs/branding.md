@@ -21,12 +21,14 @@
 | 文件 | 改什么 | 为什么 |
 |---|---|---|
 | `apps/desktop/electron-builder.config.mjs` | `productName` → `ApeMind Desktop`；`artifactName` → `apemind-desktop-${version}-...` | 产品名与安装包文件名。**`artifactName` 必须同步改**：它与 electron-updater 的 channel 元数据、上传校验耦合，只改 `productName` 会把更新链改断。 |
-| `apps/desktop/src/locale.ts` | 4 个 key × en/zh = 8 处文案 | 窗口标题与更新弹窗等用户可见文案。这是**唯一**需要改文案的文件 —— renderer（`plugin-manager.js`）全部走 `api.locale()` 取 messages，HTML/JS 里 0 处品牌字面量。 |
+| `apps/desktop/src/locale.ts` | 5 个 key × en/zh = 10 处文案 | 窗口标题与更新弹窗等用户可见文案。这是**唯一**需要改文案的文件 —— renderer（`plugin-manager.js`）全部走 `api.locale()` 取 messages，HTML/JS 里 0 处品牌字面量。 |
 | `apps/desktop/resources/` | 新增 `icon.icns` / `icon.ico` | ⚠️ 上游仓库**一个图标文件都没有**，`electron-builder` 配置里也没有 `icon` 键。所以这是**新增**资源，须从零制作并给 builder 加 `icon` 键。 |
 | `apps/desktop/src/main.ts` | 设置包内 CLI 路径与 Agent 的 `PATH` | 设置页和 Agent 使用同一二进制。 |
 | `apps/desktop/scripts/package-target.ts`、`apps/desktop/scripts/apemind-cli-runtime.mjs` | 根据版本锁下载并校验 CLI，交给打包配置收录 | 防止产物缺少 CLI 或带入错误平台、错误版本的二进制。 |
 | `apps/desktop/resources/apemind-cli.lock.json` | 固定 CLI 版本、源码提交、平台制品与摘要 | 构建不依赖本机偶然存在的 CLI。 |
-| `apps/desktop/src/project-manager.ts` | 比较已校验的核心包内容清单，触发既有安装事务 | 上游版本相同但 overlay 内容变化时，更新运行目录并保留用户插件，失败时回滚。 |
+| `apps/desktop/src/project-manager.ts` | 将 esbuild 加入运行时安装的 allowBuilds | 保证独立临时工作区可以安装原生依赖。 |
+
+桌面核心运行时随应用一起打包，运行目录由上游的运行时内容标识协调；无需维护 seed 安装和同版本核心包替换补丁。免签名试用包放在 `unsigned-artifacts`，不产生自动更新元数据或正式发布收据。
 
 ApeMind 登录插件及其界面位于 `overlay/add-files/`，通过上游插件与设置导航扩展点接入。
 完整的补丁目标、新增文件及资源仍以 `overlay/OVERLAY.md` 为唯一清单。

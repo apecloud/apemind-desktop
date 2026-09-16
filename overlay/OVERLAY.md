@@ -13,12 +13,11 @@
 # 变更清单（与 docs/branding.md 一致，改这里必须同步改那边）：
 
 patches:
-  - file: patches/11-apemind-profile-package-content.patch
+  - file: patches/14-native-runtime-smoke.patch
     targets:
-      - target: apps/desktop/src/project-manager.ts
-      - target: apps/desktop/tests/project-manager.spec.ts
-    reason: 上游版本号相同但 overlay 包内容变化时，通过已校验的包清单触发既有运行目录更新事务，保留用户插件并支持失败回滚。
-    upstream_logic_changed: true
+      - target: apps/desktop/tests/fixtures/runtime-payload-smoke.mjs
+    reason: 运行时自检应验证会话存储实际使用的原生文件锁，包括互斥与释放后重获；fs-ext 已不在上游生产依赖图中。
+    upstream_logic_changed: false
   - file: patches/10-apemind-cli-runtime.patch
     targets:
       - target: apps/desktop/src/main.ts
@@ -75,7 +74,6 @@ patches:
     targets:
       - target: packages/bundle/base/cordis.patch.yml
       - target: packages/bundle/base/package.json
-      - target: scripts/experimental-package-policy.ts
       - target: tsconfig.host.json
     upstream_logic_changed: false   # 只新增一个 roster 条目，不改任何现有行
     reason: >
@@ -103,16 +101,16 @@ patches:
       tsconfig.client 要引用新前端包。三条缺一即白屏/卡 pending。
     note: 全部是"新增行"，未修改任何上游既有行。
 
-  # ── 08-seed-build-policy.patch：保证干净环境可生成桌面 seed ─────────────
+  # ── 08-seed-build-policy.patch：保证干净环境可生成桌面运行时 ─────────────
   - file: patches/08-seed-build-policy.patch
     kind: build-policy
     targets:
       - target: apps/desktop/src/project-manager.ts
     upstream_logic_changed: true
     reason: >
-      桌面 seed 会在独立临时 workspace 执行 pnpm install。pnpm 11 默认拒绝
+      桌面运行时 会在独立临时 workspace 执行 pnpm install。pnpm 11 默认拒绝
       esbuild 的原生安装脚本；若只在上游根 workspace 允许，干净打包仍会失败。
-      将 esbuild 明确加入 seed 的 allowBuilds，确保从零构建与本地增量构建一致。
+      将 esbuild 明确加入运行时的 allowBuilds，确保从零构建与本地增量构建一致。
     guardrail: 默认只允许 esbuild 这个已审核的原生构建脚本，不放宽其他依赖。
 
   # ── 04-title.patch：窗口/标签页标题 ────────────────────────────────
@@ -169,24 +167,17 @@ patches:
   - file: patches/02-desktop-unsigned.patch
     kind: build-switch
     targets:
-      - target: apps/desktop/scripts/desktop-release-environment.mjs
-      - target: apps/desktop/scripts/desktop-release-environment.d.mts
-      - target: apps/desktop/scripts/prepare-seed.ts
-    touches:
-      - "apps/desktop/scripts/desktop-release-environment.mjs：新增 isDesktopUnsignedBuild()，开关下短路 resolveDesktopAppId / resolveMacOSSigningEnvironment / resolveMacOSNotarizationEnvironment"
-      - "apps/desktop/scripts/desktop-release-environment.d.mts：同步 declare isDesktopUnsignedBuild()（**不放宽** MacOSSigningEnvironment 字段类型，避免污染正常路径）"
-      - "apps/desktop/scripts/prepare-seed.ts：开关下跳过 seed 签名（第二道门）"
-      - "apps/desktop/electron-builder.config.mjs：开关下跳 forceCodeSigning / notarize / afterSign / dmg sign（第一道门）"
+      - target: apps/desktop/electron-builder.config.mjs
+      - target: apps/desktop/electron-builder.config.d.mts
+      - target: apps/desktop/tests/package-target.spec.ts
+      - target: apps/desktop/scripts/prepare-dsh.ts
+      - target: apps/desktop/scripts/package-target.ts
     upstream_logic_changed: true
     reason: >
-      owner 已定「Apple 凭据后置」。而缺凭据时上游会在两处硬抛（electron-builder
-      config 构造 + prepare-seed）。唯一能在不改上游仓的前提下产出本机可用 .app
-      的方式，就是在这里短路这两处。
-    guardrail: >
-      开关默认关闭（未设 DSH_DESKTOP_UNSIGNED 时行为与上游一致）。
-      唯一改到上游既有行的例外：prepare-seed.ts 里 1 处条件加了 `&& !unsignedBuild`。
-    note: >
-      未签名产物是 ad-hoc 签名（TeamIdentifier=not set），**只能本机使用、不可分发**。
+      将上游 Windows 免签名构建扩展到 macOS，并保留 ApeMind 安装包名称和图标。
+      DSH_DESKTOP_UNSIGNED=1 或 --unsigned 跳过证书签名、公证和正式发布收据，
+      产物放在 unsigned-artifacts，关闭自动更新元数据；正式签名路径保持上游行为。
+    guardrail: 默认关闭；未签名包仅供内部试用，不视为签名、公证完成的正式分发包。
 
 # ── 12-release-cross-platform.patch：发布脚本跨平台归档 ───────────────
 - file: patches/12-release-cross-platform.patch
@@ -204,21 +195,6 @@ patches:
     Windows 发布 runner 的 PATH 中可能优先出现 Git Bash tar；它无法正确处理
     D:\ 路径，导致打包在 tarball 校验阶段失败。显式选择系统 tar.exe 后，Windows
     与 macOS/Linux 使用各自可工作的归档实现。
-
-# ── 13-desktop-unsigned-windows.patch：未签名 Windows 本机构建 ─────────
-- file: patches/13-desktop-unsigned-windows.patch
-  kind: build-switch
-  targets:
-    - target: apps/desktop/electron-builder.config.mjs
-  touches:
-    - "apps/desktop/electron-builder.config.mjs：DSH_DESKTOP_UNSIGNED=1 时不创建 Windows 证书签名器"
-  upstream_logic_changed: true
-  reason: >
-    未签名开关需要在 Windows 目标上完整跳过证书文件校验和签名钩子；
-    否则 electron-builder 配置阶段仍会要求正式 Windows 证书，无法产出本机测试包。
-  guardrail: >
-    开关默认关闭；未设置 DSH_DESKTOP_UNSIGNED 时仍强制要求 Windows 签名器，
-    正式分发构建行为保持不变。
 
 
 # ── 非补丁类资源（新增文件，非上游逻辑）──────────────────────────────
@@ -240,14 +216,14 @@ add-files:
   - target: .agents/notes/implemented/ui/2026-09-14-apemind-login-ui.md
   # ApeMind 账户连接，凭据记录使用 apemind/connections。
   # 作为 workspace 包分发，因此 pnpm-lock.yaml 需在 sync 时**派生**（见 sync-upstream.sh 5 段）。
-  - target: packages/experimental/apemind-login/package.json
-  - target: packages/experimental/apemind-login/tsconfig.json
-  - target: packages/experimental/apemind-login/src/index.ts
-  - target: packages/experimental/apemind-login/src/controller.ts
-  - target: packages/experimental/apemind-login/src/cli-process.ts
+  - target: packages/credentials/apemind-login/package.json
+  - target: packages/credentials/apemind-login/tsconfig.json
+  - target: packages/credentials/apemind-login/src/index.ts
+  - target: packages/credentials/apemind-login/src/controller.ts
+  - target: packages/credentials/apemind-login/src/cli-process.ts
   # Desktop 启动与 Agent 相同的 apemind CLI；不在插件内复制认证或业务 API。
   # 设置页显示 CLI 版本与凭据存储状态，保留读取失败的连接并提供对应恢复入口。
-  - target: packages/experimental/apemind-login/src/types.ts
+  - target: packages/credentials/apemind-login/src/types.ts
   # ApeMind 设置分区，通过 remote.apemindAuth 操作 Host。
   - target: packages/client/ui-apemind-login/package.json
   - target: packages/client/ui-apemind-login/tsconfig.json

@@ -1,11 +1,11 @@
 diff --git a/apps/web/tests/expected/agent-preset-authoring/created.expected.md b/apps/web/tests/expected/agent-preset-authoring/created.expected.md
-index f9daab0c..d6f77f62 100644
+index c6ae8f6e1..b2cb97d12 100644
 --- a/apps/web/tests/expected/agent-preset-authoring/created.expected.md
 +++ b/apps/web/tests/expected/agent-preset-authoring/created.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -13,13 +13,13 @@ index f9daab0c..d6f77f62 100644
    - button "关闭":
      - img
 diff --git a/apps/web/tests/expected/agent-preset-authoring/damaged.expected.md b/apps/web/tests/expected/agent-preset-authoring/damaged.expected.md
-index cfae761b..646206fb 100644
+index 6e479db5b..79b2a1d80 100644
 --- a/apps/web/tests/expected/agent-preset-authoring/damaged.expected.md
 +++ b/apps/web/tests/expected/agent-preset-authoring/damaged.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -27,13 +27,13 @@ index cfae761b..646206fb 100644
    - button "关闭":
      - img
 diff --git a/apps/web/tests/expected/agent-preset-authoring/section.expected.md b/apps/web/tests/expected/agent-preset-authoring/section.expected.md
-index 7efe280e..74f63287 100644
+index a48725858..56a198d99 100644
 --- a/apps/web/tests/expected/agent-preset-authoring/section.expected.md
 +++ b/apps/web/tests/expected/agent-preset-authoring/section.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -41,13 +41,13 @@ index 7efe280e..74f63287 100644
    - button "关闭":
      - img
 diff --git a/apps/web/tests/expected/models-settings-recovery/stored-error.expected.md b/apps/web/tests/expected/models-settings-recovery/stored-error.expected.md
-index 6a1a3e05..de2c7d9d 100644
+index 8a0a1900a..e765db6fe 100644
 --- a/apps/web/tests/expected/models-settings-recovery/stored-error.expected.md
 +++ b/apps/web/tests/expected/models-settings-recovery/stored-error.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -55,13 +55,13 @@ index 6a1a3e05..de2c7d9d 100644
    - button "关闭":
      - img
 diff --git a/apps/web/tests/expected/models-settings/configured.expected.md b/apps/web/tests/expected/models-settings/configured.expected.md
-index 3c3be092..c8314d7b 100644
+index aabe6c153..a1119c00a 100644
 --- a/apps/web/tests/expected/models-settings/configured.expected.md
 +++ b/apps/web/tests/expected/models-settings/configured.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -69,13 +69,13 @@ index 3c3be092..c8314d7b 100644
    - button "关闭":
      - img
 diff --git a/apps/web/tests/expected/models-settings/declared-edit.expected.md b/apps/web/tests/expected/models-settings/declared-edit.expected.md
-index 1d538bcf..df377252 100644
+index 261ea7fa3..4b1c1d856 100644
 --- a/apps/web/tests/expected/models-settings/declared-edit.expected.md
 +++ b/apps/web/tests/expected/models-settings/declared-edit.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -83,13 +83,13 @@ index 1d538bcf..df377252 100644
    - button "关闭":
      - img
 diff --git a/apps/web/tests/expected/models-settings/declared.expected.md b/apps/web/tests/expected/models-settings/declared.expected.md
-index df48328f..0a7db17b 100644
+index 0b18b5e31..27d6e1424 100644
 --- a/apps/web/tests/expected/models-settings/declared.expected.md
 +++ b/apps/web/tests/expected/models-settings/declared.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -97,13 +97,13 @@ index df48328f..0a7db17b 100644
    - button "关闭":
      - img
 diff --git a/apps/web/tests/expected/models-settings/empty.expected.md b/apps/web/tests/expected/models-settings/empty.expected.md
-index 54bf1db3..24b6db76 100644
+index c779686fc..178a7f702 100644
 --- a/apps/web/tests/expected/models-settings/empty.expected.md
 +++ b/apps/web/tests/expected/models-settings/empty.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -111,13 +111,13 @@ index 54bf1db3..24b6db76 100644
    - button "关闭":
      - img
 diff --git a/apps/web/tests/expected/onboarding-deepseek-config/default-models.expected.md b/apps/web/tests/expected/onboarding-deepseek-config/default-models.expected.md
-index 25e8ef46..bc9aab4b 100644
+index 72fd3d739..19d9bf568 100644
 --- a/apps/web/tests/expected/onboarding-deepseek-config/default-models.expected.md
 +++ b/apps/web/tests/expected/onboarding-deepseek-config/default-models.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -125,13 +125,13 @@ index 25e8ef46..bc9aab4b 100644
    - button "关闭":
      - img
 diff --git a/apps/web/tests/expected/onboarding-deepseek-config/models.expected.md b/apps/web/tests/expected/onboarding-deepseek-config/models.expected.md
-index c0943df3..a1a23aa2 100644
+index a67e6bad7..ec325dfbd 100644
 --- a/apps/web/tests/expected/onboarding-deepseek-config/models.expected.md
 +++ b/apps/web/tests/expected/onboarding-deepseek-config/models.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -139,13 +139,13 @@ index c0943df3..a1a23aa2 100644
    - button "关闭":
      - img
 diff --git a/apps/web/tests/expected/onboarding-usable-provider/dismissed.expected.md b/apps/web/tests/expected/onboarding-usable-provider/dismissed.expected.md
-index 496443b0..3def8a05 100644
+index 66d4bf7c4..337a35e97 100644
 --- a/apps/web/tests/expected/onboarding-usable-provider/dismissed.expected.md
 +++ b/apps/web/tests/expected/onboarding-usable-provider/dismissed.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -153,13 +153,13 @@ index 496443b0..3def8a05 100644
    - button "关闭":
      - img
 diff --git a/apps/web/tests/expected/plugin-config/section.expected.md b/apps/web/tests/expected/plugin-config/section.expected.md
-index 08e89d18..87769af9 100644
+index bf8ade188..5441b0cd9 100644
 --- a/apps/web/tests/expected/plugin-config/section.expected.md
 +++ b/apps/web/tests/expected/plugin-config/section.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -167,13 +167,13 @@ index 08e89d18..87769af9 100644
    - button "关闭":
      - img
 diff --git a/apps/web/tests/expected/settings-chrome/dialog-en.expected.md b/apps/web/tests/expected/settings-chrome/dialog-en.expected.md
-index 3121238a..27756d93 100644
+index 0ed20913f..de79eacdd 100644
 --- a/apps/web/tests/expected/settings-chrome/dialog-en.expected.md
 +++ b/apps/web/tests/expected/settings-chrome/dialog-en.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent presets":
+@@ -16,6 +16,9 @@
+     - button "Archived sessions":
        - img
-       - text: Agent presets
+       - text: Archived sessions
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
@@ -181,13 +181,13 @@ index 3121238a..27756d93 100644
    - button "Close":
      - img
 diff --git a/apps/web/tests/expected/settings-chrome/dialog.expected.md b/apps/web/tests/expected/settings-chrome/dialog.expected.md
-index f80893bf..0132b435 100644
+index 4ed5139ae..7750d0441 100644
 --- a/apps/web/tests/expected/settings-chrome/dialog.expected.md
 +++ b/apps/web/tests/expected/settings-chrome/dialog.expected.md
-@@ -13,6 +13,9 @@
-     - button "Agent 预设":
+@@ -16,6 +16,9 @@
+     - button "已归档会话":
        - img
-       - text: Agent 预设
+       - text: 已归档会话
 +    - button "ApeMind":
 +      - img
 +      - text: ApeMind
