@@ -2,6 +2,35 @@
 
 使用锁定上游与 ApeMind overlay 构建 Desktop。开发模式与安装包使用相同的 ApeMind CLI。
 
+## GitHub Release 签名配置
+
+`desktop-release` 手动流水线对 macOS Apple Silicon 和 Intel 安装包启用 Developer ID
+签名、Apple 公证和票据装订。Windows 继续生成未签名试用包。
+macOS 凭据缺失时直接失败，不自动降级成未签名包。
+
+在仓库 Actions Secrets 中配置：
+
+| 名称 | 内容 |
+|---|---|
+| `MACOS_CERTIFICATE_P12` | 包含 Developer ID Application 证书及私钥的加密 `.p12` 文件，以 Base64 编码 |
+| `MACOS_CERTIFICATE_PASSWORD` | `.p12` 导出密码 |
+| `APPLE_APP_SPECIFIC_PASSWORD` | Apple 账号生成的 App 专用密码，用于公证 |
+
+在仓库 Actions Variables 中配置 `APPLE_ID`、`APPLE_TEAM_ID` 和
+`MACOS_SIGNING_IDENTITY`。签名身份应包含姓名和括号中的团队 ID，
+省略 `Developer ID Application:` 前缀。
+
+证书导入到每个 macOS runner 的临时钥匙串；构建结束后删除该钥匙串。
+私钥、密码和钥匙串不能加入 Git、构建产物或发布收据。
+打包复用上游对签名身份、完整性、公证票据和 Gatekeeper 的检查。
+
+发布标签的基础版本必须与 `upstream.lock` 一致。同一应用版本再次构建时可使用
+`v<上游版本>+apemind.<构建标识>` 区分发布，例如
+`v0.1.6-alpha.1+apemind.20260917.1`；应用内部版本仍为 `0.1.6-alpha.1`。
+分享时使用对应 Release 中的 `.dmg`，并按 Mac 芯片选择 `arm64` 或 `x64`。
+
+## 本机开发
+
 用途：**证明 dsh 桌面版能跑、能看见界面**，且不触碰签名门、不需要任何 Apple 凭据。
 出可安装产物是另一条路（需 Apple Developer 凭据），见文末。
 
