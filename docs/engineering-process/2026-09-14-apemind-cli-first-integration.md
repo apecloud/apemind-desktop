@@ -225,6 +225,68 @@ apemind knowledge list --jq '.items[] | .name'
 
 ## 认证与凭据
 
+### 统一身份合同
+
+浏览器登录建立的是 OAuth 连接。该连接的所有需要身份的业务操作都使用 OAuth Access Token，包括 REST 读取、REST 写入和直接 HTTP MCP 调用；不在登录后换取、创建或隐藏一份 API Key。API Key 是调用方主动配置的另一种连接凭证，不是 OAuth 功能缺口的补救手段。
+
+浏览器 Cookie 只参与网站登录和浏览器中的授权确认。授权完成后，CLI 持有自己的客户端授权；Desktop、Agent 和 CLI 不读取浏览器 Cookie 来调用业务接口。
+
+```text
+用户在浏览器登录并授权
+        ↓
+CLI 保存客户端授权、管理令牌刷新
+        ↓
+CLI 根据当前连接发送 OAuth Access Token 或显式配置的 API Key
+        ↓
+服务端验证凭证并建立唯一身份、授权范围和空间上下文
+        ↓
+REST 与 MCP 复用组织、角色、资源权限和业务服务
+```
+
+OAuth 解决用户对客户端的委托；API Key 服务明确选择固定密钥的集成和自动化。两者的凭证验证不同，业务权限判定必须复用。同一请求不得因为某个入口不支持当前凭证，就换用另一个账号、Cookie、其他连接或服务器环境中的 API Key。
+
+本合同是目标行为，不表示已有接口全部完成 OAuth 接入。每个能力上线前都必须验证它的实际 HTTP 路由、scope、空间选择、资源权限和部署版本。缺口要修复或明确返回尚不可用，不能使用无边界的 `api.read` / `api.write` scope 开放所有接口。
+
+### 连接选择与凭据来源
+
+- 命令显式指定的连接优先于保存的默认连接；一次业务操作及其分页、重试和跨空间查询固定使用同一身份，不因并发切换默认连接而改变。
+- OAuth 连接使用 Access Token；API Key 连接使用用户配置的 Key。认证失败不切换凭据来源，权限失败不切换账号或空间。
+- 自动化可以由调用方显式提供进程级凭据。这与服务端替无凭据请求使用自己的环境 Key 不同。接入此能力时必须明确目标服务、来源优先级、冲突规则和诊断输出；不能从 `.env`、其他应用或其他 Agent 的目录搜集候选密钥。
+- Desktop 默认沿用已选连接，不主动把 Token 注入 Agent 环境。用户没有明确选择另一种来源时，不因宿主机器上恰好存在其他凭据而改变 UI 展示的登录身份。
+- `auth status` 展示实际服务、账号、连接、空间、凭据种类和来源，不显示 Token、Cookie 或完整 Key。环境凭据不自动持久化或覆盖已有登录。
+- 正常调用只向 Agent 返回操作结果，不把凭据放进命令参数或模型上下文。这不是对同一操作系统用户下任意高权限进程的隔离保证。
+
+### HTTP MCP 的认证边界
+
+直接 HTTP MCP 仅接受调用方显式提供的一份 `Authorization: Bearer …`，其值可以是有效的 OAuth Access Token 或 API Key。`/mcp` 与 `/mcp/` 的受保护请求采用同一规则，包括初始化、工具发现、工具调用以及会话传输请求；匿名初始化不构成例外。公开的健康检查、协议认证元数据与 CORS 预检不提供业务数据，单独定义其公开行为。
+
+| 请求 | 结果 |
+| --- | --- |
+| 有效 OAuth Access Token | 按会话有效性、授权 scope、当前空间和资源权限执行 |
+| 有效 API Key | 按 Key 的身份、固定空间、collection/tool scope 和实时权限执行 |
+| 只有 Cookie、缺少 Bearer、格式错误或重复认证头 | HTTP 401；不执行工具，也不扣减调用额度 |
+| 无效、过期或已撤销的 Bearer，同时存在有效 Cookie | HTTP 401；Cookie 不参与身份选择 |
+| 有效受限 Key，同时存在管理员 Cookie | 只按受限 Key 执行 |
+| 无凭据，但服务器环境存在 API Key | HTTP 401；不使用服务器身份 |
+| 有效 OAuth 身份但缺少所需 scope | HTTP 403；保留明确的授权不足语义 |
+| 空间无权访问或资源不可见 | 遵循既有防枚举合同，不把它伪装成认证成功的空结果 |
+
+认证错误在 HTTP 传输层返回，不依赖模型解析一句 MCP 工具错误。401 提供 `WWW-Authenticate`；OAuth 发现按 MCP 受保护资源元数据和授权服务器元数据合同实现。缺 scope、空间不匹配、许可证拒绝、限流和工具执行失败是不同层的问题，不全部改写成 401。
+
+每次受保护请求重新验证身份、会话及空间绑定。MCP 会话 ID 不是登录凭据。校验 Token 的签发者、用途与目标服务，不能接受发给其他资源的令牌，也不能把用户令牌转发给无关第三方。
+
+凭证错误必须先于工具调度、许可证业务能力检查、用户调用限流和计量额度扣减失败。测试同时检查拒绝响应和这些下游的零调用，不能只检查错误文案。通过认证后，既有许可证、限流、额度和资源授权仍全部生效。
+
+无 HTTP 上下文的 stdio / 进程内调用可以保留由启动者明确提供凭据的合同；该路径不得成为 HTTP 认证失败后的回退。普通网站的 Cookie 登录不受此 MCP 入口规则影响。
+
+### 权限与工作空间
+
+认证只确认身份。允许执行的操作由客户端授权范围、账号状态、组织成员关系和角色、具体资源权限、API Key 附加限制以及产品治理规则共同决定，CLI 不能根据显示的角色名称自行授予权限。
+
+OAuth 登录一次即可发现当前用户可访问的个人空间和组织。每次业务请求仍绑定一个明确空间；参数中的组织或资源不能越过该绑定。用户明确要求跨空间查询时，由 CLI 使用同一身份逐空间执行，保留来源和部分失败，不修改默认空间。
+
+成员被移除、组织被停用、Key 被撤销、OAuth 会话被撤销后，后续请求应被服务端拒绝。本地空间快照和先前成功的请求均不替代实时校验。
+
 ### OAuth
 
 CLI 是公开原生客户端，不使用 client secret。登录使用 Authorization Code + PKCE，浏览器回调只监听 `127.0.0.1` 的随机端口。设备授权作为无法回跳时的自动兜底。
@@ -250,6 +312,17 @@ apemind connection remove <name>
 API Key 从 stdin 读取，不出现在命令行参数、进程列表、shell history 或日志中。连接记录只保留服务地址、绑定工作空间、权限摘要和密钥后四位。
 
 CLI 不自动从任何其他应用、SLOCK、下载目录、环境变量文件或未确认的 profile 猜测 API Key。
+
+### 选型依据
+
+`gh auth login` 的浏览器授权获得 OAuth Token，`--with-token` 和调用方显式设置的 `GH_TOKEN` 提供其他凭据来源；业务 HTTP 客户端统一选择凭据。复用的是用户委托、显式来源和统一客户端的结构，不照搬 GitHub 的 scope、Token 有效期或组织权限模型。
+
+- [GitHub CLI 登录](https://cli.github.com/manual/gh_auth_login)
+- [GitHub CLI 环境变量](https://cli.github.com/manual/gh_help_environment)
+- [GitHub CLI OAuth 实现](https://github.com/cli/cli/blob/trunk/internal/authflow/flow.go)
+- [OAuth Bearer Token：RFC 6750](https://www.rfc-editor.org/rfc/rfc6750.html)
+- [原生客户端 OAuth：RFC 8252](https://www.rfc-editor.org/rfc/rfc8252)
+- [MCP HTTP 授权合同](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
 
 ## 服务端 API 设计
 
