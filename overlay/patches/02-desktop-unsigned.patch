@@ -1,163 +1,154 @@
+diff --git a/apps/desktop/electron-builder.config.d.mts b/apps/desktop/electron-builder.config.d.mts
+index 97e282649..ac80c6d71 100644
+--- a/apps/desktop/electron-builder.config.d.mts
++++ b/apps/desktop/electron-builder.config.d.mts
+@@ -15,7 +15,7 @@ export interface DesktopElectronBuilderConfig {
+   readonly asarUnpack: readonly string[]
+   readonly extraResources: readonly [{ readonly from: string, readonly to: 'runtime' }]
+   readonly mac: {
+-    readonly identity: string | undefined
++    readonly identity: string | null | undefined
+     readonly forceCodeSigning: boolean
+     readonly notarize: boolean
+     readonly signIgnore: readonly string[]
 diff --git a/apps/desktop/electron-builder.config.mjs b/apps/desktop/electron-builder.config.mjs
-index c47bd6d7a..34bf9c08c 100644
+index 752a3c413..1c8fcf5b4 100644
 --- a/apps/desktop/electron-builder.config.mjs
 +++ b/apps/desktop/electron-builder.config.mjs
-@@ -2,6 +2,7 @@ import {
-   resolveDesktopAppId,
-   resolveMacOSNotarizationEnvironment,
-   resolveMacOSSigningEnvironment,
-+  isDesktopUnsignedBuild,
- } from './scripts/desktop-release-environment.mjs'
- import { notarizeMacOSDiskImageArtifact } from './scripts/notarize-macos-disk-images.mjs'
- import { verifyMacOSSignatureAfterSign } from './scripts/verify-macos-signature.mjs'
-@@ -25,6 +26,7 @@ export function createElectronBuilderConfig(
-   hostArch = process.arch,
- ) {
-   const appId = resolveDesktopAppId(env)
-+  const unsignedBuild = isDesktopUnsignedBuild(env)
-   const targetPlatform = env.DSH_DESKTOP_TARGET_PLATFORM
-   const resolvedPlatform = targetPlatform ?? hostPlatform
-   const resolvedArch = env.DSH_DESKTOP_TARGET_ARCH ?? hostArch
-@@ -47,8 +49,8 @@ export function createElectronBuilderConfig(
-   const buildPaths = desktopTargetBuildPaths(update.target)
+@@ -34,11 +34,10 @@ export function createElectronBuilderConfig(
+     throw new Error('desktop package: DSH_DESKTOP_UNSIGNED must be 0 or 1')
+   }
+   const unsigned = env.DSH_DESKTOP_UNSIGNED === '1'
+-  if (unsigned && resolvedPlatform !== 'win32') throw new Error('desktop package: unsigned builds require Windows')
+   const packagesMacOS = targetPlatform === 'darwin' || (targetPlatform === undefined && hostPlatform === 'darwin')
+   const packagesWindows = targetPlatform === 'win32'
+-  const macOSSigning = packagesMacOS ? resolveMacOSSigningEnvironment(env) : undefined
+-  if (packagesMacOS) resolveMacOSNotarizationEnvironment(env)
++  const macOSSigning = packagesMacOS && !unsigned ? resolveMacOSSigningEnvironment(env) : undefined
++  if (packagesMacOS && !unsigned) resolveMacOSNotarizationEnvironment(env)
+   const windowsSigner = packagesWindows && !unsigned
+     ? createWindowsTokenSigner({
+         certificateFile: env.DSH_DESKTOP_WINDOWS_CER_FILE,
+@@ -54,8 +53,8 @@ export function createElectronBuilderConfig(
+   const buildPaths = desktopTargetBuildPaths(resolveDesktopBuildTarget(env, hostPlatform, hostArch))
    return {
      appId,
 -    productName: 'DeepSeek Harness',
 -    artifactName: 'deepseek-harness-${version}-${os}-${arch}.${ext}',
 +    productName: 'ApeMind Desktop',
 +    artifactName: 'apemind-desktop-${version}-${os}-${arch}.${ext}',
-     directories: { output: buildPaths.artifacts },
+     directories: { output: unsigned ? join(buildPaths.root, 'unsigned-artifacts') : buildPaths.artifacts },
      asar: true,
      files: [
-@@ -62,22 +64,25 @@ export function createElectronBuilderConfig(
-       { from: buildPaths.seed, to: 'seed' },
+@@ -77,24 +76,27 @@ export function createElectronBuilderConfig(
+       { from: buildPaths.runtime, to: 'runtime' },
      ],
      mac: {
 +      icon: 'resources/icon.icns',
        category: 'public.app-category.developer-tools',
-       identity: macOSSigning?.signingIdentity,
+-      identity: macOSSigning?.signingIdentity,
 -      forceCodeSigning: true,
-+      forceCodeSigning: !unsignedBuild,
++      identity: unsigned ? null : macOSSigning?.signingIdentity,
++      forceCodeSigning: !unsigned,
        hardenedRuntime: true,
+       // ASAR-unpacked native runtime files are pre-signed; PAK resources are sealed by their enclosing bundle.
+       signIgnore: ['/Contents/Resources/app\\.asar\\.unpacked/dsh(?:/|$)', '\\.pak$'],
 -      notarize: true,
-+      notarize: !unsignedBuild,
++      notarize: !unsigned,
        target: ['dmg', 'zip'],
      },
      dmg: {
 -      sign: true,
-+      sign: !unsignedBuild,
++      sign: !unsigned,
        writeUpdateInfo: false,
      },
-     afterSign: context => {
-+      if (unsignedBuild) return
+     afterSign: async context => {
++      if (unsigned) return
        if (context.electronPlatformName !== 'darwin') return
        verifyMacOSSignatureAfterSign(context, macOSSigning ?? resolveMacOSSigningEnvironment(env))
      },
      artifactBuildCompleted: artifact => {
-+      if (unsignedBuild) return
++      if (unsigned) return
        if (!artifact.file.endsWith('.dmg')) return
        return notarizeMacOSDiskImageArtifact(
          artifact,
-@@ -86,7 +91,8 @@ export function createElectronBuilderConfig(
+@@ -103,6 +105,7 @@ export function createElectronBuilderConfig(
        )
      },
      win: {
--      forceCodeSigning: true,
 +      icon: 'resources/icon.ico',
-+      forceCodeSigning: !unsignedBuild,
+       forceCodeSigning: !unsigned,
        signtoolOptions: {
          sign: windowsSigner,
-         signingHashAlgorithms: ['sha256'],
-diff --git a/apps/desktop/scripts/desktop-release-environment.d.mts b/apps/desktop/scripts/desktop-release-environment.d.mts
-index ad48933f6..1c3c5cdec 100644
---- a/apps/desktop/scripts/desktop-release-environment.d.mts
-+++ b/apps/desktop/scripts/desktop-release-environment.d.mts
-@@ -7,6 +7,12 @@ export const MACOS_SIGNING_IDENTITY_ENV: 'DSH_DESKTOP_MACOS_SIGNING_IDENTITY'
- /** Environment variable that supplies the expected Apple Developer Team ID. */
- export const MACOS_TEAM_ID_ENV: 'DSH_DESKTOP_MACOS_TEAM_ID'
+diff --git a/apps/desktop/scripts/package-target.ts b/apps/desktop/scripts/package-target.ts
+index 22c303d2b..cc9ef76b5 100644
+--- a/apps/desktop/scripts/package-target.ts
++++ b/apps/desktop/scripts/package-target.ts
+@@ -199,12 +199,11 @@ export function parseDesktopPackageInvocation(
+     options: {
+       dir: { type: 'boolean', default: false },
+       'prepare-only': { type: 'boolean', default: false },
+-      unsigned: { type: 'boolean', default: false },
++      unsigned: { type: 'boolean', default: process.env.DSH_DESKTOP_UNSIGNED === '1' },
+     },
+   })
+   if (positionals.length > 1) throw new Error('desktop package: expected at most one target')
+   const name = positionals[0] ?? hostTargetName(hostPlatform, hostArch)
+-  if (values.unsigned && name !== 'win-x64') throw new Error('desktop package: --unsigned requires win-x64')
+   if (values.unsigned && values['prepare-only']) throw new Error('desktop package: --unsigned cannot use --prepare-only')
+   return {
+     target: resolveDesktopPackageTarget(name, hostPlatform, hostArch),
+@@ -311,7 +310,7 @@ async function main(): Promise<void> {
+   await runPnpm(['run', 'prepare:packages'], targetEnv)
+   await runPnpm(['run', 'prepare:dsh'], targetEnv)
+   if (invocation.prepareOnly) return
+-  if (target.platform === 'darwin' && !invocation.directory) {
++  if (target.platform === 'darwin' && !invocation.directory && !invocation.unsigned) {
+     await runPnpm([
+       ...desktopElectronBuilderArguments(target, true),
+       '--config.mac.notarize=false',
+diff --git a/apps/desktop/scripts/prepare-dsh.ts b/apps/desktop/scripts/prepare-dsh.ts
+index d3f9dae8a..4f5953c82 100644
+--- a/apps/desktop/scripts/prepare-dsh.ts
++++ b/apps/desktop/scripts/prepare-dsh.ts
+@@ -133,7 +133,7 @@ async function main(): Promise<void> {
+         throw new Error(`desktop runtime: missing private Host file ${file}`)
+       }
+     }
+-    if (process.platform === 'darwin') {
++    if (process.platform === 'darwin' && process.env.DSH_DESKTOP_UNSIGNED !== '1') {
+       await signMacOSRuntime(DSH_OUTPUT_ROOT, resolveDesktopAppId(process.env), resolveMacOSSigningEnvironment(process.env))
+     }
+     writeDesktopRuntime(DSH_OUTPUT_ROOT, release, packageSet.packages.map(entry => entry.name), target)
+diff --git a/apps/desktop/tests/package-target.spec.ts b/apps/desktop/tests/package-target.spec.ts
+index d284747e8..1ccb9f60b 100644
+--- a/apps/desktop/tests/package-target.spec.ts
++++ b/apps/desktop/tests/package-target.spec.ts
+@@ -57,14 +57,13 @@ describe('desktop package target', () => {
+     expect(desktopElectronBuilderArguments(target, true)).toContain('--dir')
+   })
  
-+/** Local-only escape hatch enabling unsigned packaging (never for distributable builds). */
-+export const DESKTOP_UNSIGNED_ENV: 'DSH_DESKTOP_UNSIGNED'
-+
-+/** Whether the local unsigned-packaging escape hatch is enabled. */
-+export function isDesktopUnsignedBuild(env?: NodeJS.ProcessEnv): boolean
-+
- /** Public identity expected on a macOS release. */
- export interface MacOSSigningEnvironment {
-   readonly signingIdentity: string
-diff --git a/apps/desktop/scripts/desktop-release-environment.mjs b/apps/desktop/scripts/desktop-release-environment.mjs
-index 46746428d..63e095a94 100644
---- a/apps/desktop/scripts/desktop-release-environment.mjs
-+++ b/apps/desktop/scripts/desktop-release-environment.mjs
-@@ -9,6 +9,19 @@ export const MACOS_SIGNING_IDENTITY_ENV = 'DSH_DESKTOP_MACOS_SIGNING_IDENTITY'
- /** Environment variable that supplies the expected Apple Developer Team ID. */
- export const MACOS_TEAM_ID_ENV = 'DSH_DESKTOP_MACOS_TEAM_ID'
- 
-+/**
-+ * Local-only escape hatch for unsigned packaging (NOT an official release path).
-+ * When set to `1`, macOS signing/notarization requirements are relaxed so a
-+ * developer without Apple Developer credentials can produce a local `.app`.
-+ * Never set this for a distributable build.
-+ */
-+export const DESKTOP_UNSIGNED_ENV = 'DSH_DESKTOP_UNSIGNED'
-+
-+/** Whether the local unsigned-packaging escape hatch is enabled. */
-+export function isDesktopUnsignedBuild(env = process.env) {
-+  return env[DESKTOP_UNSIGNED_ENV]?.trim() === '1'
-+}
-+
- const APPLE_API_KEY_ENV = 'APPLE_API_KEY'
- const APPLE_API_KEY_ID_ENV = 'APPLE_API_KEY_ID'
- const APPLE_API_ISSUER_ENV = 'APPLE_API_ISSUER'
-@@ -38,6 +51,9 @@ function requireEnvironmentValue(env, name) {
-  * @returns {string} Reverse-DNS application identifier.
-  */
- export function resolveDesktopAppId(env) {
-+  if (isDesktopUnsignedBuild(env)) {
-+    return env[DESKTOP_APP_ID_ENV]?.trim() || 'ai.local.dsh-unsigned'
-+  }
-   const appId = requireEnvironmentValue(env, DESKTOP_APP_ID_ENV)
-   if (!/^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/u.test(appId)) {
-     throw new Error(`desktop release environment: ${DESKTOP_APP_ID_ENV} must be a reverse-DNS identifier`)
-@@ -51,6 +67,9 @@ export function resolveDesktopAppId(env) {
-  * @returns {{ signingIdentity: string, teamId: string }} Expected certificate qualifier and Team ID.
-  */
- export function resolveMacOSSigningEnvironment(env) {
-+  if (isDesktopUnsignedBuild(env)) {
-+    return { signingIdentity: undefined, teamId: undefined, unsigned: true }
-+  }
-   const signingIdentity = requireEnvironmentValue(env, MACOS_SIGNING_IDENTITY_ENV)
-   if (signingIdentity.startsWith('Developer ID Application:')) {
-     throw new Error(`desktop release environment: ${MACOS_SIGNING_IDENTITY_ENV} must omit the "Developer ID Application:" prefix`)
-@@ -68,6 +87,9 @@ export function resolveMacOSSigningEnvironment(env) {
-  * @returns {{ appleId: string, appleIdPassword: string, teamId: string } | { appleApiKey: string, appleApiKeyId: string, appleApiIssuer: string } | { keychainProfile: string, keychain?: string }} Notary credentials without the submitted artifact path.
-  */
- export function resolveMacOSNotarizationEnvironment(env) {
-+  if (isDesktopUnsignedBuild(env)) {
-+    return { unsigned: true }
-+  }
-   const appleIdValues = [env[APPLE_ID_ENV], env[APPLE_APP_SPECIFIC_PASSWORD_ENV], env[APPLE_TEAM_ID_ENV]]
-   if (appleIdValues.some(value => value !== undefined)) {
-     return {
-diff --git a/apps/desktop/scripts/prepare-seed.ts b/apps/desktop/scripts/prepare-seed.ts
-index 73da078ef..cebbc95fc 100644
---- a/apps/desktop/scripts/prepare-seed.ts
-+++ b/apps/desktop/scripts/prepare-seed.ts
-@@ -24,6 +24,7 @@ import {
- import {
-   resolveDesktopAppId,
-   resolveMacOSSigningEnvironment,
-+  isDesktopUnsignedBuild,
- } from './desktop-release-environment.mjs'
- import {
-   signMacOSSeedStore,
-@@ -162,7 +163,8 @@ async function main(): Promise<void> {
-     const targetPlatform = process.env.DSH_DESKTOP_TARGET_PLATFORM ?? process.platform
-     let signedMachOFiles: number | undefined
-     let macOSSigning: ReturnType<typeof resolveMacOSSigningEnvironment> | undefined
--    if (targetPlatform === 'darwin') {
-+    const unsignedBuild = isDesktopUnsignedBuild(process.env)
-+    if (targetPlatform === 'darwin' && !unsignedBuild) {
-       macOSSigning = resolveMacOSSigningEnvironment(process.env)
-       const signing = await signMacOSSeedStore(
-         STORE_ROOT,
+-  it('accepts unsigned Windows artifacts and rejects other targets or preparation-only use', () => {
++  it('accepts unsigned Windows and macOS artifacts but rejects preparation-only use', () => {
+     expect(parseDesktopPackageInvocation(['win-x64', '--unsigned'], 'win32', 'x64').unsigned).toBe(true)
+     expect(parseDesktopPackageInvocation(['win-x64'], 'win32', 'x64').unsigned).toBe(false)
+     expect(parseDesktopPackageInvocation(['--unsigned', '--dir'], 'win32', 'x64')).toMatchObject({
+       unsigned: true, directory: true,
+     })
+-    expect(() => parseDesktopPackageInvocation(['mac-arm64', '--unsigned'], 'darwin', 'arm64'))
+-      .toThrow(/requires win-x64/u)
++    expect(parseDesktopPackageInvocation(['mac-arm64', '--unsigned'], 'darwin', 'arm64').unsigned).toBe(true)
+     expect(() => parseDesktopPackageInvocation(['--unsigned', '--prepare-only'], 'win32', 'x64'))
+       .toThrow(/cannot use --prepare-only/u)
+   })
+diff --git a/apps/desktop/scripts/package-target.ts b/apps/desktop/scripts/package-target.ts
+--- a/apps/desktop/scripts/package-target.ts
++++ b/apps/desktop/scripts/package-target.ts
+@@ -281,6 +281,7 @@
+   const buildEnv = withoutWindowsSigningEnvironment(withoutDesktopUploadCredentials(process.env))
+   const targetEnv: NodeJS.ProcessEnv = {
+     ...buildEnv,
++    DSH_DESKTOP_UNSIGNED: invocation.unsigned ? '1' : '0',
+     DSH_DESKTOP_TARGET_PLATFORM: target.platform,
+     DSH_DESKTOP_TARGET_ARCH: target.arch,
+   }

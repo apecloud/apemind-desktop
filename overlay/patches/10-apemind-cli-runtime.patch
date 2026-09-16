@@ -1,127 +1,135 @@
+diff --git a/apps/desktop/electron-builder.config.d.mts b/apps/desktop/electron-builder.config.d.mts
+index ac80c6d71..cf842851c 100644
+--- a/apps/desktop/electron-builder.config.d.mts
++++ b/apps/desktop/electron-builder.config.d.mts
+@@ -13,7 +13,11 @@ export interface DesktopElectronBuilderConfig {
+     { readonly from: string, readonly to: 'dsh/node_modules', readonly filter: readonly ['**/*'] },
+   ]
+   readonly asarUnpack: readonly string[]
+-  readonly extraResources: readonly [{ readonly from: string, readonly to: 'runtime' }]
++  readonly extraResources: readonly [
++    { readonly from: string, readonly to: 'runtime' },
++    { readonly from: string, readonly to: 'apemind/bin/apemind' | 'apemind/bin/apemind.exe' },
++    { readonly from: string, readonly to: 'apemind/release.json' },
++  ]
+   readonly mac: {
+     readonly identity: string | null | undefined
+     readonly forceCodeSigning: boolean
+diff --git a/apps/desktop/electron-builder.config.mjs b/apps/desktop/electron-builder.config.mjs
+index 1c8fcf5b4..e4903cfc6 100644
+--- a/apps/desktop/electron-builder.config.mjs
++++ b/apps/desktop/electron-builder.config.mjs
+@@ -1,3 +1,4 @@
++import { resolveApeMindCliResources } from './scripts/apemind-cli-runtime.mjs'
+ import { join } from 'node:path'
+ import { fileURLToPath } from 'node:url'
+ import {
+@@ -74,6 +75,7 @@ export function createElectronBuilderConfig(
+     ],
+     extraResources: [
+       { from: buildPaths.runtime, to: 'runtime' },
++      ...resolveApeMindCliResources(env, resolvedPlatform, resolvedArch),
+     ],
+     mac: {
+       icon: 'resources/icon.icns',
+diff --git a/apps/desktop/scripts/package-target.ts b/apps/desktop/scripts/package-target.ts
+index cc9ef76b5..40d077ed9 100644
+--- a/apps/desktop/scripts/package-target.ts
++++ b/apps/desktop/scripts/package-target.ts
+@@ -9,6 +9,7 @@ import {
+   resolveDesktopAutoUpdateConfig,
+ } from './desktop-auto-update-environment.mjs'
+ import { desktopTargetBuildPaths } from './desktop-build-paths.mjs'
++import { prepareApeMindCli } from './apemind-cli-runtime.mjs'
+ import { packageMacOSArtifacts, type DesktopPrepackagedArtifact } from './package-macos.ts'
+ 
+ const APP_ROOT = resolve(import.meta.dirname, '..')
+@@ -286,6 +287,7 @@ async function main(): Promise<void> {
+   for (const name of WINDOWS_SIGNING_ENV_NAMES) {
+     if (!invocation.unsigned && process.env[name] !== undefined) electronBuilderEnv[name] = process.env[name]
+   }
++  await prepareApeMindCli(targetEnv, target.platform, target.arch)
+   await runPnpm(['run', 'build:official'], buildEnv, REPOSITORY_ROOT)
+   await runPnpm(['run', 'release:pack', '--family', 'dsh', '--out', buildPaths.packedDsh], buildEnv, REPOSITORY_ROOT)
+   await runPnpm([
 diff --git a/apps/desktop/src/main.ts b/apps/desktop/src/main.ts
+index e63e21588..780af38af 100644
 --- a/apps/desktop/src/main.ts
 +++ b/apps/desktop/src/main.ts
 @@ -1,7 +1,7 @@
  /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
-
+ 
  import { readFile, writeFile } from 'node:fs/promises'
 -import { extname, join, normalize, resolve, sep } from 'node:path'
 +import { delimiter, dirname, extname, join, normalize, resolve, sep } from 'node:path'
  import { fileURLToPath } from 'node:url'
  import {
    app,
-@@ -50,6 +50,7 @@
+@@ -64,6 +64,7 @@ const MIME: Readonly<Record<string, string>> = {
+ interface RuntimeResources {
    readonly node: string
    readonly pnpm: string
-   readonly seed: string
 +  readonly cli: string
+   readonly dsh: string
+   readonly profileResolution?: 'runtime'
  }
-
- function runtimeResources(): RuntimeResources {
-@@ -59,7 +60,9 @@
-   const pnpm = (development ? process.env.DSH_DESKTOP_PNPM_ENTRY : undefined)
+@@ -78,7 +79,9 @@ function runtimeResources(): RuntimeResources {
      ?? join(process.resourcesPath, 'runtime', 'pnpm', 'bin', 'pnpm.mjs')
-   const seed = (development ? process.env.DSH_DESKTOP_SEED_DIR : undefined) ?? join(process.resourcesPath, 'seed')
--  return { node, pnpm, seed }
+   const dsh = (development ? process.env.DSH_DESKTOP_DSH_DIR : undefined)
+     ?? (development ? join(process.resourcesPath, 'dsh') : join(app.getAppPath(), 'dsh'))
+-  return { node, pnpm, dsh, ...(development ? {} : { profileResolution: 'runtime' }) }
 +  const cli = (development ? process.env.APEMIND_CLI_BIN : undefined)
 +    ?? join(process.resourcesPath, 'apemind', 'bin', process.platform === 'win32' ? 'apemind.exe' : 'apemind')
-+  return { node, pnpm, seed, cli }
++  return { cli, node, pnpm, dsh, ...(development ? {} : { profileResolution: 'runtime' }) }
  }
-
- function developmentProject(): string | undefined {
-@@ -132,6 +135,8 @@
-
+ 
+ function developmentHostInspectPort(enabled: boolean): number | undefined {
+@@ -153,6 +156,8 @@ async function serveShellAsset(request: Request): Promise<Response> {
+ 
  async function main(): Promise<void> {
    const resources = runtimeResources()
 +  process.env.APEMIND_CLI_BIN = resources.cli
 +  process.env.PATH = [dirname(resources.cli), process.env.PATH ?? ''].join(delimiter)
    const paths = resolveDesktopPaths()
-   const development = developmentProject()
+   const development = app.isPackaged ? undefined : join(app.getAppPath(), '.desktop-build', 'development', 'project')
    const activeProject = development ?? paths.profile
-diff --git a/apps/desktop/electron-builder.config.mjs b/apps/desktop/electron-builder.config.mjs
---- a/apps/desktop/electron-builder.config.mjs
-+++ b/apps/desktop/electron-builder.config.mjs
-@@ -12,6 +12,7 @@
- } from './scripts/windows-sign.mjs'
- import { resolveDesktopAutoUpdateConfig } from './scripts/desktop-auto-update-environment.mjs'
- import { desktopTargetBuildPaths } from './scripts/desktop-build-paths.mjs'
-+import { resolveApeMindCliResources } from './scripts/apemind-cli-runtime.mjs'
-
- /**
-  * Create electron-builder configuration from one release environment.
-@@ -47,6 +48,7 @@
-   }
-   const update = resolveDesktopAutoUpdateConfig(env, resolvedPlatform, resolvedArch)
-   const buildPaths = desktopTargetBuildPaths(update.target)
-+  const cliResources = resolveApeMindCliResources(env, resolvedPlatform, resolvedArch)
-   return {
-     appId,
-     productName: 'ApeMind Desktop',
-@@ -62,6 +64,7 @@
-     extraResources: [
-       { from: buildPaths.runtime, to: 'runtime' },
-       { from: buildPaths.seed, to: 'seed' },
-+      ...cliResources,
-     ],
-     mac: {
-       icon: 'resources/icon.icns',
-diff --git a/apps/desktop/scripts/package-target.ts b/apps/desktop/scripts/package-target.ts
---- a/apps/desktop/scripts/package-target.ts
-+++ b/apps/desktop/scripts/package-target.ts
-@@ -9,6 +9,7 @@
-   resolveDesktopAutoUpdateConfig,
- } from './desktop-auto-update-environment.mjs'
- import { desktopTargetBuildPaths } from './desktop-build-paths.mjs'
-+import { prepareApeMindCli } from './apemind-cli-runtime.mjs'
-
- const APP_ROOT = resolve(import.meta.dirname, '..')
- const REPOSITORY_ROOT = resolve(APP_ROOT, '..', '..')
-@@ -254,6 +255,7 @@
-   for (const name of WINDOWS_SIGNING_ENV_NAMES) {
-     if (process.env[name] !== undefined) electronBuilderEnv[name] = process.env[name]
-   }
-+  await prepareApeMindCli(targetEnv, target.platform, target.arch)
-   await runPnpm(['run', 'build:official'], buildEnv, REPOSITORY_ROOT)
-   await runPnpm(['run', 'release:pack', '--family', 'dsh', '--out', buildPaths.packedDsh], buildEnv, REPOSITORY_ROOT)
-   await runPnpm([
 diff --git a/apps/desktop/tests/macos-signature.spec.ts b/apps/desktop/tests/macos-signature.spec.ts
+index 7fbc75923..c7fc7b96d 100644
 --- a/apps/desktop/tests/macos-signature.spec.ts
 +++ b/apps/desktop/tests/macos-signature.spec.ts
-@@ -1,5 +1,13 @@
+@@ -1,4 +1,10 @@
  import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
- import type { NotarizeOptions } from '@electron/notarize'
-+import { resolveApeMindCliResources } from '../scripts/apemind-cli-runtime.mjs'
-+
 +vi.mock('../scripts/apemind-cli-runtime.mjs', () => ({
-+  resolveApeMindCliResources: vi.fn(() => [
-+    { from: '/release/apemind-darwin-arm64', to: 'apemind/bin/apemind' },
-+    { from: '/release/apemind-cli.lock.json', to: 'apemind/release.json' },
-+  ]),
++  resolveApeMindCliResources: () => [
++    { from: '/release/apemind', to: 'apemind/bin/apemind' },
++    { from: '/release/lock.json', to: 'apemind/release.json' },
++  ],
 +}))
+ import type { NotarizeOptions } from '@electron/notarize'
  import {
    resolveDesktopAppId,
-   resolveMacOSNotarizationEnvironment,
-@@ -40,7 +48,10 @@
+@@ -40,7 +46,9 @@ describe('desktop macOS release signature', () => {
      const { createElectronBuilderConfig } = await import('../electron-builder.config.mjs')
      const config = createElectronBuilderConfig(RELEASE_ENVIRONMENT, 'darwin', 'arm64')
      expect(portablePath(config.directories.output)).toContain('/.desktop-build/targets/mac-arm64/artifacts')
--    expect(config.extraResources).toHaveLength(2)
-+    expect(config.extraResources).toHaveLength(4)
-+    expect(config.extraResources[2]?.to).toBe('apemind/bin/apemind')
-+    expect(config.extraResources[3]?.to).toBe('apemind/release.json')
-+    expect(resolveApeMindCliResources).toHaveBeenCalledWith(RELEASE_ENVIRONMENT, 'darwin', 'arm64')
+-    expect(config.extraResources).toHaveLength(1)
++    expect(config.extraResources).toHaveLength(3)
++    expect(config.extraResources[1]?.to).toBe('apemind/bin/apemind')
++    expect(config.extraResources[2]?.to).toBe('apemind/release.json')
      expect(config.extraResources[0]?.to).toBe('runtime')
-     expect(config.extraResources[1]?.to).toBe('seed')
      expect(portablePath(config.extraResources[0]?.from ?? '')).toContain('/.desktop-build/targets/mac-arm64/runtime')
-diff --git a/apps/desktop/electron-builder.config.d.mts b/apps/desktop/electron-builder.config.d.mts
---- a/apps/desktop/electron-builder.config.d.mts
-+++ b/apps/desktop/electron-builder.config.d.mts
-@@ -7,6 +7,8 @@
-   readonly extraResources: readonly [
-     { readonly from: string, readonly to: 'runtime' },
-     { readonly from: string, readonly to: 'seed' },
-+    { readonly from: string, readonly to: 'apemind/bin/apemind' | 'apemind/bin/apemind.exe' },
-+    { readonly from: string, readonly to: 'apemind/release.json' },
-   ]
-   readonly mac: {
-     readonly identity: string | undefined
+     const [dshFiles, dshNodeModules] = config.files.slice(-2)
+@@ -113,10 +121,10 @@ describe('desktop macOS release signature', () => {
+     })
+   })
+ 
+-  it('rejects unsigned macOS builds and malformed signing modes', async () => {
++  it('allows unsigned macOS builds but rejects malformed signing modes', async () => {
+     const { createElectronBuilderConfig } = await import('../electron-builder.config.mjs')
+-    expect(() => createElectronBuilderConfig({ ...RELEASE_ENVIRONMENT, DSH_DESKTOP_UNSIGNED: '1' }))
+-      .toThrow(/unsigned builds require Windows/u)
++    expect(createElectronBuilderConfig({ ...RELEASE_ENVIRONMENT, DSH_DESKTOP_UNSIGNED: '1' }))
++      .toMatchObject({ mac: { identity: null, forceCodeSigning: false, notarize: false }, dmg: { sign: false }, publish: null })
+     expect(() => createElectronBuilderConfig({ ...RELEASE_ENVIRONMENT, DSH_DESKTOP_UNSIGNED: 'yes' }))
+       .toThrow(/must be 0 or 1/u)
+   })

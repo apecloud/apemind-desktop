@@ -10,13 +10,13 @@ upstream:
   # 上游仓库
   repository: https://github.com/deepseek-ai/deepseek-harness
   # 锁定的 commit（40 位完整 SHA，不用分支/tag，保证不可变）
-  commit: aa8262ec091698bae9a6b04773a6b5b06ad4aef2
+  commit: 0a15e36e7f82b6ed45af6fa9759f29b40dcd965d
   # 人类可读的对应版本（仅用于展示与排查，权威是上面的 commit）
-  version: 0.1.5-rc.1
+  version: 0.1.6-alpha.1
   # 该 commit 的日期（仅供展示）
-  committed_at: "2026-09-10T12:34:48+08:00"
+  committed_at: "2026-09-15T02:42:33Z"
   # 该 commit 的上游描述
-  subject: "Merge pull request #3920 from deepseek-harness/feat/add-readme-citation"
+  subject: "Merge pull request #4171 from deepseek-harness/worktree/release-dsh-0.1.6-alpha.1"
   # 上游许可证（随上游，不因本仓改名）
   license: MIT
 
@@ -33,4 +33,4 @@ dependencies:
   strategy: inherit-upstream-lockfile
   # 上游 pnpm-lock.yaml 的 sha256，用于确认"我们拿到的确实是被验证过的那份依赖图"。
   # 注意：升级 commit 时此值需同步更新，且必须由脚本在 checkout 后实测得出，不要手填。
-  upstream_lockfile_sha256: a6515566578a26c29b5faddaf94abb5ec452ce6e533f8957e813328ebd4b3c27
+  upstream_lockfile_sha256: 762874d3d5a751c2362b60aa515be707b7bda6e325bdc47cdd1ea31ace6f8608

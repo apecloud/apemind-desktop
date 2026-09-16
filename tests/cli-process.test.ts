@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { CliError, CliProcess } from '../overlay/add-files/packages/experimental/apemind-login/src/cli-process.ts'
+import { CliError, CliProcess } from '../overlay/add-files/packages/credentials/apemind-login/src/cli-process.ts'
 
 async function withCli(body: string, run: (cli: CliProcess) => Promise<void>): Promise<void> {
   const dir = await mkdtemp(join(tmpdir(), 'apemind-cli-process-'))

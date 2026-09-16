@@ -1,5 +1,5 @@
 diff --git a/packages/bundle/base/cordis.patch.yml b/packages/bundle/base/cordis.patch.yml
-index f906ea860..eab75db00 100644
+index 97e5cf60d..71d3c0307 100644
 --- a/packages/bundle/base/cordis.patch.yml
 +++ b/packages/bundle/base/cordis.patch.yml
 @@ -97,6 +97,10 @@
@@ -14,7 +14,7 @@ index f906ea860..eab75db00 100644
      # models in the picker) until a `llm-pi-ai:` settings section supplies provider
      # profiles — then those routes register live, keys resolving per request
 diff --git a/packages/bundle/base/package.json b/packages/bundle/base/package.json
-index 39bdacbcd..9cf35a476 100644
+index 672e76594..bd5b2763d 100644
 --- a/packages/bundle/base/package.json
 +++ b/packages/bundle/base/package.json
 @@ -39,6 +39,7 @@
@@ -25,27 +25,15 @@ index 39bdacbcd..9cf35a476 100644
      "@deepseek-ai/dsh-attachment-local": "workspace:^",
      "@deepseek-ai/dsh-shell-env": "workspace:^",
      "@deepseek-ai/dsh-bash-sandbox": "workspace:^",
-diff --git a/scripts/experimental-package-policy.ts b/scripts/experimental-package-policy.ts
-index da0cd08a7..1952b9bdd 100644
---- a/scripts/experimental-package-policy.ts
-+++ b/scripts/experimental-package-policy.ts
-@@ -1,6 +1,7 @@
- /** Experimental packages that publish with the dsh release family without changing names. */
- export const PUBLIC_EXPERIMENTAL_PACKAGE_DIRECTORIES = [
-   'packages/experimental/agent-team',
-+  'packages/experimental/apemind-login',
-   'packages/experimental/agent-team-profile',
-   'packages/experimental/agent-team-web-profile',
-   'packages/experimental/client-ui-agent-team',
 diff --git a/tsconfig.host.json b/tsconfig.host.json
-index c5a3f118b..db740f8fe 100644
+index 8d9b721ac..22029bdc4 100644
 --- a/tsconfig.host.json
 +++ b/tsconfig.host.json
-@@ -322,6 +322,7 @@
+@@ -345,6 +345,7 @@
      { "path": "./packages/jobs/jobs-local" },
      { "path": "./packages/jobs/tool-jobs" },
      { "path": "./packages/experimental/agent-team" },
-+    { "path": "./packages/experimental/apemind-login" },
++    { "path": "./packages/credentials/apemind-login" },
      { "path": "./packages/experimental/agent-team-profile" },
      { "path": "./packages/experimental/tool-agent-team" },
      { "path": "./packages/experimental/agent-team-web-profile" },

@@ -59,7 +59,7 @@ fs.appendFileSync(${JSON.stringify(openedFile)},JSON.stringify(process.argv.slic
 `, { mode: 0o700 })
   process.env.PATH = `${temp}:${previousPath ?? ''}`
   const { Context } = await import(pathToFileURL(join(root, 'vendor/cordis/lib/index.js')).href)
-  const { AuthorizationController } = await import(pathToFileURL(join(root, 'packages/experimental/apemind-login/lib/index.js')).href)
+  const { AuthorizationController } = await import(pathToFileURL(join(root, 'packages/credentials/apemind-login/lib/index.js')).href)
   const controller = new AuthorizationController(new Context())
   assert.equal(controller.typertRemote.namespace, 'apemindAuth')
   const state = await controller.state()

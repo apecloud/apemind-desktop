@@ -27,7 +27,7 @@
       "path": "../../api/remotes/tsconfig.client.json"
     },
     {
-      "path": "../../experimental/apemind-login"
+      "path": "../../credentials/apemind-login"
     }
   ]
 }
