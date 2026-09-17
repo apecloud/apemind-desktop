@@ -195,6 +195,11 @@ jobs:
           path: release-assets
           pattern: desktop-*
           merge-multiple: true
+      - name: Keep CI receipts out of the public release
+        shell: bash
+        run: |
+          set -euo pipefail
+          find release-assets -type f -name '*-build-receipt.tgz' -print -delete
       - name: Ensure GitHub Release exists
         env:
           GH_TOKEN: ${{ github.token }}
