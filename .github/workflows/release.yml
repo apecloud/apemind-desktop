@@ -240,7 +240,23 @@ jobs:
             echo "No release assets were downloaded" >&2
             exit 1
           fi
-          gh release upload "$RELEASE_TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --clobber \
-            "${assets[@]}"
+          for asset in "${assets[@]}"; do
+            uploaded=0
+            for attempt in 1 2 3 4 5; do
+              echo "Uploading $(basename "$asset") (attempt ${attempt}/5)"
+              if gh release upload "$RELEASE_TAG" \
+                --repo "$GITHUB_REPOSITORY" \
+                --clobber \
+                "$asset"; then
+                uploaded=1
+                break
+              fi
+              if (( attempt < 5 )); then
+                sleep $((attempt * 15))
+              fi
+            done
+            if (( uploaded == 0 )); then
+              echo "Failed to upload $(basename "$asset") after 5 attempts" >&2
+              exit 1
+            fi
+          done
