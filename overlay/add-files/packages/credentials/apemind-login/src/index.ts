@@ -1,8 +1,10 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-skill'
 import { AuthorizationController } from './controller.ts'
+import { ApeMindModels } from './models.ts'
 
 export { AuthorizationController } from './controller.ts'
+export { ApeMindModels } from './models.ts'
 
 export const inject = ['skills']
 export type * from './types.ts'
@@ -10,6 +12,7 @@ export type * from './types.ts'
 /** Install the Host-owned ApeMind account API. */
 export function apply(ctx: Context): void {
   ctx.plugin(AuthorizationController)
+  ctx.plugin(ApeMindModels)
   ctx.skills.register({
     name: 'apemind',
     description: 'Use the ApeMind CLI to authenticate, choose a workspace, and read or modify ApeMind knowledge.',
@@ -26,6 +29,8 @@ export function apply(ctx: Context): void {
       'Use JSON for automation and check both exit codes and structured errors. Never describe a partial result or first page as complete.',
       'Check account or workspace status when unclear. Do not switch identities to work around a permission error.',
       'Use the CLI preview and confirmation contract for writes, according to the user authorization already provided.',
+      'Use `apemind model list` to inspect the signed-in account model catalog. Knowledge workspace selection does not change this catalog.',
+      '`model serve` is managed by the Host. Never run it in an Agent conversation or display its private connection output.',
       '',
       'CLI capabilities are local support, not proof of server availability or authorization.',
     ].join('\n'),
