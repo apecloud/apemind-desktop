@@ -1,18 +1,18 @@
 {
-  "version": "v0.5.9",
-  "commit": "6d452b02681e396748b42bef26dbfc6efc12e733",
+  "version": "v0.5.10",
+  "commit": "2044609902f04bf5f912a3906ce3bedaf47bff80",
   "artifacts": {
     "darwin-arm64": {
-      "url": "https://apemind.ai/api/v2/public/apemind-cli/releases/v0.5.9/apemind-darwin-arm64",
-      "sha256": "1c1be8f42ab469315fe0de9625b18ed1213e06d4a28af289626aa92f76d3d1ad"
+      "url": "https://apemind.ai/api/v2/public/apemind-cli/releases/v0.5.10/apemind-darwin-arm64",
+      "sha256": "f22b2c9bfdedd4300e47c229b9ee2c86bde75b89dc3a9940da33979175cd7874"
     },
     "darwin-x64": {
-      "url": "https://apemind.ai/api/v2/public/apemind-cli/releases/v0.5.9/apemind-darwin-amd64",
-      "sha256": "0415db945ddc3a62547d9e9803bc06ca1ce2e368693f53475278506a77b991f2"
+      "url": "https://apemind.ai/api/v2/public/apemind-cli/releases/v0.5.10/apemind-darwin-amd64",
+      "sha256": "e80ca09a5038eee234376a29cf197c85bc7fc34b81e8fde06cedfdfa1ea038a1"
     },
     "win32-x64": {
-      "url": "https://apemind.ai/api/v2/public/apemind-cli/releases/v0.5.9/apemind-windows-amd64.exe",
-      "sha256": "cdaca946bc667e24e6dc49bc5dc89b9cae53efbf8449130c9b0f24e0298203cb"
+      "url": "https://apemind.ai/api/v2/public/apemind-cli/releases/v0.5.10/apemind-windows-amd64.exe",
+      "sha256": "018193a2a384cc5df659c4e69f2235440938701eea68775287a63335872a2a70"
     }
   }
 }
