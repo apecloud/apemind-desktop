@@ -18,6 +18,14 @@ patches:
       - target: packages/llm/llm-pi-ai/src/index.ts
     reason: 导出已存在的 profile 解析器，让 ApeMind 插件复用原生模型适配器且不改写用户配置。
     upstream_logic_changed: false
+  - file: patches/11-apemind-macos-artifact-name.patch
+    targets:
+      - target: apps/desktop/scripts/package-macos.ts
+    reason: >
+      上游 macOS 公证编排仍查找并输出 DeepSeek Harness 文件名；品牌应用
+      使用 ApeMind Desktop 后会在签名完成后找不到待公证的应用。同步替换
+      应用目录名和 macOS 归档基名，保证签名、公证与发布资产使用同一名称。
+    upstream_logic_changed: true
   - file: patches/14-native-runtime-smoke.patch
     targets:
       - target: apps/desktop/tests/fixtures/runtime-payload-smoke.mjs
