@@ -59,7 +59,10 @@ else if(args[1]==='serve'){
   async function chat() {
     const result = new BlockAssembler()
     for await (const chunk of ctx.llm.stream({
-      provider: 'apemind-account-a', model: 'mdl-shared', messages: [createUserMessage('synthetic integration test')],
+      provider: 'apemind-account-a', model: 'mdl-shared', messages: [createUserMessage({
+        content: [{ type: 'text', text: 'synthetic integration test' }],
+        source: { kind: 'user' },
+      })],
     })) result.push(chunk)
     assert.equal(result.finish.kind, 'stop', JSON.stringify(result.finish))
   }

@@ -79,7 +79,7 @@ export class ApeMindModels extends Service {
 
   state(): ModelConnectionStatus[] { return this.statuses.map(status => ({ ...status })) }
 
-  refresh(force = false): Promise<void> {
+  refresh(force: boolean = false): Promise<void> {
     if (this.disposed) return Promise.resolve()
     if (this.pending && !force) return this.pending
     const next = (this.pending ?? Promise.resolve()).then(() => this.disposed ? undefined : this.sync())
