@@ -105,6 +105,9 @@ jobs:
       - name: 校验编译后 CLI 状态与连接边界
         run: node scripts/test-built-cli-controller.mjs "${RUNNER_TEMP}/dsh-desktop"
 
+      - name: 校验模型注册、流式调用与账号绑定
+        run: node scripts/test-built-models.mjs "${RUNNER_TEMP}/dsh-desktop"
+
       - name: 校验界面文案接入语言字典
         working-directory: ${{ runner.temp }}/dsh-desktop
         run: pnpm run verify-client-ui-i18n

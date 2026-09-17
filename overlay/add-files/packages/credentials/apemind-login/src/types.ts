@@ -20,6 +20,13 @@ export interface AccountState {
   credentialStatus?: CredentialStatus | null
   browserLoginPending?: boolean
   loginProgress?: LoginProgress | null
+  modelConnections?: ModelConnectionStatus[]
+}
+
+export interface ModelConnectionStatus {
+  connectionId: string
+  count: number
+  error: string | null
 }
 
 export interface CredentialStatus {

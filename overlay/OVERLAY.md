@@ -13,6 +13,11 @@
 # 变更清单（与 docs/branding.md 一致，改这里必须同步改那边）：
 
 patches:
+  - file: patches/15-pi-ai-profile-resolver.patch
+    targets:
+      - target: packages/llm/llm-pi-ai/src/index.ts
+    reason: 导出已存在的 profile 解析器，让 ApeMind 插件复用原生模型适配器且不改写用户配置。
+    upstream_logic_changed: false
   - file: patches/11-apemind-macos-artifact-name.patch
     targets:
       - target: apps/desktop/scripts/package-macos.ts
@@ -232,6 +237,8 @@ add-files:
   # Desktop 启动与 Agent 相同的 apemind CLI；不在插件内复制认证或业务 API。
   # 设置页显示 CLI 版本与凭据存储状态，保留读取失败的连接并提供对应恢复入口。
   - target: packages/credentials/apemind-login/src/types.ts
+  - target: packages/credentials/apemind-login/src/model-bridge.ts
+  - target: packages/credentials/apemind-login/src/models.ts
   # ApeMind 设置分区，通过 remote.apemindAuth 操作 Host。
   - target: packages/client/ui-apemind-login/package.json
   - target: packages/client/ui-apemind-login/tsconfig.json

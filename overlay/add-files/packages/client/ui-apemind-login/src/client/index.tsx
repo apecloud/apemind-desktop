@@ -356,6 +356,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
   const disabled = busy || waiting
   const oauth = state.oauth
   const credential = state.credentialStatus
+  const models = state.modelConnections?.find(item => item.connectionId === (oauth?.id ?? state.activeId))
   const credentialAccount = [...(state.oauthConnections ?? []), ...state.connections]
     .find(item => item.id === credential?.connectionId)
   const needsSignIn = credential?.error === 'reauthentication_required'
@@ -410,6 +411,24 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
             t={t} disabled={disabled} onBrowserLogin={() => { void run(browserLogin) }}
             onDeviceLogin={() => { void run(deviceLogin) }}
           />}
+    {(oauth || active) && <section className="apemind-card">
+      <h3>{t('modelTitle')}</h3>
+      <p>{models?.error === 'model_authorization_required' ? t('modelReauthorize')
+        : models?.error ? t('modelUnavailable')
+          : !models ? t('modelLoading')
+            : models.count ? t('modelReady', { count: models.count }) : t('modelEmpty')}</p>
+      <p className="apemind-muted">{t('modelHint')}</p>
+      <div className="apemind-actions">
+        {models?.error === 'model_authorization_required' && oauth
+          ? <button type="button" className="apemind-primary" disabled={disabled}
+            onClick={() => { void run(() => browserLogin(oauth.origin)) }}>{t('modelAuthorize')}</button>
+          : <button type="button" disabled={disabled} onClick={() => { void run(async () => {
+            const result = await remote.refreshModels()
+            if (result.ok) setState(result.value)
+            else setError(result.error.message)
+          }) }}>{t('modelRefresh')}</button>}
+      </div>
+    </section>}
     <details className="apemind-advanced">
       <summary><span aria-hidden="true">⚙</span> {t('advanced')}</summary>
       <div className="apemind-advanced-content">

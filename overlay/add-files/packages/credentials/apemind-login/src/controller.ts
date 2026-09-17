@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { CliError, CliProcess } from './cli-process.ts'
+import type {} from './models.ts'
 import type {
   AccountState, AccountView, CredentialStatus, KnowledgeBaseView, KnowledgePage, LoginProgress, OAuthAccountView, WorkspaceView,
 } from './types.ts'
@@ -131,7 +132,7 @@ export class AuthorizationController extends TypertRemoteService {
     return { activeId: active?.kind === 'api-key' ? active.id : null, connections,
       oauthConnections: list.items.filter(item => item.kind === 'oauth').map(item => this.oauthView(item)),
       oauth: active?.kind === 'oauth' ? this.oauthView(active) : null,
-      cliVersion: await this.version(), credentialStatus,
+      cliVersion: await this.version(), credentialStatus, modelConnections: this.ctx.get('apemindModels')?.state() ?? [],
       browserLoginPending: Boolean(this.loginAbort), loginProgress: this.loginProgress }
   }
 
@@ -161,6 +162,7 @@ export class AuthorizationController extends TypertRemoteService {
           this.loginProgress = progress
         },
       })
+      await this.ctx.get('apemindModels')?.refresh(true)
       return this.oauthView(connection)
     } finally {
       if (this.loginAbort === controller) this.loginAbort = undefined
@@ -218,16 +220,27 @@ export class AuthorizationController extends TypertRemoteService {
   @Remote async oauthLogout(connectionId: string): Promise<void> {
     await this.connection(connectionId, 'oauth')
     await this.run(['auth', 'logout', '--connection', connectionId])
+    await this.ctx.get('apemindModels')?.refresh(true)
   }
 
   @Remote
   async connect(origin: string, apiKey: string): Promise<AccountState> {
     if (!apiKey.trim()) throw new RemoteError('gateway/bad-request', '请输入 API Key。', {})
     await this.run<CliConnection>(['auth', 'connect', '--server', origin, '--api-key-stdin'], { input: apiKey })
+    await this.ctx.get('apemindModels')?.refresh(true)
     return this.state()
   }
   @Remote async select(id: string): Promise<AccountState> { await this.run(['connection', 'use', id]); return this.state() }
-  @Remote async disconnect(id: string): Promise<AccountState> { await this.run(['connection', 'remove', id]); return this.state() }
+  @Remote async disconnect(id: string): Promise<AccountState> {
+    await this.run(['connection', 'remove', id])
+    await this.ctx.get('apemindModels')?.refresh(true)
+    return this.state()
+  }
+
+  @Remote async refreshModels(): Promise<AccountState> {
+    await this.ctx.get('apemindModels')?.refresh(true)
+    return this.state()
+  }
 
   @Remote
   async collections(connectionId: string, cursor?: string): Promise<KnowledgePage & { account: AccountView }> {
