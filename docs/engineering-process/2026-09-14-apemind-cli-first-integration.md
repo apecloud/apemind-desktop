@@ -32,7 +32,7 @@ apemind CLI
 ApeMind /api/v2
 ```
 
-Desktop 的 UI、设置项和后台任务也调用同一个 CLI。用户在 UI 中看到的状态，应当与执行 `apemind auth status --format json` 得到的状态一致。
+Desktop 的 UI、设置项和后台调用也调用同一个 CLI。用户在 UI 中看到的状态，应当与执行 `apemind auth status --format json` 得到的状态一致。
 
 ### 产品只有一套 CLI，不区分 Desktop 模式
 
@@ -104,6 +104,8 @@ CLI 是一个跨平台、可随 Desktop 分发的单二进制程序，负责：
 - 非交互执行；
 - 幂等、重试、分页和错误转换；
 - 请求审计上下文。
+
+CLI 不自行创造服务端不存在的公共资源。索引、导入、导出和 Turn 等长操作沿用服务端已有的资源状态或事件；CLI 可以据此提供对应资源的等待或事件查看，只有服务端支持取消时才提供取消命令，不维护另一套跨资源的 `task` 状态机。后续交付以 CLI 为主线，Desktop 只跟随登录、打包、调用与结果展示的必要集成变化。
 
 ### 服务端的职责
 
