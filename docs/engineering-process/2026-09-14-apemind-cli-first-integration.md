@@ -32,7 +32,7 @@ apemind CLI
 ApeMind /api/v2
 ```
 
-Desktop 的 UI、设置项和后台任务也调用同一个 CLI。用户在 UI 中看到的状态，应当与执行 `apemind auth status --format json` 得到的状态一致。
+Desktop 的 UI、设置项和后台调用也调用同一个 CLI。用户在 UI 中看到的状态，应当与执行 `apemind auth status --format json` 得到的状态一致。
 
 ### 产品只有一套 CLI，不区分 Desktop 模式
 
