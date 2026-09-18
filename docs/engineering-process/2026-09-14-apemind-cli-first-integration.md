@@ -6,7 +6,7 @@
 
 ## 现状与目标
 
-ApeMind Desktop 是 DeepSeek Harness 的品牌化发行版。它的核心用户是 Agent，用户通过 Desktop 完成登录、配置和授权，Agent 通过 Desktop 内置的工具执行任务。ApeMind CLI 尚未正式发布，现有命令、认证和本地状态模型不承担兼容性责任。
+ApeMind Desktop 是 DeepSeek Harness 的品牌化发行版。它的核心用户是 Agent，用户通过 Desktop 完成登录、配置和授权，Agent 通过 Desktop 内置的工具执行任务。ApeMind CLI 是当前集成的主要交付面，Desktop 只负责把它随应用分发、提供图形化入口并展示结构化结果；CLI 的命令、认证和本地状态合同需要独立验证和发布。
 
 目标产品模型是：
 
@@ -194,7 +194,7 @@ apemind document list --knowledge-base <id> --format json
 apemind document get <document-id> --format json
 ```
 
-第一阶段提供只读能力。写能力采用预览和确认流程：
+读取和写入都沿用服务端已有资源。写入采用预览和确认流程：
 
 ```bash
 apemind document update <id> --knowledge-base <kb-id> --input change.json --dry-run
@@ -496,7 +496,7 @@ OpenAPI 生成代码在 CI 中校验，不手工修改。业务语义、CLI 命�
 - 选择 Go 和单二进制发布形态；
 - 定义命令、JSON schema、错误代码和退出码；
 - 实现 OAuth、设备码、系统凭据库和连接管理；
-- 实现 `auth`、`workspace`、`knowledge` 只读命令；
+- 实现 `auth`、`workspace`、`knowledge`、`document`、`agent`、`chat` 和 `turn` 命令；
 - 默认服务地址为 `https://apemind.ai`；
 - 删除 SLOCK 自动发现和隐式 API Key 回退。
 
@@ -517,12 +517,14 @@ OpenAPI 生成代码在 CI 中校验，不手工修改。业务语义、CLI 命�
 - 将旧 `/api/v2/auth/desktop/*` 标记为兼容入口；
 - 完成 Desktop 与 CLI 迁移后删除旧路由。
 
-### 第四阶段：写操作
+### 第四阶段：写操作与能力覆盖
 
 - 增加 knowledge/document 写 scope；
 - 实现 dry-run、确认、幂等键和审计；
 - 先支持单资源变更，再支持批量操作；
 - 提供复用当前连接、认证和工作空间边界的 `apemind api` 通用入口；默认限定当前服务的 `/api/v2`，高风险写入仍需确认，不允许绕过权限或将凭据发送到其他来源。具体范围见[能力扩展设计](2026-09-16-apemind-cli-gh-capability-design.md)。
+
+当前继续推进的重点是把已有 CLI 命令逐项接到真实的 `/api/v2` 资源合同：补齐知识库与文档生命周期、Agent/Chat/Turn 的读写和取消、分页与事件等待、MCP 权限传播，以及 OAuth 和 API Key 两种连接的同一权限边界。服务端没有统一任务资源时，CLI 不添加跨资源任务层；Desktop 也不再为这些能力维护第二套业务实现。
 
 ## 验收标准
 
