@@ -416,24 +416,30 @@ HTTP 认证失败、scope 不足与 MCP 工具执行失败必须可区分。受�
 - Turn 分享；
 - HTML/PDF 等产物分享。
 
-当前 CLI 基本没有覆盖。
+CLI 按服务端资源逐项覆盖这些能力；命令名、参数和授权范围必须与已经实现的
+CLI 合同一致，不能继续使用历史 CLI 中的另一套参数。
 
 目标是让 Desktop 的 ApeMind 图形入口和 Agent 能通过同一 CLI 契约使用这些服务端能力。
 
 建议最终支持：
 
 ```bash
-apemind agent list
-apemind agent get ID
-apemind agent create
-apemind chat create --agent ID
-apemind chat list
-apemind turn create --chat ID --message "..."
-apemind turn watch --chat ID --turn ID
-apemind turn cancel --chat ID --turn ID
+apemind bot list [--workspace ID]
+apemind bot get BOT_ID [--workspace ID]
+apemind chat create --bot-id BOT_ID [--workspace ID] [--dry-run | --confirm]
+apemind chat list --bot-id BOT_ID [--workspace ID]
+apemind chat get CHAT_ID --bot-id BOT_ID [--workspace ID]
+apemind turn create --chat-id CHAT_ID --query "..."
+apemind turn watch TURN_ID --chat-id CHAT_ID [--after-sequence N]
+apemind turn cancel TURN_ID --chat-id CHAT_ID
 apemind turn approve ...
 apemind turn respond ...
 ```
+
+`chat create` 使用单独的 `chat.write` 授权。CLI 默认只生成创建预览，
+明确传入 `--confirm` 才请求服务端；`chat list` 和 `chat get` 继续使用
+`chat.read`。`turn create`、`turn watch` 和 `turn cancel` 分别使用服务端
+Turn 的写入、事件和取消合同，不把 Chat 或 Turn 包装成新的客户端任务。
 
 创建 Turn 成功只代表服务端接受请求，不能等同于 Turn 已经结束。流式 Turn 应该提供稳定的事件协议，例如：
 
