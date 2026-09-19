@@ -858,7 +858,7 @@ Desktop 则提供：
 
 ## 当前交付重点（2026-09-19）
 
-实现顺序以 CLI 的生产可用性为准，Desktop 的新需求暂时让位于 CLI 能力。当前优先收口命令树、OAuth/API Key 的统一请求边界、工作空间权限、知识库与文档生命周期，以及 Agent/Chat/Turn 的资源级读写和等待。
+实现顺序以 CLI 的生产可用性为准，Desktop 的新需求暂时让位于 CLI 能力。当前优先收口命令树、OAuth/API Key 的统一请求边界、工作空间权限、知识库与文档生命周期，以及 Agent/Chat/Turn/Export 的资源级读写和等待。
 
 Turn 的命令面已经确定为资源命令：`turn create`、`turn cancel`、`turn watch`、`turn consent`、`turn elicit` 和 `turn wait`。这些命令共享服务端的 Chat、Turn 和事件合同；`turn wait` 只在当前 CLI 进程内轮询 Turn 状态，不生成本地任务记录，也不把 CLI 的一次执行暴露为跨资源对象。
 
