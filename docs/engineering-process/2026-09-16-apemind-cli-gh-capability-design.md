@@ -2,7 +2,7 @@
 
 本文回答 ApeMind CLI 如何成为类似 `gh` 的统一客户端：当前使用体验有哪些差距，ApeMind 服务端有哪些能力尚未暴露，以及命令、API、MCP、Desktop 和 Skill 应如何分工。
 
-本文延续 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md) 的单一客户端、凭据和工作空间边界，并扩展通用 API、MCP、业务命令和能力发现方案。能力差距分析保留 2026-09-16 的调查快照，不作为今天的完成清单；建议命令和事件示例属于目标设计，不代表已实现。具体参数和输出合同需要在实现对应能力时定稿。ApeMind 当前公开的是工作空间、知识库、文档、Chat、Turn、导入和导出等领域资源，没有统一的 Task 产品对象；CLI 只映射这些真实资源和服务端事件，不把一次命令执行包装成新的 `task` 资源。
+本文延续 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md) 的单一客户端、凭据和工作空间边界，并扩展通用 API、MCP、业务命令和能力发现方案。普通用户命令、organization/workspace/admin 语义和本轮服务端审计以 [ApeMind CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md) 为准。能力差距分析保留 2026-09-16 的调查快照，不作为今天的完成清单；建议命令和事件示例属于目标设计，不代表已实现。具体参数和输出合同需要在实现对应能力时定稿。ApeMind 当前公开的是工作空间、知识库、文档、Chat、Turn、导入和导出等领域资源，没有统一的 Task 产品对象；CLI 只映射这些真实资源和服务端事件，不把一次命令执行包装成新的 `task` 资源。
 
 当前系统没有统一的 Task 产品对象，因此本文所有“等待”“观看”“取消”都指向具体的服务端资源。CLI 的公共命令、JSON 字段、事件类型和本地状态不能使用一个跨资源的 `task` 名称来代替这些资源；需要统一的地方统一的是传输、错误、分页和输出机制，不是业务对象。
 
@@ -693,7 +693,7 @@ Desktop 应该是 CLI 的图形化语法糖，同时区分公开契约和内部�
 - 高频、稳定、面向用户的能力：高层命令；
 - 快速演进或低频能力：`apemind api`；
 - 面向 Agent 的检索和工具能力：`apemind mcp`；
-- 管理和运维能力：独立的 `admin` 命令；
+- 管理和运维能力：同一 `apemind` 二进制下显式的 `admin` 命名空间；具体边界见 [命令语义修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)；
 - 未授权能力：由服务端权限拒绝，不在 CLI 中硬编码假权限。
 
 ## 七、需要优先修复的 CLI 基础问题
@@ -877,7 +877,7 @@ Turn 的命令面已经确定为资源命令：`turn create`、`turn cancel`、`
 以下文案用于持续执行本设计，恢复执行时以代码、公开制品、环境状态和验收记录判断已完成范围，不依据历史口头声明重新开始或提前收尾。
 
 ```text
-以 apecloud/apemind-desktop 的 docs/engineering-process/2026-09-16-apemind-cli-gh-capability-design.md 为能力目标，以同目录 2026-09-14-apemind-cli-first-integration.md 的统一身份合同为认证与空间边界，持续完成 ApeMind CLI 及其服务端合同所需的实现、合并、发布与验收。
+以 apecloud/apemind-desktop 的 docs/engineering-process/2026-09-24-apemind-cli-command-scope-and-admin-design.md 为当前 CLI 命令语义、organization/workspace/admin 边界和授权矩阵，以同目录 2026-09-14-apemind-cli-first-integration.md 的统一身份合同和 2026-09-16 文档的 gh 能力分析为背景，持续完成 ApeMind CLI 及其服务端合同所需的实现、合并、发布与验收。
 
 CLI 是本阶段唯一主线。Desktop 只保留登录入口、CLI 打包、结构化结果展示和必要的集成回归；除非 CLI 合同要求，不新增 Desktop 专用功能、独立 SDK、独立业务 API 或第二套凭据逻辑。
 
