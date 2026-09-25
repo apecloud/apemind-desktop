@@ -48,7 +48,7 @@
  }
 +
 +--- a/apps/desktop/scripts/smoke-packaged-runtime.ts
-++++ b/apps/desktop/scripts/smoke-packaged-runtime.ts
++++ b/apps/desktop/scripts/smoke-packaged-runtime.ts
 +@@ -14,8 +14,8 @@
 + const artifacts = values.unsigned ? paths.unsignedArtifacts : paths.artifacts
 + const application = windows ? join(artifacts, 'win-unpacked')
@@ -60,4 +60,3 @@
 + const descriptor = await verifyDesktopRuntime(paths.dsh, readDesktopRuntime(paths.dsh).release.version,
 +   resolveDesktopPackageTarget(target))
 + if (windows && !values.unsigned) await verifyWindowsCode(application)
-*** End Patch
