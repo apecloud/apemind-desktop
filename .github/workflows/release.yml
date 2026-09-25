@@ -239,7 +239,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-assets
-          find "${RUNNER_TEMP}/dsh-desktop/apps/desktop/.desktop-build/targets" -mindepth 3 -maxdepth 3 -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.msi' \) -print -exec cp {} release-assets/ \;
+          export RELEASE_TAG="${{ inputs.tag }}"
+          while IFS= read -r -d '' file; do
+            base="$(basename "$file")"
+            case "$base" in
+              electron.exe) continue ;;
+              *.exe) cp "$file" "release-assets/apemind-desktop-${RELEASE_TAG#v}-win-x64-unsigned.exe" ;;
+              *.dmg|*.zip|*.msi) cp "$file" "release-assets/$base" ;;
+            esac
+          done < <(find "${RUNNER_TEMP}/dsh-desktop/apps/desktop/.desktop-build/targets" -mindepth 3 -maxdepth 3 -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.msi' \) -print0)
           test -n "$(find release-assets -type f -print -quit)"
           if command -v sha256sum >/dev/null 2>&1; then
             sha256sum release-assets/* > release-assets/SHA256SUMS-${{ matrix.os }}.txt
