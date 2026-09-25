@@ -1,0 +1,130 @@
+# CI：验证 upstream.lock 真的锁得住、overlay 只碰授权文件、构建可复现。
+#
+# 说明（2026-09-10 建仓时的实际约束，不要按习惯改）：
+#   - 上游 dsh **没有任何桌面打包 workflow**（全部 20 个 workflow 里零引用
+#     package:desktop / DSH_DESKTOP_APP_ID），所以这条流水线是我们自己的。
+#   - 构建**需要外网**：prepare:runtime 会下载 Node 24.17.0，
+#     prepare:seed 会从 registry.npmjs.org 拉依赖。**不是离线构建**。
+#   - runner 使用 **hosted `ubuntu-latest`**，与同组织其他仓（apemind-computer /
+#     apemind-status / apemind-agent）保持一致。
+#     本 workflow 只干：checkout + 跑 bash 脚本 + pnpm + corepack —— 都是标准 hosted
+#     runner 能做的事，不需要特权、不需要内网、不碰客户环境。
+#     ⚠️ 建仓时曾误写为 `self-hosted`，而本仓**没有注册任何 self-hosted runner**,
+#     导致自建仓第一个 commit 起所有 run 永久停在 `queued`（从未执行）。已修正。
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # ── 闸门：锁与 overlay 范围 ────────────────────────────────────────
+  verify-lock-and-overlay:
+    name: 校验 upstream.lock 与 overlay 范围
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 校验 overlay 文件与 upstream.lock 的声明一致
+        run: ./scripts/verify-overlay.sh
+
+      - name: 取上游并按锁应用 overlay（含越界校验）
+        run: ./scripts/sync-upstream.sh --work-dir "${RUNNER_TEMP}/dsh-desktop"
+
+      - name: 确认 HEAD 与 upstream.lock 完全一致
+        run: |
+          set -euo pipefail
+          WANT="$(./scripts/lock-get.sh upstream.commit)"
+          GOT="$(git -C "${RUNNER_TEMP}/dsh-desktop" rev-parse HEAD)"
+          echo "want=${WANT}"
+          echo "got =${GOT}"
+          test "${WANT}" = "${GOT}"
+
+  # ── 前段构建：证明 overlay 后仍能构建（不含签名/打包）──────────────
+  build-dev:
+    name: overlay 后可构建（dev 前段）
+    runs-on: ubuntu-latest
+    needs: verify-lock-and-overlay
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 取上游 + overlay
+        run: ./scripts/sync-upstream.sh --work-dir "${RUNNER_TEMP}/dsh-desktop"
+
+      - name: 激活上游要求的 pnpm（必须匹配 packageManager）
+        run: |
+          set -euo pipefail
+          export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+          # 从 upstream.lock 读出版本（在仓库根执行，不依赖 CWD）
+          PM="$(./scripts/lock-get.sh toolchain.package_manager)"   # 形如 pnpm@11.7.0
+          echo "upstream requires: ${PM}"
+          # ⚠️ 必须 `corepack enable` 才能把 shim 放进 PATH。
+          # 只跑 `corepack prepare --activate` 在 GitHub runner 上不会创建 pnpm shim，
+          # 随后 `pnpm` 会 command not found（exit 127）——首次跑 CI 时实测撞到。
+          corepack enable
+          corepack prepare "${PM}" --activate
+          command -v pnpm
+          pnpm --version
+
+      - name: 派生 lockfile（add-files 引入新的 workspace 包）
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: |
+          set -euo pipefail
+          # 为何必须单独一步、且必须在 pnpm 激活之后：
+          # add-files 里的插件是新的 workspace 包，会使上游 pnpm-lock.yaml 失效；
+          # 而下面 `pnpm install --frozen-lockfile` 会因此报 ERR_PNPM_OUTDATED_LOCKFILE。
+          # sync-upstream.sh 里也有一段派生尝试，但它可能在 pnpm 未就绪时静默跳过
+          # （CI 里 sync 跑在 corepack 之前，实测就是这种情况）——所以这里显式跑。
+          # lock 是**派生**的，不作为补丁入库。
+          # 注意：本步的 CWD 是**上游工作树**，不是我们的仓库；
+          # 用 git rev-parse --show-toplevel 会解析到工作树（那里没有 overlay/），
+          # 守卫会因此静默为假 —— 实测撞到过。这里用 GITHUB_WORKSPACE 显式指向本仓。
+          OVERLAY="${GITHUB_WORKSPACE}/overlay/add-files"
+          echo "overlay add-files: ${OVERLAY}"
+          if [ -d "${OVERLAY}" ] && [ -n "$(find "${OVERLAY}" -type f -print -quit)" ]; then
+            pnpm install --lockfile-only --ignore-scripts
+            echo "lock 已派生"
+          else
+            echo "add-files 为空，无需派生 lock"
+          fi
+
+      - name: 安装依赖
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: pnpm run build
+
+      - name: 校验账号切换与退出交互
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: pnpm exec vitest run packages/client/ui-apemind-login/tests/login.spec.tsx
+
+      - name: 校验编译后 CLI 状态与连接边界
+        run: node scripts/test-built-cli-controller.mjs "${RUNNER_TEMP}/dsh-desktop"
+
+      - name: 校验模型注册、流式调用与账号绑定
+        run: node scripts/test-built-models.mjs "${RUNNER_TEMP}/dsh-desktop"
+
+      - name: 校验界面文案接入语言字典
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: pnpm run verify-client-ui-i18n
+
+      - name: 断言品牌已生效（overlay 确实被应用）
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        run: |
+          set -euo pipefail
+          builder_config="$(find apps/desktop -type f | grep -E '/electron-builder(\.config|-config)\.mjs$' | head -n1)"
+          test -n "${builder_config}"
+          grep -Eq "productName: ['\"]ApeMind Desktop['\"]" "${builder_config}"
+          echo "✓ productName 已品牌化：${builder_config}"
+          # verify-client-ui-i18n above validates locale ownership and build
+          # output; avoid coupling this smoke assertion to an upstream source
+          # file path that may move between DSH releases.
+          echo "✓ 品牌文案由 locale 校验与构建链路覆盖"
+
+      # 注意：此处**有意不做** pnpm run package:* —— 它需要 Apple 凭据，
+      # 且会在两处签名门抛错（electron-builder config 构造 + prepare-seed）。
+      # 未签名开关（DSH_DESKTOP_UNSIGNED）见 docs/。等 owner 给凭据后再加打包 job。
