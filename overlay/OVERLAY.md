@@ -21,11 +21,10 @@ patches:
   - file: patches/11-apemind-macos-artifact-name.patch
     targets:
       - target: apps/desktop/scripts/package-macos.ts
-      - target: apps/desktop/scripts/smoke-packaged-runtime.ts
     reason: >
-      上游 macOS 公证编排和跨平台运行时 smoke 仍使用 DeepSeek Harness 文件名；
-      品牌应用使用 ApeMind Desktop 后，签名归档会因中间产物名和 smoke 路径不一致而失败。
-      补丁保留上游中间产物名，最后统一重命名为 ApeMind Desktop，并同步 smoke 路径。
+      上游 macOS 公证编排生成 DeepSeek Harness 文件名，而发布页需要 ApeMind Desktop
+      资产名。补丁保留上游中间产物名用于构建，验证通过后再统一重命名并提升到发布目录，
+      避免把内部 staging 名称误当作最终资产名。
     upstream_logic_changed: true
   - file: patches/14-native-runtime-smoke.patch
     targets:
