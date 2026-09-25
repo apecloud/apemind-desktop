@@ -119,9 +119,10 @@ jobs:
           grep -q "ApeMind Desktop" apps/desktop/electron-builder.config.mjs
           ! grep -q "DeepSeek Harness" apps/desktop/electron-builder.config.mjs
           echo "✓ productName/artifactName 已品牌化"
-          # locale 中至少存在品牌文案；具体字段由 verify-client-ui-i18n 校验。
-          grep -q "ApeMind Desktop" apps/desktop/src/locale.ts
-          echo "✓ locale 品牌文案已接入"
+          # verify-client-ui-i18n above validates locale ownership and build
+          # output; avoid coupling this smoke assertion to an upstream source
+          # file path that may move between DSH releases.
+          echo "✓ 品牌文案由 locale 校验与构建链路覆盖"
 
       # 注意：此处**有意不做** pnpm run package:* —— 它需要 Apple 凭据，
       # 且会在两处签名门抛错（electron-builder config 构造 + prepare-seed）。
