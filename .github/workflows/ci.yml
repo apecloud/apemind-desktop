@@ -116,9 +116,13 @@ jobs:
         working-directory: ${{ runner.temp }}/dsh-desktop
         run: |
           set -euo pipefail
-          grep -q "ApeMind Desktop" apps/desktop/electron-builder.config.mjs
-          ! grep -q "DeepSeek Harness" apps/desktop/electron-builder.config.mjs
-          echo "✓ productName/artifactName 已品牌化"
+          builder_config="$(find apps/desktop -type f \
+            \( -name 'electron-builder.config.mjs' -o -name 'electron-builder-config.mjs' \\) \
+            -print -quit)"
+          test -n "${builder_config}"
+          grep -q "ApeMind Desktop" "${builder_config}"
+          ! grep -q "DeepSeek Harness" "${builder_config}"
+          echo "✓ productName/artifactName 已品牌化：${builder_config}"
           # verify-client-ui-i18n above validates locale ownership and build
           # output; avoid coupling this smoke assertion to an upstream source
           # file path that may move between DSH releases.
