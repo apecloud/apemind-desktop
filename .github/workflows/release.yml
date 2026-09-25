@@ -108,6 +108,36 @@ jobs:
         shell: bash
         run: pnpm install --frozen-lockfile
 
+      - name: Prefetch bundled ApeMind CLI
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        shell: bash
+        env:
+          PACKAGE_TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          case "$PACKAGE_TARGET" in
+            package:mac:arm64) CLI_TARGET=darwin-arm64 ;;
+            package:mac:x64) CLI_TARGET=darwin-x64 ;;
+            package:win:x64) CLI_TARGET=win32-x64 ;;
+            *) echo "unsupported Desktop target: $PACKAGE_TARGET" >&2; exit 2 ;;
+          esac
+          lock="apps/desktop/resources/apemind-cli.lock.json"
+          version="$(jq -r '.version' "$lock")"
+          url="$(jq -r --arg target "$CLI_TARGET" '.artifacts[$target].url' "$lock")"
+          expected="$(jq -r --arg target "$CLI_TARGET" '.artifacts[$target].sha256' "$lock")"
+          filename="$(basename "${url%%\?*}")"
+          destination="apps/desktop/.desktop-build/apemind-cli/$version/$CLI_TARGET/$filename"
+          mkdir -p "$(dirname "$destination")"
+          curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
+            --connect-timeout 20 --max-time 180 "$url" -o "$destination"
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "$destination" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "$destination" | awk '{print $1}')"
+          fi
+          test "$actual" = "$expected"
+          if [[ "$CLI_TARGET" != win32-* ]]; then chmod +x "$destination"; fi
+
       - name: Prefer native Windows tar
         if: runner.os == 'Windows'
         shell: bash
@@ -157,7 +187,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$RUNNER_OS" == "macOS" ]]; then
-            cp .env.macos.example .env.macos
+            : > .env.macos
             {
               printf 'DSH_DESKTOP_APP_ID=%s\n' "$APP_ID"
               printf 'DSH_DESKTOP_AUTO_UPDATE_ENV=production\n'
@@ -172,7 +202,7 @@ jobs:
               printf 'CSC_KEY_PASSWORD=%s\n' "$CERTIFICATE_PASSWORD_VALUE"
             } >> .env.macos
           else
-            cp .env.windows.example .env.windows
+            : > .env.windows
             {
               printf 'DSH_DESKTOP_APP_ID=%s\n' "$APP_ID"
               printf 'DSH_DESKTOP_AUTO_UPDATE_ENV=production\n'
