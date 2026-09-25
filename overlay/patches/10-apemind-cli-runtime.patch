@@ -1,100 +1,89 @@
-diff --git a/apps/desktop/electron-builder.config.d.mts b/apps/desktop/electron-builder.config.d.mts
-index ac80c6d71..cf842851c 100644
 --- a/apps/desktop/electron-builder.config.d.mts
 +++ b/apps/desktop/electron-builder.config.d.mts
-@@ -13,7 +13,11 @@ export interface DesktopElectronBuilderConfig {
-     { readonly from: string, readonly to: 'dsh/node_modules', readonly filter: readonly ['**/*'] },
-   ]
-   readonly asarUnpack: readonly string[]
--  readonly extraResources: readonly [{ readonly from: string, readonly to: 'runtime' }]
-+  readonly extraResources: readonly [
-+    { readonly from: string, readonly to: 'runtime' },
-+    { readonly from: string, readonly to: 'apemind/bin/apemind' | 'apemind/bin/apemind.exe' },
+@@ -22,6 +22,8 @@
+     { readonly from: string, readonly to: 'runtime' },
+     { readonly from: string, readonly to: 'icon.png' },
+     ...{ readonly from: string, readonly to: 'tray.ico' }[],
++    ...{ readonly from: string, readonly to: 'apemind/bin/apemind' | 'apemind/bin/apemind.exe' }[],
 +    { readonly from: string, readonly to: 'apemind/release.json' },
-+  ]
+   ]
    readonly mac: {
-     readonly identity: string | null | undefined
-     readonly forceCodeSigning: boolean
-diff --git a/apps/desktop/electron-builder.config.mjs b/apps/desktop/electron-builder.config.mjs
-index 1c8fcf5b4..e4903cfc6 100644
---- a/apps/desktop/electron-builder.config.mjs
-+++ b/apps/desktop/electron-builder.config.mjs
-@@ -1,3 +1,4 @@
-+import { resolveApeMindCliResources } from './scripts/apemind-cli-runtime.mjs'
- import { join } from 'node:path'
- import { fileURLToPath } from 'node:url'
- import {
-@@ -74,6 +75,7 @@ export function createElectronBuilderConfig(
-     ],
+     readonly extendInfo: { readonly NSMicrophoneUsageDescription: string }
+--- a/apps/desktop/scripts/electron-builder-config.mjs
++++ b/apps/desktop/scripts/electron-builder-config.mjs
+@@ -25,6 +25,7 @@
+ import { resolveDesktopPolicyEnvironment } from './desktop-policy-environment.mjs'
+ import { desktopTargetBuildPaths, resolveDesktopBuildTarget } from './desktop-build-paths.mjs'
+ import { installWindowsDirectoryInstaller } from './windows-directory-installer.mjs'
++import { resolveApeMindCliResources } from './apemind-cli-runtime.mjs'
+ import { preserveWindowsRuntimeSignature, signWindowsCode } from './windows-runtime-signature.mjs'
+ import { prepareWindowsAsarUnpack, verifyWindowsAsarUnpack } from './windows-asar-unpack.mjs'
+ import { recordPackagingEvent } from './packaging-run.mjs'
+@@ -143,6 +144,7 @@
      extraResources: [
        { from: buildPaths.runtime, to: 'runtime' },
+       { from: fileURLToPath(new URL('../resources/icon-windows.png', import.meta.url)), to: 'icon.png' },
 +      ...resolveApeMindCliResources(env, resolvedPlatform, resolvedArch),
+       // Windows tray bitmaps; macOS keeps the Dock and ships no menu bar icon.
+       ...(packagesWindows ? [{ from: fileURLToPath(new URL('../resources/tray-windows.ico', import.meta.url)), to: 'tray.ico' }] : []),
      ],
-     mac: {
-       icon: 'resources/icon.icns',
-diff --git a/apps/desktop/scripts/package-target.ts b/apps/desktop/scripts/package-target.ts
-index cc9ef76b5..40d077ed9 100644
 --- a/apps/desktop/scripts/package-target.ts
 +++ b/apps/desktop/scripts/package-target.ts
-@@ -9,6 +9,7 @@ import {
+@@ -9,6 +9,7 @@
    resolveDesktopAutoUpdateConfig,
  } from './desktop-auto-update-environment.mjs'
  import { desktopTargetBuildPaths } from './desktop-build-paths.mjs'
 +import { prepareApeMindCli } from './apemind-cli-runtime.mjs'
  import { packageMacOSArtifacts, type DesktopPrepackagedArtifact } from './package-macos.ts'
- 
- const APP_ROOT = resolve(import.meta.dirname, '..')
-@@ -286,6 +287,7 @@ async function main(): Promise<void> {
-   for (const name of WINDOWS_SIGNING_ENV_NAMES) {
-     if (!invocation.unsigned && process.env[name] !== undefined) electronBuilderEnv[name] = process.env[name]
+ import { loadDesktopPackageEnvironment, validateDesktopPackageEnvironment } from './desktop-package-environment.mjs'
+ import { createPackagingRun, recordPackagingEvent } from './packaging-run.mjs'
+@@ -447,6 +448,7 @@
+         { cwd: APP_ROOT, env: electronBuilderEnv, timeoutMs: 60_000 })
+     })
    }
 +  await prepareApeMindCli(targetEnv, target.platform, target.arch)
-   await runPnpm(['run', 'build:official'], buildEnv, REPOSITORY_ROOT)
-   await runPnpm(['run', 'release:pack', '--family', 'dsh', '--out', buildPaths.packedDsh], buildEnv, REPOSITORY_ROOT)
-   await runPnpm([
-diff --git a/apps/desktop/src/main.ts b/apps/desktop/src/main.ts
-index e63e21588..780af38af 100644
+   await execute(['run', 'build:official'], buildEnv, REPOSITORY_ROOT)
+   await execute(['run', 'release:pack', '--family', 'dsh', '--out', buildPaths.packedDsh, ...packArguments], buildEnv, REPOSITORY_ROOT)
+   await execute([
 --- a/apps/desktop/src/main.ts
 +++ b/apps/desktop/src/main.ts
-@@ -1,7 +1,7 @@
+@@ -2,7 +2,7 @@
  /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
- 
+
  import { readFile, writeFile } from 'node:fs/promises'
--import { extname, join, normalize, resolve, sep } from 'node:path'
-+import { delimiter, dirname, extname, join, normalize, resolve, sep } from 'node:path'
+-import { join } from 'node:path'
++import { delimiter, dirname, join } from 'node:path'
  import { fileURLToPath } from 'node:url'
  import {
    app,
-@@ -64,6 +64,7 @@ const MIME: Readonly<Record<string, string>> = {
- interface RuntimeResources {
+@@ -141,6 +141,7 @@
+   readonly nodeBin: string
    readonly node: string
    readonly pnpm: string
 +  readonly cli: string
    readonly dsh: string
-   readonly profileResolution?: 'runtime'
  }
-@@ -78,7 +79,9 @@ function runtimeResources(): RuntimeResources {
-     ?? join(process.resourcesPath, 'runtime', 'pnpm', 'bin', 'pnpm.mjs')
+
+@@ -153,7 +154,9 @@
+       : join(process.resourcesPath, 'runtime', 'pnpm', 'bin', 'pnpm.mjs'))
    const dsh = (development ? process.env.DSH_DESKTOP_DSH_DIR : undefined)
-     ?? (development ? join(process.resourcesPath, 'dsh') : join(app.getAppPath(), 'dsh'))
--  return { node, pnpm, dsh, ...(development ? {} : { profileResolution: 'runtime' }) }
+     ?? (development ? join(app.getAppPath(), '.desktop-build', 'development', 'project') : join(app.getAppPath(), 'dsh'))
+-  return { node, nodeBin, pnpm, dsh }
 +  const cli = (development ? process.env.APEMIND_CLI_BIN : undefined)
 +    ?? join(process.resourcesPath, 'apemind', 'bin', process.platform === 'win32' ? 'apemind.exe' : 'apemind')
-+  return { cli, node, pnpm, dsh, ...(development ? {} : { profileResolution: 'runtime' }) }
++  return { cli, node, nodeBin, pnpm, dsh }
  }
- 
- function developmentHostInspectPort(enabled: boolean): number | undefined {
-@@ -153,6 +156,8 @@ async function serveShellAsset(request: Request): Promise<Response> {
- 
- async function main(): Promise<void> {
+
+ function developmentPrimaryRuntime(): string {
+@@ -312,6 +315,8 @@
+   const journalDirectory = process.env.DSH_DESKTOP_UPDATE_JOURNAL_DIR
+   const updateJournal = journalDirectory === undefined ? undefined : new DesktopUpdateJournal(journalDirectory, app.getVersion())
    const resources = runtimeResources()
 +  process.env.APEMIND_CLI_BIN = resources.cli
 +  process.env.PATH = [dirname(resources.cli), process.env.PATH ?? ''].join(delimiter)
    const paths = resolveDesktopPaths()
-   const development = app.isPackaged ? undefined : join(app.getAppPath(), '.desktop-build', 'development', 'project')
-   const activeProject = development ?? paths.profile
-diff --git a/apps/desktop/tests/macos-signature.spec.ts b/apps/desktop/tests/macos-signature.spec.ts
-index 7fbc75923..c7fc7b96d 100644
+   const development = !app.isPackaged
+   const primaryRuntime = development
 --- a/apps/desktop/tests/macos-signature.spec.ts
 +++ b/apps/desktop/tests/macos-signature.spec.ts
 @@ -1,4 +1,10 @@
@@ -108,28 +97,15 @@ index 7fbc75923..c7fc7b96d 100644
  import type { NotarizeOptions } from '@electron/notarize'
  import {
    resolveDesktopAppId,
-@@ -40,7 +46,9 @@ describe('desktop macOS release signature', () => {
-     const { createElectronBuilderConfig } = await import('../electron-builder.config.mjs')
-     const config = createElectronBuilderConfig(RELEASE_ENVIRONMENT, 'darwin', 'arm64')
+@@ -44,8 +50,10 @@
+     expect(config.protocols).toEqual([{ name: 'DeepSeek Harness', schemes: ['dsh'] }])
      expect(portablePath(config.directories.output)).toContain('/.desktop-build/targets/mac-arm64/artifacts')
--    expect(config.extraResources).toHaveLength(1)
-+    expect(config.extraResources).toHaveLength(3)
-+    expect(config.extraResources[1]?.to).toBe('apemind/bin/apemind')
-+    expect(config.extraResources[2]?.to).toBe('apemind/release.json')
+     expect(config.mac.extendInfo.NSMicrophoneUsageDescription).toContain('microphone')
+-    expect(config.extraResources).toHaveLength(2)
++    expect(config.extraResources).toHaveLength(4)
      expect(config.extraResources[0]?.to).toBe('runtime')
++    expect(config.extraResources[2]?.to).toBe('apemind/bin/apemind')
++    expect(config.extraResources[3]?.to).toBe('apemind/release.json')
      expect(portablePath(config.extraResources[0]?.from ?? '')).toContain('/.desktop-build/targets/mac-arm64/runtime')
      const [dshFiles, dshNodeModules] = config.files.slice(-2)
-@@ -113,10 +121,10 @@ describe('desktop macOS release signature', () => {
-     })
-   })
- 
--  it('rejects unsigned macOS builds and malformed signing modes', async () => {
-+  it('allows unsigned macOS builds but rejects malformed signing modes', async () => {
-     const { createElectronBuilderConfig } = await import('../electron-builder.config.mjs')
--    expect(() => createElectronBuilderConfig({ ...RELEASE_ENVIRONMENT, DSH_DESKTOP_UNSIGNED: '1' }))
--      .toThrow(/unsigned builds require Windows/u)
-+    expect(createElectronBuilderConfig({ ...RELEASE_ENVIRONMENT, DSH_DESKTOP_UNSIGNED: '1' }))
-+      .toMatchObject({ mac: { identity: null, forceCodeSigning: false, notarize: false }, dmg: { sign: false }, publish: null })
-     expect(() => createElectronBuilderConfig({ ...RELEASE_ENVIRONMENT, DSH_DESKTOP_UNSIGNED: 'yes' }))
-       .toThrow(/must be 0 or 1/u)
-   })
+     if (!dshFiles || !dshNodeModules || typeof dshFiles === 'string' || typeof dshNodeModules === 'string') {

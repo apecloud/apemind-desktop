@@ -9,5 +9,5 @@ index 13ea20c..3bbfdbc 100644
 -  DSH_CLIENT_TITLE: 'DeepSeek Harness',
 +  DSH_CLIENT_TITLE: 'ApeMind',
  } as const
- 
+
  /** Public variable carrying the source commit embedded in client artifacts. */
