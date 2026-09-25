@@ -6,7 +6,7 @@ index 9ac6dd7ce..3fc3d08e6 100644
 -import { BrandWordmark, FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
 +import { FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
  import type { SidebarBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
- 
+
  /**
 @@ -15,5 +15,9 @@ export function OfficialBrandMark({ size }: SidebarBrandMarkOwnerProps) {
   * @returns the official name wordmark.

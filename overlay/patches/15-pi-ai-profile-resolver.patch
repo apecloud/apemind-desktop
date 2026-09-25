@@ -1,12 +1,11 @@
-diff --git a/packages/llm/llm-pi-ai/src/index.ts b/packages/llm/llm-pi-ai/src/index.ts
 --- a/packages/llm/llm-pi-ai/src/index.ts
 +++ b/packages/llm/llm-pi-ai/src/index.ts
-@@ -93,7 +93,7 @@
- 
+@@ -75,7 +75,7 @@
+
  export { PiAiAdapter } from './adapter.ts'
  export type { PiAiAdapterOptions } from './adapter.ts'
 -export { Config } from './config.ts'
 +export { Config, resolveProfiles } from './config.ts'
  export type {
+   Options,
    PiAiCompatProfile,
-   PiAiModality,
