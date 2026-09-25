@@ -27,7 +27,7 @@ index 106830b5ad..38892963e7 100644
 +const application = windows ? join(artifacts, 'win-unpacked') : macApplication!.root
  const resources = join(application, windows ? 'resources' : 'Resources')
 -const executable = windows ? join(application, 'DeepSeek Harness.exe') : join(application, 'MacOS', 'DeepSeek Harness')
-+const executable = windows ? join(application, 'DeepSeek Harness.exe') : macApplication!.executable
++const executable = windows ? join(application, 'ApeMind Desktop.exe') : macApplication!.executable
  const descriptor = await verifyDesktopRuntime(paths.dsh, readDesktopRuntime(paths.dsh).release.version,
    resolveDesktopPackageTarget(target))
  if (windows && !values.unsigned) await verifyWindowsCode(application)
