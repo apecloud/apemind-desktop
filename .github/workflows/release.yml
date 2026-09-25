@@ -53,7 +53,7 @@ jobs:
       # The Windows-hosted runner's bundled LibreOffice Kit cannot reliably load the
       # generated XLSX fixture. Keep the package boot/plugin smoke while skipping
       # only Office conversion coverage; Office conversion remains covered on macOS.
-      DSH_DESKTOP_SKIP_OFFICE_SMOKE: ${{ runner.os == 'Windows' && '1' || '0' }}
+      DSH_DESKTOP_SKIP_OFFICE_SMOKE: ${{ startsWith(matrix.os, 'windows-') && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
         with:
