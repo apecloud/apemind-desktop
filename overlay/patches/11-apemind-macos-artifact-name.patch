@@ -28,7 +28,7 @@
      ] as const
 -    for (const [output, filename] of artifacts) {
 -      const file = join(output, filename)
-+    for (const [output, source, destination] of artifacts) {
++    for (const [output, source] of artifacts) {
 +      const file = join(output, source)
        const details = await stat(file)
        if (!details.isFile() || details.size === 0) {
