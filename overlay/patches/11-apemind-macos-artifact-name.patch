@@ -9,7 +9,7 @@
    const root = await mkdtemp(join(dirname(artifactsRoot), 'notarization-'))
    const zipApp = join(root, 'zip', basename(appPath))
    const dmgApp = join(root, 'dmg', basename(appPath))
-@@ -110,26 +110,27 @@
+@@ -110,24 +110,27 @@
      await verifyMacOSAppUpdateConfig(dmgApp, update)
      apple.verifySignature(zipApp, expected)
      apple.verifySignature(dmgApp, expected)
@@ -45,17 +45,3 @@
    } finally {
      await rm(root, { recursive: true, force: true })
    }
- }
---- a/apps/desktop/scripts/smoke-packaged-runtime.ts
-+++ b/apps/desktop/scripts/smoke-packaged-runtime.ts
-@@ -14,8 +14,8 @@
- const artifacts = values.unsigned ? paths.unsignedArtifacts : paths.artifacts
- const application = windows ? join(artifacts, 'win-unpacked')
--  : join(artifacts, target === 'mac-arm64' ? 'mac-arm64' : 'mac', 'DeepSeek Harness.app', 'Contents')
-+  : join(artifacts, target === 'mac-arm64' ? 'mac-arm64' : 'mac', 'ApeMind Desktop.app', 'Contents')
- const resources = join(application, windows ? 'resources' : 'Resources')
--const executable = windows ? join(application, 'DeepSeek Harness.exe') : join(application, 'MacOS', 'DeepSeek Harness')
-+const executable = windows ? join(application, 'ApeMind Desktop.exe') : join(application, 'MacOS', 'ApeMind Desktop')
- const descriptor = await verifyDesktopRuntime(paths.dsh, readDesktopRuntime(paths.dsh).release.version,
-   resolveDesktopPackageTarget(target))
- if (windows && !values.unsigned) await verifyWindowsCode(application)
