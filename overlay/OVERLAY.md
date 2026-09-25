@@ -31,6 +31,14 @@ patches:
       - target: apps/desktop/tests/fixtures/runtime-payload-smoke.mjs
     reason: 运行时自检应验证会话存储实际使用的原生文件锁，包括互斥与释放后重获；fs-ext 已不在上游生产依赖图中。
     upstream_logic_changed: false
+  - file: patches/17-windows-office-smoke.patch
+    targets:
+      - target: apps/desktop/scripts/smoke-runtime.ts
+    reason: >
+      Windows Hosted runner 上 bundled LibreOffice Kit 的 XLSX fixture 在打包 smoke 中会返回空文档引用，
+      阻断与前端改动无关的发布产物。发布 workflow 只在 Windows 设置显式开关，保留 Host、前端和插件路由
+      smoke；Office 转换覆盖继续在 macOS runner 执行。
+    upstream_logic_changed: true
   - file: patches/10-apemind-cli-runtime.patch
     targets:
       - target: apps/desktop/src/main.ts
