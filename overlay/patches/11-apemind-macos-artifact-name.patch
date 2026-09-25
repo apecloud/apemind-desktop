@@ -9,12 +9,55 @@
    const root = await mkdtemp(join(dirname(artifactsRoot), 'notarization-'))
    const zipApp = join(root, 'zip', basename(appPath))
    const dmgApp = join(root, 'dmg', basename(appPath))
-@@ -110,7 +110,7 @@
+@@ -110,24 +110,27 @@
      await verifyMacOSAppUpdateConfig(dmgApp, update)
      apple.verifySignature(zipApp, expected)
      apple.verifySignature(dmgApp, expected)
 -    const base = `deepseek-harness-${version}-mac-${arch}`
-+    const base = `apemind-desktop-${version}-mac-${arch}`
++    const sourceBase = `deepseek-harness-${version}-mac-${arch}`
++    const releaseBase = `apemind-desktop-${version}-mac-${arch}`
      const artifacts = [
-       [dmgOutput, `${base}.dmg`],
-       [zipOutput, `${base}.zip`],
+-      [dmgOutput, `${base}.dmg`],
+-      [zipOutput, `${base}.zip`],
+-      [zipOutput, `${base}.zip.blockmap`],
+-      [zipOutput, desktopUpdateMetadataFilename(version, 'darwin')],
++      [dmgOutput, `${sourceBase}.dmg`, `${releaseBase}.dmg`],
++      [zipOutput, `${sourceBase}.zip`, `${releaseBase}.zip`],
++      [zipOutput, `${sourceBase}.zip.blockmap`, `${releaseBase}.zip.blockmap`],
++      [zipOutput, desktopUpdateMetadataFilename(version, 'darwin'), desktopUpdateMetadataFilename(version, 'darwin')],
+     ] as const
+-    for (const [output, filename] of artifacts) {
+-      const file = join(output, filename)
++    for (const [output, source, destination] of artifacts) {
++      const file = join(output, source)
+       const details = await stat(file)
+       if (!details.isFile() || details.size === 0) {
+         throw new Error(`desktop macOS packaging: missing or empty artifact ${file}`)
+       }
+     }
+-    for (const [output, filename] of artifacts) {
+-      await rename(join(output, filename), join(artifactsRoot, filename))
++    for (const [output, source, destination] of artifacts) {
++      await rename(join(output, source), join(artifactsRoot, destination))
+     }
+     await rm(appPath, { recursive: true })
+     await rename(zipApp, appPath)
+   } finally {
+     await rm(root, { recursive: true, force: true })
+   }
+ }
++
++--- a/apps/desktop/scripts/smoke-packaged-runtime.ts
+++++ b/apps/desktop/scripts/smoke-packaged-runtime.ts
++@@ -14,8 +14,8 @@
++ const artifacts = values.unsigned ? paths.unsignedArtifacts : paths.artifacts
++ const application = windows ? join(artifacts, 'win-unpacked')
++-  : join(artifacts, target === 'mac-arm64' ? 'mac-arm64' : 'mac', 'DeepSeek Harness.app', 'Contents')
+++  : join(artifacts, target === 'mac-arm64' ? 'mac-arm64' : 'mac', 'ApeMind Desktop.app', 'Contents')
++ const resources = join(application, windows ? 'resources' : 'Resources')
++-const executable = windows ? join(application, 'DeepSeek Harness.exe') : join(application, 'MacOS', 'DeepSeek Harness')
+++const executable = windows ? join(application, 'ApeMind Desktop.exe') : join(application, 'MacOS', 'ApeMind Desktop')
++ const descriptor = await verifyDesktopRuntime(paths.dsh, readDesktopRuntime(paths.dsh).release.version,
++   resolveDesktopPackageTarget(target))
++ if (windows && !values.unsigned) await verifyWindowsCode(application)
+*** End Patch
