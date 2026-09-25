@@ -142,7 +142,44 @@ jobs:
           security add-certificates -k "$KEYCHAIN" "$RUNNER_TEMP/DeveloperIDG2CA.cer"
           security list-keychains -d user -s "$KEYCHAIN" "$HOME/Library/Keychains/login.keychain-db"
           security find-identity -v -p codesigning "$KEYCHAIN"
-          rm "$RUNNER_TEMP/apemind-signing.p12"
+
+      - name: Prepare platform packaging settings
+        working-directory: ${{ runner.temp }}/dsh-desktop/apps/desktop
+        shell: bash
+        env:
+          APP_ID: ${{ env.DSH_DESKTOP_APP_ID }}
+          MANDATORY_UPDATE_ORIGIN: https://apemind.ai
+          MACOS_SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+          APPLE_ID_VALUE: ${{ vars.APPLE_ID }}
+          APPLE_TEAM_ID_VALUE: ${{ vars.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD_VALUE: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          CERTIFICATE_PASSWORD_VALUE: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            cp .env.macos.example .env.macos
+            {
+              printf 'DSH_DESKTOP_APP_ID=%s\n' "$APP_ID"
+              printf 'DSH_DESKTOP_AUTO_UPDATE_ENV=production\n'
+              printf 'DSH_DESKTOP_MANDATORY_UPDATE_PROD_ORIGIN=%s\n' "$MANDATORY_UPDATE_ORIGIN"
+              printf "DSH_DESKTOP_MANDATORY_UPDATE_CONFIG='%s'\n" '{"allowedPageOrigins":["https://apemind.ai"]}'
+              printf 'DSH_DESKTOP_MACOS_SIGNING_IDENTITY=%s\n' "$MACOS_SIGNING_IDENTITY"
+              printf 'DSH_DESKTOP_MACOS_TEAM_ID=%s\n' "$APPLE_TEAM_ID_VALUE"
+              printf 'APPLE_ID=%s\n' "$APPLE_ID_VALUE"
+              printf 'APPLE_APP_SPECIFIC_PASSWORD=%s\n' "$APPLE_APP_SPECIFIC_PASSWORD_VALUE"
+              printf 'APPLE_TEAM_ID=%s\n' "$APPLE_TEAM_ID_VALUE"
+              printf 'CSC_LINK=%s\n' "$RUNNER_TEMP/apemind-signing.p12"
+              printf 'CSC_KEY_PASSWORD=%s\n' "$CERTIFICATE_PASSWORD_VALUE"
+            } >> .env.macos
+          else
+            cp .env.windows.example .env.windows
+            {
+              printf 'DSH_DESKTOP_APP_ID=%s\n' "$APP_ID"
+              printf 'DSH_DESKTOP_AUTO_UPDATE_ENV=production\n'
+              printf 'DSH_DESKTOP_MANDATORY_UPDATE_PROD_ORIGIN=%s\n' "$MANDATORY_UPDATE_ORIGIN"
+              printf "DSH_DESKTOP_MANDATORY_UPDATE_CONFIG='%s'\n" '{"allowedPageOrigins":["https://apemind.ai"]}'
+            } >> .env.windows
+          fi
 
       - name: Package application
         working-directory: ${{ runner.temp }}/dsh-desktop
