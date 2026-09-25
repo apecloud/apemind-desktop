@@ -1,0 +1,115 @@
+name: publish-existing-desktop-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag, for example v0.1.7-rc.2'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark the GitHub Release as a prerelease'
+        required: true
+        default: true
+        type: boolean
+      arm_run_id:
+        description: 'Actions run ID containing desktop-macos-14'
+        required: true
+        type: string
+      intel_run_id:
+        description: 'Actions run ID containing desktop-macos-15-intel'
+        required: true
+        type: string
+      windows_run_id:
+        description: 'Actions run ID containing desktop-windows-latest'
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: publish-existing-desktop-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish ${{ inputs.tag }} from existing artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS Apple Silicon artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-macos-14
+          run-id: ${{ inputs.arm_run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          path: release-assets/arm
+
+      - name: Download macOS Intel artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-macos-15-intel
+          run-id: ${{ inputs.intel_run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          path: release-assets/intel
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-windows-latest
+          run-id: ${{ inputs.windows_run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          path: release-assets/windows
+
+      - name: Prepare public release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public-assets
+          find release-assets -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.msi' -o -name 'SHA256SUMS-*' \) -exec cp {} public-assets/ \;
+          test -n "$(find public-assets -type f -print -quit)"
+          find public-assets -type f -name '*-build-receipt.tgz' -delete
+          find public-assets -maxdepth 1 -type f -print | sort
+
+      - name: Ensure GitHub Release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_TITLE: ApeMind Desktop ${{ inputs.tag }}
+          RELEASE_PRERELEASE: ${{ inputs.prerelease }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --title "$RELEASE_TITLE"
+            if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+              gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --prerelease
+            fi
+          else
+            args=("$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --title "$RELEASE_TITLE" --generate-notes)
+            if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+              args+=(--prerelease)
+            fi
+            gh release create "${args[@]}"
+          fi
+
+      - name: Upload release assets idempotently
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=(public-assets/*)
+          if (( ${#assets[@]} == 0 )); then
+            echo 'No release assets were downloaded' >&2
+            exit 1
+          fi
+          for asset in "${assets[@]}"; do
+            gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber "$asset"
+          done
