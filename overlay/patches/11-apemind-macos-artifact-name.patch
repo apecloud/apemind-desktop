@@ -9,7 +9,7 @@
    const root = await mkdtemp(join(dirname(artifactsRoot), 'notarization-'))
    const zipApp = join(root, 'zip', basename(appPath))
    const dmgApp = join(root, 'dmg', basename(appPath))
-@@ -110,24 +110,27 @@
+@@ -110,25 +110,26 @@
      await verifyMacOSAppUpdateConfig(dmgApp, update)
      apple.verifySignature(zipApp, expected)
      apple.verifySignature(dmgApp, expected)
