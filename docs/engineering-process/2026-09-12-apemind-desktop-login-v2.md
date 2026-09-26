@@ -156,7 +156,7 @@ GET /api/v2/me/workspaces
 Authorization: Bearer <Access Token>
 ```
 
-返回当前身份可访问的工作空间投影。个人空间是可选的遗留项，服务端不返回时不得由客户端补造：
+返回当前身份可访问的工作空间投影。个人空间是可选的遗留项；历史数据用 `user + org_id=null` 表示个人命名空间，是否仍可用由服务端 presence resolver 决定。服务端不返回时不得由客户端补造：
 
 ```json
 {

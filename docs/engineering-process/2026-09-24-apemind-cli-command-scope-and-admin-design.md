@@ -143,7 +143,7 @@ apemind api /api/v2/admin/organizations
 
 ### Workspace 语义本身正确，但必须成为默认边界
 
-`/api/v2/me/workspaces` 按当前用户返回实际存在且可访问的工作空间，是 CLI workspace 发现的唯一来源；个人空间可能不存在，列表也可以为空。`workspace use` 只改变本地默认选择，每个业务请求仍需服务端重新校验成员关系。
+`/api/v2/me/workspaces` 按当前用户返回服务端 presence resolver 判定为实际可访问的工作空间，是 CLI workspace 发现的唯一来源；个人空间可能不存在，列表也可以为空。`workspace use` 只改变本地默认选择，每个业务请求仍需服务端重新校验成员关系。CLI 不读取个人数据表来推断空间，也不根据用户 ID 或旧 flag 拼接个人空间 ID。
 
 调整为：所有 workspace-aware 命令统一读取该上下文；跨 workspace 必须使用显式 `--all-workspaces` 或逐空间调用；不再把组织列表作为知识库查询的隐式来源。
 
