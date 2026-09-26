@@ -66,7 +66,7 @@ function WorkspaceRow({ workspace, current, disabled, onSelect, roleLabel, curre
     <span className={`apemind-workspace-icon apemind-workspace-icon-${workspace.type}`} aria-hidden="true">{initials}</span>
     <span className="apemind-workspace-copy">
       <strong>{workspace.name}</strong>
-      <small>{workspace.type === 'organization' ? roleLabel : ''}</small>
+      <small>{roleLabel}</small>
     </span>
     {current && <span className="apemind-current-badge">{currentLabel}</span>}
     {!current && <span className="apemind-chevron" aria-hidden="true">›</span>}
