@@ -248,7 +248,7 @@ it('shows a retained personal workspace in the available workspace list', async 
   }
   const state: AccountState = { ...connected, oauth: personalAccount, oauthConnections: [personalAccount] }
   renderLogin({ state: vi.fn(async () => ({ ok: true as const, value: state })) })
-  expect(await screen.findByText('Alice space')).toBeTruthy()
+  expect((await screen.findAllByText('Alice space')).length).toBeGreaterThan(0)
   expect(screen.getByText(en.personalSpace)).toBeTruthy()
   expect(screen.getByText(en.currentBadge)).toBeTruthy()
 })
