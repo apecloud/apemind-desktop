@@ -2,7 +2,7 @@
 
 本文定义 ApeMind CLI、ApeMind Desktop 和 ApeMind 服务端的统一产品与技术边界，回答一个问题：如何让 DSH Agent 稳定地读写 ApeMind，同时只维护一套面向 Agent 的能力接口。
 
-后续命令体验、普通用户与平台 admin 的范围、workspace/organization 语义、授权矩阵和 CLI 审计调整见 [ApeMind CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)；gh 能力对比和服务端覆盖分析见 [ApeMind CLI 对标 gh 的能力分析与产品技术设计](2026-09-16-apemind-cli-gh-capability-design.md)。本文继续定义统一身份、凭据与进程调用边界。
+后续命令体验、通用 API、MCP 和业务能力扩展见 [ApeMind CLI 对标 gh 的能力分析与产品技术设计](2026-09-16-apemind-cli-gh-capability-design.md)。个人空间的可选化、空工作空间和组织长期迁移见[个人空间可选化与组织工作空间迁移设计](2026-09-26-personal-workspace-transition.md)。本文继续定义统一身份、凭据与进程调用边界；普通用户、平台 admin、workspace/organization 语义和授权矩阵见 [ApeMind CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)，通用 API 的开放范围以相关设计为准。个人空间是可选的遗留命名空间，线上新账户默认关闭；CLI、Desktop 和服务端都必须兼容个人空间存在、为空或不存在，不能把旧 flag 当作存在证明。
 
 ## 现状与目标
 
@@ -112,7 +112,7 @@ CLI 不自行创造服务端不存在的公共资源。当前系统没有统一�
 服务端负责：
 
 - OAuth 授权和令牌轮换；
-- 用户、个人空间和组织空间；
+- 当前用户实际可访问的工作空间，可能包含遗留个人空间、组织空间，也可能为空；
 - workspace 级权限；
 - 知识库与文档 API；
 - 写操作审计；
@@ -193,7 +193,7 @@ apemind workspace current --format json
 apemind workspace use <workspace-id>
 ```
 
-工作空间统一表示个人空间和组织空间。每个命令默认使用当前工作空间，也支持显式 `--workspace`。服务端始终重新校验用户是否仍然属于目标空间。
+工作空间统一表示当前身份实际可访问的命名空间。它可能是遗留个人空间、组织空间，或空集合。每个需要空间的命令默认使用当前工作空间，也支持显式 `--workspace`；没有当前空间时返回 `workspace_required`，不能退回或合成个人空间。服务端始终重新校验用户是否仍然属于目标空间。
 
 工作空间列表需要返回：
 
@@ -325,7 +325,7 @@ OAuth 解决用户对客户端的委托；API Key 服务明确选择固定密钥
 
 认证只确认身份。允许执行的操作由客户端授权范围、账号状态、组织成员关系和角色、具体资源权限、API Key 附加限制以及产品治理规则共同决定，CLI 不能根据显示的角色名称自行授予权限。
 
-OAuth 登录一次即可发现当前用户可访问的个人空间和组织。每次业务请求仍绑定一个明确空间；参数中的组织或资源不能越过该绑定。用户明确要求跨空间查询时，由 CLI 使用同一身份逐空间执行，保留来源和部分失败，不修改默认空间。
+OAuth 登录一次即可发现当前用户实际可访问的工作空间。个人空间可能不存在。每次业务请求仍绑定一个明确空间；参数中的组织或资源不能越过该绑定。用户明确要求跨空间查询时，由 CLI 使用同一身份逐空间执行，只遍历服务端返回的空间，保留来源和部分失败，不修改默认空间。
 
 成员被移除、组织被停用、Key 被撤销、OAuth 会话被撤销后，后续请求应被服务端拒绝。本地空间快照和先前成功的请求均不替代实时校验。
 
@@ -395,7 +395,7 @@ GET /api/v2/me
 GET /api/v2/me/workspaces
 ```
 
-`/me/workspaces` 返回个人空间和组织空间的统一投影。组织成员资格、角色、状态和能力由服务端决定，客户端只保存显示快照。
+`/me/workspaces` 返回当前身份可访问空间的统一投影。历史个人命名空间由服务端 presence resolver 根据资格、迁移和 onboarding 状态决定是否返回；个人空间可以为空，列表也可以为空。组织成员资格、角色、状态和能力由服务端决定，客户端只保存显示快照，不根据用户 ID 或旧 flag 生成个人空间。
 
 ### 知识库
 
@@ -583,7 +583,7 @@ CLI 的能力按真实资源推进：补齐 workspace、knowledge、document、a
 1. 用户只在 Desktop 中点击一次登录，CLI 和 Agent 立即可用。
 2. Desktop 显示的账号、服务地址和当前 workspace 与 `apemind auth status --format json` 一致。
 3. 浏览器无法回跳时自动提供设备码，不需要用户理解 OAuth 术语。
-4. 用户可以看到个人空间和全部有效组织，并显式切换当前空间。
+4. 用户可以看到服务端返回的全部有效工作空间，并显式切换当前空间；没有空间时仍能看到清晰的 `workspace_required` 引导。
 5. Desktop 和 Agent 执行同一个 CLI 命令得到一致结果。
 
 ### Agent 使用
@@ -599,7 +599,7 @@ CLI 的能力按真实资源推进：补齐 workspace、knowledge、document、a
 1. Access Token 不进入模型上下文、命令输出、日志或持久化业务状态。
 2. Refresh Token 轮换并发安全，旧令牌重放会撤销会话。
 3. 服务端根据 token 和 workspace 成员关系重新鉴权。
-4. 组织切换不会扩大个人空间或其他组织权限。
+4. 组织切换不会扩大遗留个人空间或其他组织权限；不存在的个人空间不会被客户端创建。
 5. 所有写操作可以通过审计记录追踪到用户、workspace 和 request ID。
 
 ## 不解决什么
@@ -614,6 +614,6 @@ CLI 的能力按真实资源推进：补齐 workspace、knowledge、document、a
 - Agent 为什么直接使用 `apemind` 命令？
 - 登录凭据由谁保存和刷新？
 - 如何避免 Desktop、CLI、SLOCK 和 API Key 身份串线？
-- 个人空间和组织空间如何隔离？
+- 遗留个人空间、组织空间和空工作空间如何隔离并保持兼容？
 - OpenAPI、CLI、Skill 和 Desktop 各自维护什么？
 - 写操作如何得到用户确认并留下审计记录？

@@ -5,6 +5,7 @@
 - [ApeMind CLI-first 集成设计](engineering-process/2026-09-14-apemind-cli-first-integration.md)：CLI、Desktop、DSH Agent 与 ApeMind `/api/v2` 的统一身份、凭据与进程边界；明确 OAuth 默认业务路径、显式 API Key、HTTP MCP Bearer 认证及错误合同。能力扩展以对标 gh 的设计为准。
 - 异步能力统一遵循服务端资源合同：当前系统没有统一的 `task` 产品对象，CLI 不创建跨资源任务命令、状态表或输出字段；等待和取消使用 `document`、`turn`、`import`、`export` 等真实资源。
 - [登录与工作空间设计](engineering-process/2026-09-12-apemind-desktop-login-v2.md)：产品体验、UI、PKCE、设备码、API Key、服务端接口、权限与验收标准。
+- [个人空间可选化与组织工作空间迁移设计](engineering-process/2026-09-26-personal-workspace-transition.md)：个人空间逐步退出期间的空工作空间、默认选择、OAuth/API Key 边界、Desktop 行为和跨仓库实施计划。
 - [API Key 连接说明](engineering-process/2026-09-11-apemind-desktop-login.md)：高级连接实现与历史验证记录。
 - [开发运行手册](dev-runbook.md)：同步、构建与本地运行。
 - [品牌说明](branding.md)：品牌改动边界；逐文件范围以 `overlay/OVERLAY.md` 为准。

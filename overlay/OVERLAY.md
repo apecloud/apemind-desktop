@@ -213,7 +213,7 @@ patches:
 # 与 patches/ 的分界：patches 改上游已有文件；add-files 只放**我们新增**的文件。
 # 每个文件都必须在此登记（未登记则不拷且报错，见 scripts/sync-upstream.sh 3c 段）。
 #
-# 当前用途：ApeMind 账户连接插件。登录态使用短期 Access Token + 可轮换 Refresh Token；组织与个人空间通过服务端工作空间接口发现。
+# 当前用途：ApeMind 账户连接插件。登录态使用短期 Access Token + 可轮换 Refresh Token；组织与可选的遗留个人空间只通过服务端工作空间接口发现。线上新账户默认没有个人空间，个人空间为空或不存在时插件仍必须保持登录并显示可操作的空状态，不得根据用户 ID 合成 `personal:<user_id>`。
 # ── 派生文件：sync 时由脚本重新生成，不是我们手写的补丁 ────────────────
 # pnpm-lock.yaml 需随 add-files 的 workspace 包一起变化；
 # 我们存的是"派生规则"而不是 lock 内容本身（见 sync-upstream.sh 5 段）。

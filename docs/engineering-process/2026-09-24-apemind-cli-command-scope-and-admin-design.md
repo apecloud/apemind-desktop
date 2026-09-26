@@ -64,7 +64,7 @@ apemind auth connect --connection NAME --api-key-stdin
 
 ### Workspace 是数据命名空间
 
-Workspace 统一表示个人空间和组织空间。`workspace list` 返回当前身份有权访问的空间及其角色、状态和能力摘要；`workspace use ID` 只写入本地默认选择。
+Workspace 统一表示当前身份实际可访问的命名空间，可能包含遗留个人空间、组织空间，也可能为空。`workspace list` 返回服务端实际返回的空间及其角色、状态和能力摘要；`workspace use ID` 只写入本地默认选择。
 
 ```bash
 apemind workspace list
@@ -143,7 +143,7 @@ apemind api /api/v2/admin/organizations
 
 ### Workspace 语义本身正确，但必须成为默认边界
 
-`/api/v2/me/workspaces` 按当前用户返回个人空间和组织空间，是适合作为 CLI workspace 发现来源的语义。`workspace use` 只改变本地默认选择，每个业务请求仍需服务端重新校验成员关系。
+`/api/v2/me/workspaces` 按当前用户返回服务端 presence resolver 判定为实际可访问的工作空间，是 CLI workspace 发现的唯一来源；个人空间可能不存在，列表也可以为空。`workspace use` 只改变本地默认选择，每个业务请求仍需服务端重新校验成员关系。CLI 不读取个人数据表来推断空间，也不根据用户 ID 或旧 flag 拼接个人空间 ID。
 
 调整为：所有 workspace-aware 命令统一读取该上下文；跨 workspace 必须使用显式 `--all-workspaces` 或逐空间调用；不再把组织列表作为知识库查询的隐式来源。
 
@@ -213,7 +213,7 @@ mcp
 admin
 ```
 
-`knowledge` 是正式的产品名称，`collection` 可以作为兼容别名；`workspace` 统一个人空间和组织空间；`org` 只表达当前用户的组织治理；`admin` 表达平台控制面。
+`knowledge` 是正式的产品名称，`collection` 可以作为兼容别名；`workspace` 统一当前身份实际可访问的空间，个人空间属于可选遗留项；`org` 只表达当前用户的组织治理；`admin` 表达平台控制面。
 
 ### 正交全局参数
 
@@ -267,7 +267,7 @@ apemind api /api/v2/workspaces/WORKSPACE_ID/knowledge-bases \
 |---|---|---|---|---|---|
 | `auth status` | 当前 connection | `--connection` | `/api/v2/me`、`/api/v2/me/workspaces` | `profile`、`workspace.read` | 否 |
 | `connection list/use` | 本地连接记录 | connection name | 本地状态，不访问业务数据 | 无 | 否 |
-| `workspace list` | 当前用户的个人空间和组织空间 | connection | `/api/v2/me/workspaces` | `workspace.read` | 否 |
+| `workspace list` | 当前用户实际可访问的工作空间，列表可以为空 | connection | `/api/v2/me/workspaces` | `workspace.read` | 否 |
 | `org list` | 当前用户所属或可治理的组织 | connection | `/api/v2/me/organizations` | `organization.read` | 否 |
 | `org member/role` | 一个明确组织 | `--org-id` | `/api/v2/organizations/{id}/members` 等 | `organization.read` 或 `organization.write` | 否 |
 | `admin org list` | 平台组织目录 | admin connection/context | `/api/v2/admin/organizations` | `admin.organization.read` | 是，且仍需服务端 admin 权限 |
