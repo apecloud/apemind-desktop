@@ -4,6 +4,8 @@
 
 后续命令体验、通用 API、MCP 和业务能力扩展见 [ApeMind CLI 对标 gh 的能力分析与产品技术设计](2026-09-16-apemind-cli-gh-capability-design.md)。个人空间的可选化、空工作空间和组织长期迁移见[个人空间可选化与组织工作空间迁移设计](2026-09-26-personal-workspace-transition.md)。本文继续定义统一身份、凭据与进程调用边界；普通用户、平台 admin、workspace/organization 语义和授权矩阵见 [ApeMind CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)，通用 API 的开放范围以相关设计为准。个人空间是可选的遗留命名空间，线上新账户默认关闭；CLI、Desktop 和服务端都必须兼容个人空间存在、为空或不存在，不能把旧 flag 当作存在证明。
 
+截至 2026-09-27，生产默认关闭个人空间是产品基线，不是实验开关。CLI 的长期目标是只依赖服务端返回的工作空间集合和类型；个人空间最终完全退出时，登录、连接、组织和 Agent 能力仍然成立，只是可选空间集合中不再出现 `type=personal`。任何依赖个人空间的默认资源、API Key 或 UI 初始化都必须在没有该项目时保持为空并给出可恢复提示。
+
 ## 现状与目标
 
 ApeMind Desktop 是 DeepSeek Harness 的品牌化发行版。它的核心用户是 Agent，用户通过 Desktop 完成登录、配置和授权，Agent 通过 Desktop 内置的工具执行任务。ApeMind CLI 是当前集成的主要交付面，Desktop 只负责把它随应用分发、提供图形化入口并展示结构化结果；CLI 的命令、认证和本地状态合同需要独立验证和发布。
