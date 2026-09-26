@@ -73,9 +73,11 @@ Desktop 登录页显示“可用工作空间”，不再承诺一定有“个人
 
 Desktop 继续作为 CLI 的图形化语法糖：工作空间发现、选择、API Key 连接、错误码和刷新都调用同一套 CLI 合同。Renderer 不能自己拼接个人空间 ID，也不能把登录快照当作服务端权限证明。
 
+当 Agent 通过 MCP 访问 ApeMind 时，Desktop 只负责传递当前 CLI 连接和已选择的工作空间。服务端返回 `workspace_required` 时，界面应把它解释为“先选择或加入工作空间”，停止自动重试，并保留原问题供用户在选择空间后继续；不能把网页工具的失败显示成网络故障，也不能让 Renderer 通过 Cookie、旧连接或本地用户 ID 猜测空间。MCP 的 `workspace_access`、`collection_access` 和 `web_access` 前置条件由服务端 `tools/list` 合同决定，Desktop 不复制这套权限判断。
+
 ## 当前实现状态（2026-09-27）
 
-CLI、Desktop 和服务端已经共享三态 presence 语义：登录可以成功但没有任何工作空间；个人空间只有在服务端返回 canonical ID 时才显示和使用；空列表不会被解释为“没有知识库”，数据命令会得到 `workspace_required`。服务端的知识库、模型、API Key、配额和 MCP 入口已经加入相应的空间前置检查，Desktop 只消费这些结果。
+CLI、Desktop 和服务端已经共享三态 presence 语义：登录可以成功但没有任何工作空间；个人空间只有在服务端返回 canonical ID 时才显示和使用；空列表不会被解释为“没有知识库”，数据命令会得到 `workspace_required`。服务端的知识库、模型、API Key、配额和 MCP 入口已经加入相应的空间前置检查，网页 MCP 工具也会在许可证、限流、额度和网页调用前执行 `workspace_access` 准入检查，Desktop 只消费这些结果。
 
 仍未完成的部分不能从登录成功推断为已完成：Widget 目前仍是个人 Agent 专属能力，组织 Agent 的 `org_id` 不等于 Widget 已支持组织发布；Bot、Chat、Turn、tagging、历史恢复和多组织聚合仍需按六种状态完成真实验收。个人空间最终退出前，必须先为 Widget 决定组织授权合同或下线方案，并取得独立的迁移、导出、删除和回滚收据。
 
