@@ -221,3 +221,33 @@ it('keeps the device code and offers a copyable address after opening fails', as
   await waitFor(() => { expect(screen.queryByRole('alert')).toBeNull() })
   expect(remote.openDevicePage).toHaveBeenCalledTimes(2)
 })
+
+it('explains an account with no workspace and offers recovery actions', async () => {
+  const emptyAccount: OAuthAccountView = { ...account, origin: 'https://apemind.example.com' }
+  let state: AccountState = { ...connected, oauth: emptyAccount, oauthConnections: [emptyAccount] }
+  const remote = {
+    state: vi.fn(async () => ({ ok: true as const, value: state })),
+    refreshWorkspaces: vi.fn(async () => emptyAccount),
+  }
+  renderLogin(remote)
+  expect(await screen.findByRole('heading', { name: en.noWorkspacesTitle })).toBeTruthy()
+  expect(screen.getByText(en.noWorkspacesDescription)).toBeTruthy()
+  expect(screen.getByRole('link', { name: new RegExp(en.openApeMind) })).toHaveAttribute('href', emptyAccount.origin)
+  fireEvent.click(screen.getByRole('button', { name: en.emptyRefreshWorkspaces }))
+  await waitFor(() => { expect(remote.refreshWorkspaces).toHaveBeenCalledWith(emptyAccount.id) })
+})
+
+it('shows a retained personal workspace in the available workspace list', async () => {
+  const personalAccount: OAuthAccountView = {
+    ...account,
+    activeWorkspaceId: 'personal:alice',
+    workspaces: [{
+      id: 'personal:alice', type: 'personal', name: 'Alice space', status: 'active', role: null, permissions: [],
+    }],
+  }
+  const state: AccountState = { ...connected, oauth: personalAccount, oauthConnections: [personalAccount] }
+  renderLogin({ state: vi.fn(async () => ({ ok: true as const, value: state })) })
+  expect(await screen.findByText('Alice space')).toBeTruthy()
+  expect(screen.getByText(en.personalSpace)).toBeTruthy()
+  expect(screen.getByText(en.currentBadge)).toBeTruthy()
+})
