@@ -1,0 +1,33 @@
+diff --git a/apps/desktop/scripts/smoke-packaged-runtime.ts b/apps/desktop/scripts/smoke-packaged-runtime.ts
+index 106830b5ad..38892963e7 100644
+--- a/apps/desktop/scripts/smoke-packaged-runtime.ts
++++ b/apps/desktop/scripts/smoke-packaged-runtime.ts
+@@ -1,4 +1,5 @@
+ /** Validate the assembled application, including native Office conversion outside ASAR. */
++import { readdirSync } from 'node:fs'
+ import { join } from 'node:path'
+ import { parseArgs } from 'node:util'
+ import { resolveDesktopBuildTarget, resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
+@@ -11,12 +12,18 @@ const paths = resolveDesktopTargetBuildPaths()
+ const { values } = parseArgs({ options: { unsigned: { type: 'boolean', default: false } }, allowPositionals: false })
+ const target = resolveDesktopBuildTarget()
+ const windows = target === 'win-x64'
+-if (values.unsigned && !windows) throw new Error('desktop smoke: unsigned artifacts require Windows')
+ const artifacts = values.unsigned ? paths.unsignedArtifacts : paths.artifacts
+-const application = windows ? join(artifacts, 'win-unpacked')
+-  : join(artifacts, target === 'mac-arm64' ? 'mac-arm64' : 'mac', 'DeepSeek Harness.app', 'Contents')
++const macApplication = windows ? undefined : (() => {
++  const macArtifacts = join(artifacts, target === 'mac-arm64' ? 'mac-arm64' : 'mac')
++  const app = readdirSync(macArtifacts, { withFileTypes: true })
++    .find(entry => entry.isDirectory() && entry.name.endsWith('.app'))
++  if (app === undefined) throw new Error(`desktop smoke: no macOS application found in ${macArtifacts}`)
++  const appRoot = join(macArtifacts, app.name, 'Contents')
++  return { root: appRoot, executable: join(appRoot, 'MacOS', app.name.slice(0, -'.app'.length)) }
++})()
++const application = windows ? join(artifacts, 'win-unpacked') : macApplication!.root
+ const resources = join(application, windows ? 'resources' : 'Resources')
+-const executable = windows ? join(application, 'DeepSeek Harness.exe') : join(application, 'MacOS', 'DeepSeek Harness')
++const executable = windows ? join(application, 'ApeMind Desktop.exe') : macApplication!.executable
+ const descriptor = await verifyDesktopRuntime(paths.dsh, readDesktopRuntime(paths.dsh).release.version,
+   resolveDesktopPackageTarget(target))
+ if (windows && !values.unsigned) await verifyWindowsCode(application)

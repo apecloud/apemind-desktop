@@ -1,5 +1,6 @@
 # ApeMind Desktop 文档
 
+- [ApeMind CLI 命令语义、权限范围与管理能力设计修订](engineering-process/2026-09-24-apemind-cli-command-scope-and-admin-design.md)：当前用户、connection、workspace、org、admin、API/MCP 认证边界、审计发现、授权矩阵和执行 Goal。
 - [ApeMind CLI 对标 gh 的能力分析与产品技术设计](engineering-process/2026-09-16-apemind-cli-gh-capability-design.md)：CLI 体验差距、服务端能力覆盖、高层命令、通用 API、MCP、Desktop 和 Skill 分工、实施优先级与持续交付 Goal 文案。
 - [ApeMind CLI-first 集成设计](engineering-process/2026-09-14-apemind-cli-first-integration.md)：CLI、Desktop、DSH Agent 与 ApeMind `/api/v2` 的统一身份、凭据与进程边界；明确 OAuth 默认业务路径、显式 API Key、HTTP MCP Bearer 认证及错误合同。能力扩展以对标 gh 的设计为准。
 - 异步能力统一遵循服务端资源合同：当前系统没有统一的 `task` 产品对象，CLI 不创建跨资源任务命令、状态表或输出字段；等待和取消使用 `document`、`turn`、`import`、`export` 等真实资源。

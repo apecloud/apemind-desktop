@@ -22,47 +22,32 @@ patches:
     targets:
       - target: apps/desktop/scripts/package-macos.ts
     reason: >
-      上游 macOS 公证编排仍查找并输出 DeepSeek Harness 文件名；品牌应用
-      使用 ApeMind Desktop 后会在签名完成后找不到待公证的应用。同步替换
-      应用目录名和 macOS 归档基名，保证签名、公证与发布资产使用同一名称。
+      上游 macOS 公证编排生成 DeepSeek Harness 文件名，而发布页需要 ApeMind Desktop
+      资产名。补丁保留上游中间产物名用于构建，验证通过后再统一重命名并提升到发布目录，
+      避免把内部 staging 名称误当作最终资产名。
     upstream_logic_changed: true
   - file: patches/14-native-runtime-smoke.patch
     targets:
       - target: apps/desktop/tests/fixtures/runtime-payload-smoke.mjs
     reason: 运行时自检应验证会话存储实际使用的原生文件锁，包括互斥与释放后重获；fs-ext 已不在上游生产依赖图中。
     upstream_logic_changed: false
+  - file: patches/17-windows-office-smoke.patch
+    targets:
+      - target: apps/desktop/scripts/smoke-runtime.ts
+    reason: >
+      Windows Hosted runner 上 bundled LibreOffice Kit 的 XLSX fixture 在打包 smoke 中会返回空文档引用，
+      阻断与前端改动无关的发布产物。发布 workflow 只在 Windows 设置显式开关，保留 Host、前端和插件路由
+      smoke；Office 转换覆盖继续在 macOS runner 执行。
+    upstream_logic_changed: true
   - file: patches/10-apemind-cli-runtime.patch
     targets:
       - target: apps/desktop/src/main.ts
-      - target: apps/desktop/electron-builder.config.mjs
+      - target: apps/desktop/scripts/electron-builder-config.mjs
       - target: apps/desktop/electron-builder.config.d.mts
       - target: apps/desktop/scripts/package-target.ts
       - target: apps/desktop/tests/macos-signature.spec.ts
     reason: Desktop 与 Agent 使用同一份随包 apemind CLI；打包前下载锁定版本并校验摘要，缺失或错误的二进制不能进入产物。
     upstream_logic_changed: true
-  # ── 09-apemind-snapshots.patch：同步设置导航的可访问性快照 ─────────────
-  - file: patches/09-apemind-snapshots.patch
-    kind: test-contract
-    targets:
-      - target: apps/web/tests/expected/agent-preset-authoring/created.expected.md
-      - target: apps/web/tests/expected/agent-preset-authoring/damaged.expected.md
-      - target: apps/web/tests/expected/agent-preset-authoring/section.expected.md
-      - target: apps/web/tests/expected/models-settings-recovery/stored-error.expected.md
-      - target: apps/web/tests/expected/models-settings/configured.expected.md
-      - target: apps/web/tests/expected/models-settings/declared-edit.expected.md
-      - target: apps/web/tests/expected/models-settings/declared.expected.md
-      - target: apps/web/tests/expected/models-settings/empty.expected.md
-      - target: apps/web/tests/expected/onboarding-deepseek-config/default-models.expected.md
-      - target: apps/web/tests/expected/onboarding-deepseek-config/models.expected.md
-      - target: apps/web/tests/expected/onboarding-usable-provider/dismissed.expected.md
-      - target: apps/web/tests/expected/plugin-config/section.expected.md
-      - target: apps/web/tests/expected/settings-chrome/dialog-en.expected.md
-      - target: apps/web/tests/expected/settings-chrome/dialog.expected.md
-    upstream_logic_changed: false
-    reason: >
-      ApeMind 登录插件是设置导航中的正式分区；这些上游可访问性快照需要
-      记录新增的 ApeMind 导航项，否则 Web 测试会把预期的品牌入口误报为回归。
-
   # ── 05-brand-mark.patch：侧栏 mark + 中间 hero 的图形（用户可见）──────
   - file: patches/05-brand-mark.patch
     kind: brand-occupant
@@ -209,6 +194,18 @@ patches:
     D:\ 路径，导致打包在 tarball 校验阶段失败。显式选择系统 tar.exe 后，Windows
     与 macOS/Linux 使用各自可工作的归档实现。
 
+
+# ── 16-macos-unsigned-smoke.patch：品牌 macOS unsigned 包的本地 smoke ─────
+- file: patches/16-macos-unsigned-smoke.patch
+  kind: build-switch
+  targets:
+    - target: apps/desktop/scripts/smoke-packaged-runtime.ts
+  upstream_logic_changed: true
+  reason: >
+    本地 unsigned macOS 构建由 ApeMind overlay 明确支持；上游 smoke 仍拒绝
+    macOS unsigned 产物，并把应用目录硬编码为 DeepSeek Harness.app，导致实际
+    已生成的 ApeMind Desktop.app 无法验收。按产物目录发现唯一 .app，保留同一套
+    runtime smoke，避免把“包已生成”误报为失败。
 
 # ── 非补丁类资源（新增文件，非上游逻辑）──────────────────────────────
 # 注意：即使是资源也**逐文件**列出（不用目录），与脚本 ALLOWED 一致。

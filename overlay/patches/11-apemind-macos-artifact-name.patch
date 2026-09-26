@@ -1,20 +1,47 @@
 --- a/apps/desktop/scripts/package-macos.ts
 +++ b/apps/desktop/scripts/package-macos.ts
-@@ -72,7 +72,7 @@
-   const { arch, version, artifactsRoot, environment } = request
+@@ -78,7 +78,7 @@
    const expected = resolveMacOSSigningEnvironment(environment)
    const credentials = resolveMacOSNotarizationEnvironment(environment)
--  const appPath = join(artifactsRoot, `mac${getArchSuffix(Arch[arch])}`, 'DeepSeek Harness.app')
-+  const appPath = join(artifactsRoot, `mac${getArchSuffix(Arch[arch])}`, 'ApeMind Desktop.app')
+   const update = resolveDesktopAutoUpdateConfig(environment, 'darwin', arch)
+-  const appPath = join(artifactsRoot, arch === 'arm64' ? 'mac-arm64' : 'mac', 'DeepSeek Harness.app')
++  const appPath = join(artifactsRoot, arch === 'arm64' ? 'mac-arm64' : 'mac', 'ApeMind Desktop.app')
    const root = await mkdtemp(join(dirname(artifactsRoot), 'notarization-'))
    const zipApp = join(root, 'zip', basename(appPath))
    const dmgApp = join(root, 'dmg', basename(appPath))
-@@ -97,7 +97,7 @@
-     if (failures.length > 0) {
-       throw new AggregateError(failures.map(result => result.reason), 'desktop macOS packaging: artifact lanes failed')
-     }
+@@ -110,25 +110,26 @@
+     await verifyMacOSAppUpdateConfig(dmgApp, update)
+     apple.verifySignature(zipApp, expected)
+     apple.verifySignature(dmgApp, expected)
 -    const base = `deepseek-harness-${version}-mac-${arch}`
-+    const base = `apemind-desktop-${version}-mac-${arch}`
++    const sourceBase = `deepseek-harness-${version}-mac-${arch}`
++    const releaseBase = `apemind-desktop-${version}-mac-${arch}`
      const artifacts = [
-       [dmgOutput, `${base}.dmg`],
-       [zipOutput, `${base}.zip`],
+-      [dmgOutput, `${base}.dmg`],
+-      [zipOutput, `${base}.zip`],
+-      [zipOutput, `${base}.zip.blockmap`],
+-      [zipOutput, desktopUpdateMetadataFilename(version, 'darwin')],
++      [dmgOutput, `${sourceBase}.dmg`, `${releaseBase}.dmg`],
++      [zipOutput, `${sourceBase}.zip`, `${releaseBase}.zip`],
++      [zipOutput, `${sourceBase}.zip.blockmap`, `${releaseBase}.zip.blockmap`],
++      [zipOutput, desktopUpdateMetadataFilename(version, 'darwin'), desktopUpdateMetadataFilename(version, 'darwin')],
+     ] as const
+-    for (const [output, filename] of artifacts) {
+-      const file = join(output, filename)
++    for (const [output, source] of artifacts) {
++      const file = join(output, source)
+       const details = await stat(file)
+       if (!details.isFile() || details.size === 0) {
+         throw new Error(`desktop macOS packaging: missing or empty artifact ${file}`)
+       }
+     }
+-    for (const [output, filename] of artifacts) {
+-      await rename(join(output, filename), join(artifactsRoot, filename))
++    for (const [output, source, destination] of artifacts) {
++      await rename(join(output, source), join(artifactsRoot, destination))
+     }
+     await rm(appPath, { recursive: true })
+     await rename(zipApp, appPath)
+   } finally {
+     await rm(root, { recursive: true, force: true })
+   }

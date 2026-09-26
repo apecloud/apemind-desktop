@@ -1,39 +1,33 @@
-diff --git a/packages/bundle/base/cordis.patch.yml b/packages/bundle/base/cordis.patch.yml
-index 97e5cf60d..71d3c0307 100644
 --- a/packages/bundle/base/cordis.patch.yml
 +++ b/packages/bundle/base/cordis.patch.yml
-@@ -97,6 +97,10 @@
+@@ -116,6 +116,10 @@
+
      - id: credentials
        name: '@deepseek-ai/dsh-credentials-local'
- 
++
 +    # ApeMind workspace connections and server-verified API keys.
 +    - id: apemind-login
 +      name: '@deepseek-ai/dsh-apemind-login'
-+
+
      # The pi-ai multi-provider twin, mounted dormant: zero routes (and no extra
      # models in the picker) until a `llm-pi-ai:` settings section supplies provider
-     # profiles — then those routes register live, keys resolving per request
-diff --git a/packages/bundle/base/package.json b/packages/bundle/base/package.json
-index 672e76594..bd5b2763d 100644
 --- a/packages/bundle/base/package.json
 +++ b/packages/bundle/base/package.json
 @@ -39,6 +39,7 @@
-     "@deepseek-ai/dsh-agent": "workspace:^",
-     "@deepseek-ai/dsh-agent-default-model": "workspace:^",
-     "@deepseek-ai/dsh-agent-loop": "workspace:^",
-+    "@deepseek-ai/dsh-apemind-login": "workspace:^",
-     "@deepseek-ai/dsh-attachment-local": "workspace:^",
-     "@deepseek-ai/dsh-shell-env": "workspace:^",
-     "@deepseek-ai/dsh-bash-sandbox": "workspace:^",
-diff --git a/tsconfig.host.json b/tsconfig.host.json
-index 8d9b721ac..22029bdc4 100644
+     "@deepseek-ai/dsh-agent": "workspace:*",
+     "@deepseek-ai/dsh-agent-default-model": "workspace:*",
+     "@deepseek-ai/dsh-agent-loop": "workspace:*",
++    "@deepseek-ai/dsh-apemind-login": "workspace:*",
+     "@deepseek-ai/dsh-attachment-local": "workspace:*",
+     "@deepseek-ai/dsh-shell-env": "workspace:*",
+     "@deepseek-ai/dsh-bash-sandbox": "workspace:*",
 --- a/tsconfig.host.json
 +++ b/tsconfig.host.json
-@@ -345,6 +345,7 @@
+@@ -431,6 +431,7 @@
      { "path": "./packages/jobs/jobs-local" },
      { "path": "./packages/jobs/tool-jobs" },
      { "path": "./packages/experimental/agent-team" },
 +    { "path": "./packages/credentials/apemind-login" },
      { "path": "./packages/experimental/agent-team-profile" },
      { "path": "./packages/experimental/tool-agent-team" },
-     { "path": "./packages/experimental/agent-team-web-profile" },
+     { "path": "./packages/workflow/workflow" },
