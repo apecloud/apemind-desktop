@@ -78,9 +78,9 @@ Desktop 继续作为 CLI 的图形化语法糖：工作空间发现、选择、A
 
 当 Agent 通过 MCP 访问 ApeMind 时，Desktop 只负责传递当前 CLI 连接和已选择的工作空间。服务端返回 `workspace_required` 时，界面应把它解释为“先选择或加入工作空间”，停止自动重试，并保留原问题供用户在选择空间后继续；不能把网页工具的失败显示成网络故障，也不能让 Renderer 通过 Cookie、旧连接或本地用户 ID 猜测空间。MCP 的 `workspace_access`、`collection_access` 和 `web_access` 前置条件由服务端 `tools/list` 合同决定，Desktop 不复制这套权限判断。
 
-## 当前实现状态（2026-09-27）
+## 当前实现状态（2026-09-28）
 
-CLI、Desktop 和服务端已经共享三态 presence 语义：登录可以成功但没有任何工作空间；个人空间只有在服务端返回 canonical ID 时才显示和使用；空列表不会被解释为“没有知识库”，数据命令会得到 `workspace_required`。已验证的服务端知识库创建、模型、API Key、配额和 MCP 入口已经加入相应的空间前置检查，网页 MCP 工具也会在许可证、限流、额度和网页调用前执行 `workspace_access` 准入检查；Marketplace 订阅接口也必须把省略的 `org_id` 归一化为当前连接的工作空间，不能把它当作个人空间默认值。Desktop 只消费这些结果。Bot 以及 Chat 反馈、附件、聊天分享、Turn 分享和 HTML artifact 分享已经接入父 Bot 的 presence/member gate，避免个人空间关闭后沿旧 Chat 子资源继续读取；这些路径以及 Turn 导出、历史恢复和 Widget 仍需按下方清单补齐真实路径验证，不能把共享 presence 语义当成所有资源已经完成。
+CLI、Desktop 和服务端已经共享三态 presence 语义：登录可以成功但没有任何工作空间；个人空间只有在服务端返回 canonical ID 时才显示和使用；空列表不会被解释为“没有知识库”，数据命令会得到 `workspace_required`。已验证的服务端知识库创建、模型、API Key、配额和 MCP 入口已经加入相应的空间前置检查，网页 MCP 工具也会在许可证、限流、额度和网页调用前执行 `workspace_access` 准入检查；Marketplace 订阅接口也必须把省略的 `org_id` 归一化为当前连接的工作空间，不能把它当作个人空间默认值。Desktop 只消费这些结果。Bot 以及 Chat 反馈、附件、聊天分享、Turn 分享和 HTML artifact 分享已经接入父 Bot 的 presence/member gate，避免个人空间关闭后沿旧 Chat 子资源继续读取；服务端候选实现也已把 Agent Runtime 的 canonical workspace identity 和 Turn export 的提交前 gate 落到代码与针对性测试中，但这仍不等于六种账户状态的 staging/生产收据。历史恢复、Widget、Chat/Turn/附件/分享/导出、tagging 和多组织聚合仍需按下方清单补齐真实路径验证，不能把共享 presence 语义当成所有资源已经完成。
 
 CLI 的请求体和查询参数也必须读取服务端返回的 `Workspace.Type`；不能从 ID 前缀推断个人空间或组织空间。这样即使历史个人空间使用不透明 ID，知识库、Bot、配额和 API Key 操作仍会落在正确的命名空间；服务端没有返回类型时，CLI 应提示刷新或重新登录并停止请求。
 
@@ -93,7 +93,7 @@ CLI 的请求体和查询参数也必须读取服务端返回的 `Workspace.Type
 | 历史个人空间有数据 | 个人空间，可选加组织空间 | 显示服务端返回的个人项和组织项；只有一个可用空间时才按规则自动选择 |
 | 历史个人空间为空 | 仍返回个人项，知识库可以为空 | 空知识库不等于缺少空间；允许选择该空间，数据为空时显示空状态 |
 | 新账户默认关闭个人空间 | 组织项或空列表 | 登录成功；没有空间时保留空选择，数据命令显示加入组织/选择空间的恢复动作 |
-| 个人数据迁移完成 | 不返回个人项 | 清理失效的个人历史选择，不能用旧 flag 或用户 ID补造空间 |
+| 个人数据迁移完成 | 不返回个人项 | 清理失效的个人历史选择，不能用旧 flag 或用户 ID 补造空间 |
 | 多组织账户 | 两个或更多组织项，可选加个人项 | 不静默切换组织；必须由用户或 Agent 明确选择 |
 | 登录后没有任何空间 | `items: []` | 账户页和刷新可用；workspace-aware 请求返回 `workspace_required`，不请求猜测的个人 ID |
 
