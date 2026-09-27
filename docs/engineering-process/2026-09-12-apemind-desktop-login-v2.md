@@ -164,7 +164,7 @@ Authorization: Bearer <Access Token>
 {
   "items": [
     {
-      "id": "personal:user-id",
+      "id": "ws_legacy_personal_7f3c",
       "type": "personal",
       "name": "个人空间",
       "status": "active",
@@ -182,6 +182,10 @@ Authorization: Bearer <Access Token>
   ]
 }
 ```
+
+示例中的 `id` 是服务端返回的不透明标识，只用于说明响应结构；客户端不得根据
+`personal:`、用户 ID 或其他字符串规则推断工作空间类型。个人项可能完全不存在，
+也可能存在但没有任何知识库；这两种状态都由 `items` 的实际内容表达。
 
 业务请求可以携带：
 
