@@ -80,11 +80,11 @@ Desktop 继续作为 CLI 的图形化语法糖：工作空间发现、选择、A
 
 ## 当前实现状态（2026-09-27）
 
-CLI、Desktop 和服务端已经共享三态 presence 语义：登录可以成功但没有任何工作空间；个人空间只有在服务端返回 canonical ID 时才显示和使用；空列表不会被解释为“没有知识库”，数据命令会得到 `workspace_required`。已验证的服务端知识库创建、模型、API Key、配额和 MCP 入口已经加入相应的空间前置检查，网页 MCP 工具也会在许可证、限流、额度和网页调用前执行 `workspace_access` 准入检查；Marketplace 订阅接口也必须把省略的 `org_id` 归一化为当前连接的工作空间，不能把它当作个人空间默认值。Desktop 只消费这些结果。Bot、Chat、Turn、导入导出、历史恢复和 Widget 仍需按下方清单补齐真实路径验证，不能把共享 presence 语义当成所有资源已经完成。
+CLI、Desktop 和服务端已经共享三态 presence 语义：登录可以成功但没有任何工作空间；个人空间只有在服务端返回 canonical ID 时才显示和使用；空列表不会被解释为“没有知识库”，数据命令会得到 `workspace_required`。已验证的服务端知识库创建、模型、API Key、配额和 MCP 入口已经加入相应的空间前置检查，网页 MCP 工具也会在许可证、限流、额度和网页调用前执行 `workspace_access` 准入检查；Marketplace 订阅接口也必须把省略的 `org_id` 归一化为当前连接的工作空间，不能把它当作个人空间默认值。Desktop 只消费这些结果。Bot 以及 Chat 反馈、附件、聊天分享、Turn 分享和 HTML artifact 分享已经接入父 Bot 的 presence/member gate，避免个人空间关闭后沿旧 Chat 子资源继续读取；这些路径以及 Turn 导出、历史恢复和 Widget 仍需按下方清单补齐真实路径验证，不能把共享 presence 语义当成所有资源已经完成。
 
 CLI 的请求体和查询参数也必须读取服务端返回的 `Workspace.Type`；不能从 ID 前缀推断个人空间或组织空间。这样即使历史个人空间使用不透明 ID，知识库、Bot、配额和 API Key 操作仍会落在正确的命名空间；服务端没有返回类型时，CLI 应提示刷新或重新登录并停止请求。
 
-仍未完成的部分不能从登录成功推断为已完成：Widget 目前仍是个人 Agent 专属能力，组织 Agent 的 `org_id` 不等于 Widget 已支持组织发布；已发布的个人 Widget 在个人空间关闭或迁移后会被 presence gate 拒绝 boot 探测、继续创建/授权 session。Bot、Chat、Turn、tagging、历史恢复和多组织聚合仍需按六种状态完成真实验收。个人空间最终退出前，必须先为 Widget 决定组织授权合同或下线方案，并取得独立的迁移、导出、删除和回滚收据。
+仍未完成的部分不能从登录成功推断为已完成：Widget 目前仍是个人 Agent 专属能力，组织 Agent 的 `org_id` 不等于 Widget 已支持组织发布；已发布的个人 Widget 在个人空间关闭或迁移后会被 presence gate 拒绝 boot 探测、继续创建/授权 session。Chat 子资源已接入共享 gate，但 Chat/Turn/附件/分享/导出仍需要个人关闭、迁移完成、组织成员撤销和副作用顺序的完整六态验收；tagging、历史恢复和多组织聚合也仍需完成。个人空间最终退出前，必须先为 Widget 决定组织授权合同或下线方案，并取得独立的迁移、导出、删除和回滚收据。
 
 客户端验收按以下六种账户状态执行，状态名称对应服务端实际返回的工作空间集合，不对应数据库里的资格 flag：
 
@@ -114,7 +114,7 @@ CLI 的请求体和查询参数也必须读取服务端返回的 `Workspace.Type
 
 | 阶段 | 交付结果 | 依赖与验收 |
 | --- | --- | --- |
-| 服务端边界 | 所有 workspace-aware 路由和初始化副作用统一经过 presence 检查；缺失空间在副作用前返回 `workspace_required` | 资源级合同测试覆盖个人存在、个人为空、个人关闭、迁移完成、多组织和空列表 |
+| 服务端边界 | 所有 workspace-aware 路由和初始化副作用统一经过 presence 检查；Bot 与 Chat 子资源已经接入父 Bot gate；缺失空间在副作用前返回 `workspace_required` | 资源级合同测试覆盖个人存在、个人为空、个人关闭、迁移完成、多组织和空列表 |
 | CLI 合同 | 命令树、workspace selector、API Key、模型、知识库、Bot、Chat/Turn 和 MCP 使用服务端 canonical workspace；空列表仍可登录，`workspace current` 返回 `current: null` | 真实二进制对六种状态输出稳定 JSON、错误码和退出码；不合成 `personal:<user_id>`，未知 workspace 类型不能被保存 |
 | Desktop 展示 | 登录、空间选择器、知识库和 Agent 页面展示空空间及失效选择；所有请求走 CLI 合同 | UI 行为测试与打包产物验收通过；Renderer 不复制授权判断 |
 | 个人数据迁移 | 提供盘点、导出、迁移、删除、回滚和执行收据 | staging 演练、备份校验和人工验收完成后，才允许清理旧 alias 或恢复入口 |
