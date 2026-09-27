@@ -20,7 +20,7 @@ ApeMind 线上已经默认关闭新账户的个人空间，也不保证新账户
 2. 只有一个或多个组织空间；
 3. 没有任何工作空间。
 
-工作空间发现以 `GET /api/v2/me/workspaces` 为唯一来源。响应中的 `personal_workspace_enabled` 表示历史资格和迁移状态；客户端仍然只消费服务端返回的 `items`。个人空间可以为空，服务端不返回个人空间时客户端不得补造；服务端返回空列表时，登录仍然成功，但所有需要工作空间的命令应返回可操作的 `workspace_required`。
+工作空间发现以 `GET /api/v2/me/workspaces` 为唯一来源。响应中的 `personal_workspace_enabled` 表示历史资格和迁移状态；客户端仍然只消费服务端返回的 `items`。明确的 `items: []` 才表示空工作空间；缺少 `items`、`items: null` 或非数组响应属于服务端协议错误，客户端不能把它当成空列表或清理本地选择。个人空间可以为空，服务端不返回个人空间时客户端不得补造；服务端返回空列表时，登录仍然成功，但所有需要工作空间的命令应返回可操作的 `workspace_required`。
 
 默认空间选择遵循稳定、可解释的规则：
 
@@ -97,7 +97,7 @@ Desktop 继续作为 CLI 的图形化语法糖：工作空间发现、选择、A
 
 ## 当前进展和交付边界
 
-截至 2026-09-28，合同已同步到登录、CLI-first、命令范围、gh 能力设计以及服务端接入文档。服务端与 CLI 的候选实现集中在 [aperag-enterprise PR #5908](https://github.com/apecloud/aperag-enterprise/pull/5908)，剩余工作在 [Issue #5893](https://github.com/apecloud/aperag-enterprise/issues/5893) 跟踪。
+截至 2026-09-28，合同已同步到登录、CLI-first、命令范围、gh 能力设计以及服务端接入文档。服务端实现与 CLI 收口由 [aperag-enterprise Issue #5893](https://github.com/apecloud/aperag-enterprise/issues/5893) 跟踪；具体代码以服务端主干、关联 PR 和合同测试为准，不能把某一个资源的 PR 当作整个个人空间项目已经完成。
 
 候选代码覆盖 presence、认证投影、默认初始化、CLI 空选择，以及知识库、Bot/Chat、标签、MCP、Marketplace 和 Computer 等入口。Computer 的状态、打开和停止请求会把 OAuth/API Key 绑定的组织空间传给服务层；个人空间不存在时在实例查询或创建前返回 `workspace_required`，请求中的冲突空间 selector 在调用服务前拒绝。检索限流顺序、集合写权限和导出创建、状态读取、下载边界已经有局部合同测试；六种账户状态下的资源和线上收据仍需继续收口。候选分支有代码或局部测试通过，不代表主干、发布版本和线上环境已具备该行为。本文不维护逐次提交的完成流水账；实际测试、发布和验收收据放在 Issue / PR。
 
