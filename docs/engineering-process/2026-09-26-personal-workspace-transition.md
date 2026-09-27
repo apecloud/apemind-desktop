@@ -114,7 +114,7 @@ CLI 的请求体和查询参数也必须读取服务端返回的 `Workspace.Type
 
 | 阶段 | 交付结果 | 依赖与验收 |
 | --- | --- | --- |
-| 服务端边界 | 所有 workspace-aware 路由和初始化副作用统一经过 presence 检查；Bot 与 Chat 子资源已经接入父 Bot gate；缺失空间在副作用前返回 `workspace_required` | 资源级合同测试覆盖个人存在、个人为空、个人关闭、迁移完成、多组织和空列表 |
+| 服务端边界 | 所有 workspace-aware 路由和初始化副作用统一经过 presence 检查；Bot 与 Chat 子资源已经接入父 Bot gate；标签目录及集合/Agent 标签绑定路由已接入当前 workspace gate；缺失空间在副作用前返回 `workspace_required` | 资源级合同测试覆盖个人存在、个人为空、个人关闭、迁移完成、多组织和空列表；标签路由的窄测试不替代六态验收 |
 | CLI 合同 | 命令树、workspace selector、API Key、模型、知识库、Bot、Chat/Turn 和 MCP 使用服务端 canonical workspace；空列表仍可登录，`workspace current` 返回 `current: null` | 真实二进制对六种状态输出稳定 JSON、错误码和退出码；不合成 `personal:<user_id>`，未知 workspace 类型不能被保存 |
 | Desktop 展示 | 登录、空间选择器、知识库和 Agent 页面展示空空间及失效选择；所有请求走 CLI 合同 | UI 行为测试与打包产物验收通过；Renderer 不复制授权判断 |
 | 个人数据迁移 | 提供盘点、导出、迁移、删除、回滚和执行收据 | staging 演练、备份校验和人工验收完成后，才允许清理旧 alias 或恢复入口 |
