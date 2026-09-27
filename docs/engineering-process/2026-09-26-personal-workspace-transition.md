@@ -80,7 +80,7 @@ Desktop 继续作为 CLI 的图形化语法糖：工作空间发现、选择、A
 
 ## 当前实现状态（2026-09-28）
 
-CLI、Desktop 和服务端已经共享三态 presence 语义：登录可以成功但没有任何工作空间；个人空间只有在服务端返回 canonical ID 时才显示和使用；空列表不会被解释为“没有知识库”，数据命令会得到 `workspace_required`。已验证的服务端知识库创建、检索、模型、API Key、配额和 MCP 入口已经加入相应的空间前置检查；检索创建还会在限流、检索流水线和搜索历史写入前完成 workspace/read-scope admission。文档上传/确认/索引/内容/抓取/数据库刷新以及知识图谱写入口也会先经过 workspace gate；网页 MCP 工具也会在许可证、限流、额度和网页调用前执行 `workspace_access` 准入检查；Marketplace 订阅接口也必须把省略的 `org_id` 归一化为当前连接的工作空间，不能把它当作个人空间默认值。Desktop 只消费这些结果。Bot 以及 Chat 反馈、附件、聊天分享、Turn 分享和 HTML artifact 分享已经接入父 Bot 的 presence/member gate，避免个人空间关闭后沿旧 Chat 子资源继续读取；服务端候选实现也已把 Agent Runtime 的 canonical workspace identity 和 Turn export 的提交前 gate 落到代码与针对性测试中，但这仍不等于六种账户状态的 staging/生产收据。历史恢复、Widget、Chat/Turn/附件/分享/导出、tagging 和多组织聚合仍需按下方清单补齐真实路径验证，不能把共享 presence 语义当成所有资源已经完成。
+CLI、Desktop 和服务端已经共享三态 presence 语义：登录可以成功但没有任何工作空间；个人空间只有在服务端返回 canonical ID 时才显示和使用；空列表不会被解释为“没有知识库”，数据命令会得到 `workspace_required`。已验证的服务端知识库创建、检索、集合元数据更新/删除/转移、模型、API Key、配额和 MCP 入口已经加入相应的空间前置检查；检索创建还会在限流、检索流水线和搜索历史写入前完成 workspace/read-scope admission。文档上传/确认/索引/内容/抓取/数据库刷新以及知识图谱写入口也会先经过 workspace gate；网页 MCP 工具也会在许可证、限流、额度和网页调用前执行 `workspace_access` 准入检查；Marketplace 订阅接口也必须把省略的 `org_id` 归一化为当前连接的工作空间，不能把它当作个人空间默认值。Desktop 只消费这些结果。Bot 以及 Chat 反馈、附件、聊天分享、Turn 分享和 HTML artifact 分享已经接入父 Bot 的 presence/member gate，避免个人空间关闭后沿旧 Chat 子资源继续读取；服务端候选实现也已把 Agent Runtime 的 canonical workspace identity 和 Turn export 的提交前 gate 落到代码与针对性测试中，但这仍不等于六种账户状态的 staging/生产收据。历史恢复、Widget、Chat/Turn/附件/分享/导出、tagging 和多组织聚合仍需按下方清单补齐真实路径验证，不能把共享 presence 语义当成所有资源已经完成。
 
 CLI 的请求体和查询参数也必须读取服务端返回的 `Workspace.Type`；不能从 ID 前缀推断个人空间或组织空间。这样即使历史个人空间使用不透明 ID，知识库、Bot、配额和 API Key 操作仍会落在正确的命名空间；服务端没有返回类型时，CLI 应提示刷新或重新登录并停止请求。
 
