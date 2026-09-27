@@ -97,7 +97,7 @@ Desktop 继续作为 CLI 的图形化语法糖：工作空间发现、选择、A
 
 截至 2026-09-28，合同已同步到登录、CLI-first、命令范围、gh 能力设计以及服务端接入文档。服务端与 CLI 的候选实现集中在 [aperag-enterprise PR #5908](https://github.com/apecloud/aperag-enterprise/pull/5908)，剩余工作在 [Issue #5893](https://github.com/apecloud/aperag-enterprise/issues/5893) 跟踪。
 
-候选代码覆盖 presence、认证投影、默认初始化、CLI 空选择，以及知识库、Bot/Chat、标签、MCP、Marketplace 等入口。检索限流顺序、集合写权限和导出边界仍需依据 PR 的测试与复核结果收口。候选分支有代码或局部测试通过，不代表主干、发布版本和线上环境已具备该行为。本文不维护逐次提交的完成流水账；实际测试、发布和验收收据放在 Issue / PR。
+候选代码覆盖 presence、认证投影、默认初始化、CLI 空选择，以及知识库、Bot/Chat、标签、MCP、Marketplace 等入口。检索限流顺序、集合写权限和导出创建、状态读取、下载边界已经有局部合同测试；六种账户状态下的资源和线上收据仍需继续收口。候选分支有代码或局部测试通过，不代表主干、发布版本和线上环境已具备该行为。本文不维护逐次提交的完成流水账；实际测试、发布和验收收据放在 Issue / PR。
 
 Widget 当前仍只发布个人 Agent。组织 Agent 有 `org_id` 不表示 Widget 已支持组织空间。个人空间关闭后，已发布 Widget 的处置必须纳入迁移；新增组织发布能力或下线决定要有独立合同。
 
