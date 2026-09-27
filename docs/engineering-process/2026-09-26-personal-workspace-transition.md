@@ -97,7 +97,7 @@ Desktop 继续作为 CLI 的图形化语法糖：工作空间发现、选择、A
 
 截至 2026-09-28，合同已同步到登录、CLI-first、命令范围、gh 能力设计以及服务端接入文档。服务端与 CLI 的候选实现集中在 [aperag-enterprise PR #5908](https://github.com/apecloud/aperag-enterprise/pull/5908)，剩余工作在 [Issue #5893](https://github.com/apecloud/aperag-enterprise/issues/5893) 跟踪。
 
-候选代码覆盖 presence、认证投影、默认初始化、CLI 空选择，以及知识库、Bot/Chat、标签、MCP、Marketplace 等入口。检索限流顺序、集合写权限和导出创建、状态读取、下载边界已经有局部合同测试；六种账户状态下的资源和线上收据仍需继续收口。候选分支有代码或局部测试通过，不代表主干、发布版本和线上环境已具备该行为。本文不维护逐次提交的完成流水账；实际测试、发布和验收收据放在 Issue / PR。
+候选代码覆盖 presence、认证投影、默认初始化、CLI 空选择，以及知识库、Bot/Chat、标签、MCP、Marketplace 和 Computer 等入口。Computer 的状态、打开和停止请求会把 OAuth/API Key 绑定的组织空间传给服务层；个人空间不存在时在实例查询或创建前返回 `workspace_required`，请求中的冲突空间 selector 在调用服务前拒绝。检索限流顺序、集合写权限和导出创建、状态读取、下载边界已经有局部合同测试；六种账户状态下的资源和线上收据仍需继续收口。候选分支有代码或局部测试通过，不代表主干、发布版本和线上环境已具备该行为。本文不维护逐次提交的完成流水账；实际测试、发布和验收收据放在 Issue / PR。
 
 Widget 当前仍只发布个人 Agent。组织 Agent 有 `org_id` 不表示 Widget 已支持组织空间。个人空间关闭后，已发布 Widget 的处置必须纳入迁移；新增组织发布能力或下线决定要有独立合同。
 
@@ -105,7 +105,7 @@ Widget 当前仍只发布个人 Agent。组织 Agent 有 `org_id` 不表示 Widg
 
 | 优先级 | 工作项 | 完成证据 |
 | --- | --- | --- |
-| P0 | 服务端入口与初始化审计：知识库、文档、检索、导出、模型、API Key、配额、Bot/Chat/Turn、证据、附件、标签、分享、MCP、Marketplace | 从实际 HTTP/MCP 入口证明 presence、成员、资源及凭据范围检查早于业务副作用；订阅读权限不能变成写权限 |
+| P0 | 服务端入口与初始化审计：知识库、文档、检索、导出、模型、API Key、配额、Bot/Chat/Turn、证据、附件、标签、分享、MCP、Marketplace、Computer | 从实际 HTTP/MCP 入口证明 presence、成员、资源及凭据范围检查早于业务副作用；订阅读权限不能变成写权限；Computer 不能把组织绑定请求落入个人实例 |
 | P0 | CLI：登录/刷新、失效选择、未知类型、组织 Key、账户级 Key 恢复、模型代理、通用 `api`、`--all-workspaces` | 真实二进制使用服务端 ID 与 `type`；无空间可登录；旧选择清理；机器错误、退出码和部分失败稳定 |
 | P1 | Desktop 插件和网页：空列表、唯一组织、多组织、失效选择、无个人配额/默认 Agent | UI 行为测试和本机构建通过；打包的 CLI 版本可核对；不复制授权逻辑 |
 | P1 | 发布验证 | 合并提交、CLI 版本/校验和、服务镜像和部署收据关联；先 staging，再生产只读与最小功能验收；保留上一版本回滚方法 |
