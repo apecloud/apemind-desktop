@@ -59,7 +59,7 @@ export class AuthorizationController extends TypertRemoteService {
     const active = connection.workspaces?.find(item => item.id === connection.workspace_id)
     return {
       id: connection.id, origin: connection.server, userId: connection.user_id, username: connection.username,
-      workspaceName: active?.name ?? connection.workspace_name ?? 'ApeMind',
+      workspaceName: active?.name ?? connection.workspace_name ?? '',
       orgId: active?.type === 'organization' ? active.id : null,
       role: active?.role ?? connection.role ?? null, permissions: active?.permissions ?? connection.permissions ?? [],
       verifiedAt: connection.verified_at,

@@ -66,7 +66,7 @@ function WorkspaceRow({ workspace, current, disabled, onSelect, roleLabel, curre
     <span className={`apemind-workspace-icon apemind-workspace-icon-${workspace.type}`} aria-hidden="true">{initials}</span>
     <span className="apemind-workspace-copy">
       <strong>{workspace.name}</strong>
-      <small>{workspace.type === 'organization' ? roleLabel : ''}</small>
+      <small>{roleLabel}</small>
     </span>
     {current && <span className="apemind-current-badge">{currentLabel}</span>}
     {!current && <span className="apemind-chevron" aria-hidden="true">›</span>}
@@ -148,9 +148,9 @@ function ConnectedPanel({ t, oauth, disabled, onSelectWorkspace, onRefresh, onLo
   hasMore: boolean
   onLoadMore: () => void
 }): ReactNode {
-  const active = oauth.workspaces.find(item => item.id === oauth.activeWorkspaceId && item.status === 'active')
-  const organizations = oauth.workspaces.filter(item => item.type === 'organization')
-  const personal = oauth.workspaces.find(item => item.type === 'personal')
+  const availableWorkspaces = oauth.workspaces.filter(item => item.status === 'active')
+  const active = availableWorkspaces.find(item => item.id === oauth.activeWorkspaceId)
+  const hasWorkspaces = availableWorkspaces.length > 0
   return <section className="apemind-connected-panel">
     <div className="apemind-connected-heading">
       <Mark className="apemind-connected-mark" />
@@ -167,10 +167,24 @@ function ConnectedPanel({ t, oauth, disabled, onSelectWorkspace, onRefresh, onLo
     </section>
     <section className="apemind-workspace-list">
       <h4>{t('availableSpaces')}</h4>
-      {personal && personal.id !== active?.id && <WorkspaceRow workspace={personal} current={false} disabled={disabled} onSelect={() => onSelectWorkspace(personal.id)} roleLabel={t('personalSpace')} currentLabel={t('currentBadge')} />}
-      {organizations.length === 0 && !personal
-        ? <p className="apemind-muted">{t('noOrganizations')}</p>
-        : organizations.map(workspace => <WorkspaceRow key={workspace.id} workspace={workspace} current={workspace.id === active?.id} disabled={disabled} onSelect={() => onSelectWorkspace(workspace.id)} roleLabel={workspace.role ?? t('member')} currentLabel={t('currentBadge')} />)}
+      {hasWorkspaces
+        ? availableWorkspaces.map(workspace => <WorkspaceRow
+          key={workspace.id}
+          workspace={workspace}
+          current={workspace.id === active?.id}
+          disabled={disabled}
+          onSelect={() => onSelectWorkspace(workspace.id)}
+          roleLabel={workspace.type === 'organization' ? (workspace.role ?? t('member')) : t('personalSpace')}
+          currentLabel={t('currentBadge')}
+        />)
+        : <div className="apemind-empty-workspace" role="status">
+          <h5>{t('noWorkspacesTitle')}</h5>
+          <p className="apemind-muted">{t('noWorkspacesDescription')}</p>
+          <div className="apemind-empty-workspace-actions">
+            <button type="button" className="apemind-secondary" disabled={disabled} onClick={onRefresh}>{t('emptyRefreshWorkspaces')}</button>
+            <a className="apemind-link-action" href={oauth.origin} target="_blank" rel="noreferrer">{t('openApeMind')} <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>}
     </section>
     <div className="apemind-connected-actions">
       <button type="button" className="apemind-secondary" disabled={disabled} onClick={onRefresh}>{t('refreshWorkspaces')}</button>
@@ -377,7 +391,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
       >
         <option value="" disabled>{t('chooseConnection')}</option>
         {state.oauthConnections?.map(item => <option key={item.id} value={item.id}>{item.username} · {item.origin}</option>)}
-        {state.connections.map(item => <option key={item.id} value={item.id}>{item.username} · {item.workspaceName} · {t('apiKey')}</option>)}
+        {state.connections.map(item => <option key={item.id} value={item.id}>{item.username} · {item.workspaceName || t('workspaceUnavailable')} · {t('apiKey')}</option>)}
       </select>
     </label>}
     {waiting && !oauth
@@ -437,7 +451,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
           <label>{t('currentKey')}
             <select disabled={disabled} value={state.activeId ?? ''} onChange={(event) => { void run(() => select(event.target.value)) }}>
               <option value="" disabled>{t('chooseConnection')}</option>
-              {state.connections.map(item => <option key={item.id} value={item.id}>{item.workspaceName} · {item.username}</option>)}
+              {state.connections.map(item => <option key={item.id} value={item.id}>{item.workspaceName || t('workspaceUnavailable')} · {item.username}</option>)}
             </select>
           </label>
           {active && <><p>{active.origin}</p><div className="apemind-actions"><button disabled={disabled} onClick={() => { void run(loadKnowledge) }}>{t('viewKnowledge')}</button><button disabled={disabled} onClick={() => { void run(() => disconnect(active.id)) }}>{t('removeConnection')}</button></div><KnowledgeList values={keyItems} title={t('knowledge')} empty={t('knowledgeEmpty')} hasMore={Boolean(keyCursor)} loadMoreLabel={t('loadMore')} disabled={disabled} onLoadMore={() => { void run(() => loadKnowledge(keyCursor ?? undefined), true) }} /></>}

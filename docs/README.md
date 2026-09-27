@@ -5,6 +5,10 @@
 - [ApeMind CLI-first 集成设计](engineering-process/2026-09-14-apemind-cli-first-integration.md)：CLI、Desktop、DSH Agent 与 ApeMind `/api/v2` 的统一身份、凭据与进程边界；明确 OAuth 默认业务路径、显式 API Key、HTTP MCP Bearer 认证及错误合同。能力扩展以对标 gh 的设计为准。
 - 异步能力统一遵循服务端资源合同：当前系统没有统一的 `task` 产品对象，CLI 不创建跨资源任务命令、状态表或输出字段；等待和取消使用 `document`、`turn`、`import`、`export` 等真实资源。
 - [登录与工作空间设计](engineering-process/2026-09-12-apemind-desktop-login-v2.md)：产品体验、UI、PKCE、设备码、API Key、服务端接口、权限与验收标准。
+- [个人空间可选化与组织工作空间迁移设计](engineering-process/2026-09-26-personal-workspace-transition.md)：个人空间逐步退出期间的空工作空间、默认选择、OAuth/API Key 边界、Desktop 行为和跨仓库实施计划。
+- 服务端对应的 `/api/v2` presence、权限前置检查和迁移退出合同见 [aperag-enterprise 的个人空间服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md)。
+- 个人空间当前已是生产中的可选遗留能力：线上新账户默认关闭，长期可以完全移除；CLI 与 Desktop 只消费服务端返回的 workspace ID 和 `type`，不从 ID 前缀合成个人空间。
+- 空工作空间是正常登录结果，不是异常登录态：`items: []` 时仍可查看账户和刷新状态，所有需要命名空间的命令由 CLI/服务端返回 `workspace_required`，Desktop 只呈现恢复动作。个人数据迁移、导出、删除和旧 alias 清理不随客户端发布隐式执行。
 - [API Key 连接说明](engineering-process/2026-09-11-apemind-desktop-login.md)：高级连接实现与历史验证记录。
 - [开发运行手册](dev-runbook.md)：同步、构建与本地运行。
 - [品牌说明](branding.md)：品牌改动边界；逐文件范围以 `overlay/OVERLAY.md` 为准。
