@@ -66,7 +66,7 @@ apemind auth connect --connection NAME --api-key-stdin
 
 ### Workspace 是数据命名空间
 
-Workspace 统一表示当前身份实际可访问的命名空间，可能包含遗留个人空间、组织空间，也可能为空。`workspace list` 返回服务端实际返回的空间及其角色、状态和能力摘要；`workspace use ID` 只写入本地默认选择。
+Workspace 统一表示当前身份实际可访问的命名空间，可能包含遗留个人空间、组织空间，也可能为空。`workspace list` 返回服务端实际返回的空间及其角色、状态和能力摘要；`workspace current` 在没有当前空间时返回 `current: null`；`workspace use ID` 只写入服务端返回且类型已知、状态为 active 的本地默认选择。刷新空间时，已经不在服务端列表中的历史选择必须清理。
 
 ```bash
 apemind workspace list

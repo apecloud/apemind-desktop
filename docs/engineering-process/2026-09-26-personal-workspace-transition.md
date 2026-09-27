@@ -1,6 +1,6 @@
 # 个人空间可选化与组织工作空间迁移设计
 
-> 本文定义 ApeMind CLI、ApeMind Desktop 和 ApeMind 服务端在个人空间逐步退出期间必须遵守的统一合同。它补充并收敛 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md)、[登录与工作空间设计](2026-09-12-apemind-desktop-login-v2.md) 和 [CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)。
+> 本文定义 ApeMind CLI、ApeMind Desktop 和 ApeMind 服务端在个人空间逐步退出期间必须遵守的统一合同。它补充并收敛 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md)、[登录与工作空间设计](2026-09-12-apemind-desktop-login-v2.md) 和 [CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)。服务端实现和 `/api/v2` 合同以 [aperag-enterprise 的个人空间服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准。
 
 ## 现状
 
@@ -47,7 +47,7 @@ ApeMind 线上已经默认关闭新账户的个人空间，也不保证新账户
 }
 ```
 
-`workspace list` 和 `workspace current` 可以在空选择状态下工作。`workspace use ID` 只能选择当前服务端已经发现且状态为 `active` 的工作空间；客户端保存的是选择，不保存成员关系和权限的最终判断。
+`workspace list` 和 `workspace current` 可以在空选择状态下工作；空列表时前者返回空数组，后者返回 `current: null`，两者都是成功的发现结果。`workspace use ID` 只能选择当前服务端已经发现、类型属于 `personal` 或 `organization` 且状态为 `active` 的工作空间；客户端保存的是选择，不保存成员关系和权限的最终判断。刷新时会清理服务端已不再返回的历史选择。
 
 未绑定组织的 API Key 只有在服务端明确声明个人空间仍可用时才能建立个人连接。个人空间关闭后，未绑定 Key 必须返回 `workspace_required`，提示创建绑定组织的 Key；客户端不能用 `personal:<user_id>` 伪装绑定结果。组织绑定 Key 固定在该组织空间，不能用 `--workspace` 或 `--all-workspaces` 扩大范围。
 
@@ -61,6 +61,7 @@ ApeMind 线上已经默认关闭新账户的个人空间，也不保证新账户
 - 工作空间相关读写每次校验成员关系、组织状态、资源权限和 API Key 绑定；
 - 缺少工作空间的请求返回稳定的 `workspace_required` 或等价机器错误，不通过个人空间兜底；
 - 个人空间关闭后禁止新建个人资源和未绑定个人 Key；已有数据只能通过迁移、导出或受控只读路径处理；关闭前仍存在的空个人空间不因为没有知识库而被客户端伪造或删除；
+- 需要幂等重试的知识库创建必须携带认证请求确认的 canonical `workspace_id`；客户端和服务端都不能用 `personal:<user_id>` 为新收据或新资源补造个人空间；
 - 旧个人 Key 不得被解释成组织 Key，组织 Key 不得被解释成个人 Key；
 - 缺失的 `personal_workspace_enabled` 状态按关闭处理，避免兼容投影意外重新开放个人写入；
 - 站点管理员的控制面查询与普通用户的组织/工作空间查询分离，普通接口不返回全量平台组织。
@@ -101,7 +102,7 @@ CLI 的请求体和查询参数也必须读取服务端返回的 `Workspace.Type
 实施顺序按风险和依赖排列：
 
 1. **合同收敛**：更新 CLI、Desktop、服务端和 MCP 文档；建立 workspace 状态、错误码、selector 和 OAuth scope 矩阵。
-2. **CLI 登录与选择**：保存有效历史选择；只在明确条件下自动选择组织或遗留个人空间；支持空工作空间登录；删除所有合成个人空间的连接逻辑。
+2. **CLI 登录与选择**：保存有效历史选择；只在明确条件下自动选择组织或遗留个人空间；支持空工作空间登录；删除所有合成个人空间的连接逻辑。幂等写入把服务端返回的 canonical workspace 传给资源接口。
 3. **API Key 边界**：根据服务端返回的绑定信息和个人空间状态建立连接；关闭个人空间时拒绝未绑定 Key；补齐账户级 Key 管理的提示和迁移信息。
 4. **服务端默认值审计**：消除 `getattr(..., True)` 等隐式开放路径，检查认证依赖、模型、知识库、Bot、Chat、Turn、配额、导出和 MCP；每个 workspace-aware 路由都要在实际执行前完成空间校验。
 5. **行为测试**：覆盖有个人空间、无个人空间、多组织、空列表、历史选择失效、未绑定 Key、组织 Key、跨空间聚合和部分失败。
@@ -114,7 +115,7 @@ CLI 的请求体和查询参数也必须读取服务端返回的 `Workspace.Type
 | 阶段 | 交付结果 | 依赖与验收 |
 | --- | --- | --- |
 | 服务端边界 | 所有 workspace-aware 路由和初始化副作用统一经过 presence 检查；缺失空间在副作用前返回 `workspace_required` | 资源级合同测试覆盖个人存在、个人为空、个人关闭、迁移完成、多组织和空列表 |
-| CLI 合同 | 命令树、workspace selector、API Key、模型、知识库、Bot、Chat/Turn 和 MCP 使用服务端 canonical workspace；空列表仍可登录 | 真实二进制对六种状态输出稳定 JSON、错误码和退出码；不合成 `personal:<user_id>` |
+| CLI 合同 | 命令树、workspace selector、API Key、模型、知识库、Bot、Chat/Turn 和 MCP 使用服务端 canonical workspace；空列表仍可登录，`workspace current` 返回 `current: null` | 真实二进制对六种状态输出稳定 JSON、错误码和退出码；不合成 `personal:<user_id>`，未知 workspace 类型不能被保存 |
 | Desktop 展示 | 登录、空间选择器、知识库和 Agent 页面展示空空间及失效选择；所有请求走 CLI 合同 | UI 行为测试与打包产物验收通过；Renderer 不复制授权判断 |
 | 个人数据迁移 | 提供盘点、导出、迁移、删除、回滚和执行收据 | staging 演练、备份校验和人工验收完成后，才允许清理旧 alias 或恢复入口 |
 | 最终退出 | 停止创建/恢复个人空间，删除个人专属 fallback 和默认资源初始化 | 生产六态收据齐全，旧数据处置完成，兼容字段和文档同步收口 |
