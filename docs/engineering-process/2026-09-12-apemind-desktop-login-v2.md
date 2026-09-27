@@ -2,7 +2,7 @@
 
 > 本文记录现有 Desktop OAuth 与工作空间实现。后续产品边界、CLI 认证归属、Agent 调用方式和服务端接口收敛以 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md) 和 [个人空间可选化与组织工作空间迁移设计](2026-09-26-personal-workspace-transition.md) 为准。
 
-本文是 ApeMind Desktop 登录功能的当前设计。它覆盖产品行为、桌面端实现、ApeMind 服务端接口、私有化兼容性、组织权限和验收标准。所有服务端接口统一使用 `/api/v2`。
+本文是 ApeMind Desktop 登录功能的当前设计。它覆盖产品行为、桌面端实现、ApeMind 服务端接口、私有化兼容性、组织权限和验收标准。所有服务端接口统一使用 `/api/v2`。个人空间是否存在只由服务端 presence 合同决定；线上新账户默认没有个人空间，`items: []` 是成功登录后的合法结果，本文件中的个人空间均指仍由服务端返回的历史兼容项。
 
 ## 目标和边界
 

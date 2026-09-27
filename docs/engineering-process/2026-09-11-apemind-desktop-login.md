@@ -1,6 +1,6 @@
 # ApeMind Desktop 账户连接与工作空间
 
-本文说明 API Key 高级连接；当前浏览器登录与多工作空间合同以 [登录与工作空间设计](2026-09-11-apemind-desktop-oauth-workspace.md) 为准。历史验收记录只覆盖记录中注明的版本与链路。
+本文说明 API Key 高级连接；当前浏览器登录、多工作空间和个人空间可选化合同以 [登录与工作空间设计](2026-09-11-apemind-desktop-oauth-workspace.md) 与 [个人空间可选化与组织工作空间迁移设计](2026-09-26-personal-workspace-transition.md) 为准。历史验收记录只覆盖记录中注明的版本与链路。
 
 本文定义 Desktop 如何复用 ApeMind 的 API Key、身份与组织接口，验证连接并调用工作空间内的业务能力。
 
@@ -20,7 +20,7 @@
 
 设置中的 ApeMind 页面包含连接表单和已连接工作空间。用户填写 HTTPS 服务站点和 Key，提交后清空输入值。验证成功后保存连接并显示账户、服务地址、绑定空间、角色、组织权限和上次验证时间。失效、服务异常或存储失败都返回明确失败，不展示成功。
 
-切换工作空间需要先连接它对应的 Key。每次切换重新验证目标 Key；失败保留原连接。移除连接只清除此设备记录，不撤销服务端 Key，不自动激活其他身份。知识库按钮用当前 Key 发起实际 API 请求，先重验账户与工作空间，响应只投影知识库 id 和 title。
+切换工作空间需要先连接它对应的 Key；个人空间只有在服务端返回仍可用的 canonical ID 时才是合法目标。每次切换重新验证目标 Key；失败保留原连接。移除连接只清除此设备记录，不撤销服务端 Key，不自动激活其他身份。知识库按钮用当前 Key 发起实际 API 请求，先重验账户与工作空间，响应只投影知识库 id 和 title。服务端返回空工作空间列表时，账户仍可登录，数据请求应显示 `workspace_required`，不能合成 `personal:<user_id>`。
 
 请求期间禁用重复操作；请求串行，防止慢验证在退出后恢复连接。页面卸载不再更新状态，不使用轮询。保存的快照不代表实时授权，页面明确展示验证时间。
 
@@ -32,7 +32,7 @@ Remote 提供 state、connect、select、disconnect、collections。不存在伪
 
 ## 存储
 
-沿用 dsh 的 ctx.credentials，在 apemind/connections grant record 中保存版本化连接集合和当前选择。Key 与账户/组织绑定，连接标识由服务站点、用户 ID、组织 ID 计算。同一身份空间的新 Key 替换旧连接；不同空间分别保存。
+沿用 dsh 的 ctx.credentials，在 apemind/connections grant record 中保存版本化连接集合和当前选择。Key 与账户及服务端返回的绑定空间关联；连接标识由服务站点、用户 ID、绑定工作空间 ID 计算，不能依赖个人空间一定存在。同一身份空间的新 Key 替换旧连接；不同空间分别保存。
 
 锁定上游的 credentials-local 使用权限 0600 的 .credentials.yaml 文件与跨进程文件锁，并非 OS 钥匙串，也不是加密存储。密钥不可写入日志、URL、错误或公开账户快照。不要把 DSH_HOME 凭据文件提交到版本库。历史 apemind/account 占位记录不会被当作已验证连接自动导入。
 
