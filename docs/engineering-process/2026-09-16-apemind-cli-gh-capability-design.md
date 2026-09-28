@@ -248,7 +248,7 @@ apemind knowledge list
 - Agent 不能因为某个空间访问失败，就自动切换到另一个空间；
 - 不能为了“找到结果”偷偷遍历所有组织。
 
-当前的显式 `--workspace` 设计是正确的，只是还需要更好的聚合能力和输出。工作空间集合可以为空；CLI 必须让 `workspace list` 和 `workspace current` 在空集合下成功返回，并让数据命令给出稳定的 `workspace_required`，不能为了模仿 `gh` 的默认体验补造个人空间。
+当前的显式 `--workspace` 设计是正确的，只是还需要更好的聚合能力和输出。工作空间集合可以为空；CLI 必须让 `workspace list` 和 `workspace current` 在空集合下成功返回，并让数据命令给出稳定的 `workspace_required`，不能为了模仿 `gh` 的默认体验补造个人空间。发现项目缺少 canonical `id`、`status` 或已知 `type` 时应返回 `invalid_response`，不能把协议升级误报为空集合。
 
 ### 3. 写操作的预览和幂等设计是正确的
 

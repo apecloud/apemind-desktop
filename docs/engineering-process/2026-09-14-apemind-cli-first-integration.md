@@ -195,7 +195,7 @@ apemind workspace current --format json
 apemind workspace use <workspace-id>
 ```
 
-工作空间统一表示当前身份实际可访问的命名空间。它可能是遗留个人空间、组织空间，或空集合。`workspace list` 和 `workspace current` 是发现命令，空集合时仍成功返回空数组或 `current: null`；每个需要空间的数据命令默认使用当前工作空间，也支持显式 `--workspace`，没有当前空间时返回 `workspace_required`，不能退回或合成个人空间。服务端始终重新校验用户是否仍然属于目标空间。
+工作空间统一表示当前身份实际可访问的命名空间。它可能是遗留个人空间、组织空间，或空集合。`workspace list` 和 `workspace current` 是发现命令，空集合时仍成功返回空数组或 `current: null`；每个需要空间的数据命令默认使用当前工作空间，也支持显式 `--workspace`，没有当前空间时返回 `workspace_required`，不能退回或合成个人空间。工作空间项目必须带有非空 canonical `id`、`status` 和已知 `type`；未知类型或空字段属于 `invalid_response`，CLI 应停止数据请求并提示刷新或升级。服务端始终重新校验用户是否仍然属于目标空间。
 
 工作空间列表需要返回：
 
