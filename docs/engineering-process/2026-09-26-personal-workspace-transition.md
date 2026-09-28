@@ -1,6 +1,6 @@
 # 个人空间可选化与组织工作空间迁移设计
 
-> 本文定义 ApeMind CLI、ApeMind Desktop 和 ApeMind 服务端在个人空间逐步退出期间必须遵守的统一合同。它补充并收敛 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md)、[登录与工作空间设计](2026-09-12-apemind-desktop-login-v2.md) 和 [CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)。服务端实现和 `/api/v2` 合同以 [aperag-enterprise 的个人空间服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准。
+> 本文定义 ApeMind CLI、ApeMind Desktop 和 ApeMind 服务端在个人空间逐步退出期间必须遵守的统一合同。它补充并收敛 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md)、[登录与工作空间设计](2026-09-12-apemind-desktop-login-v2.md) 和 [CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)。服务端实现和 `/api/v2` 合同以 [aperag-enterprise 的个人空间服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；跨资源执行顺序见 [个人空间退出基线与执行计划](2026-09-28-personal-workspace-exit-plan.md)。
 
 ## 现状
 
@@ -20,7 +20,7 @@ ApeMind 线上已经默认关闭新账户的个人空间，也不保证新账户
 2. 只有一个或多个组织空间；
 3. 没有任何工作空间。
 
-工作空间发现以 `GET /api/v2/me/workspaces` 为唯一来源。响应中的 `personal_workspace_enabled` 表示历史资格和迁移状态；客户端仍然只消费服务端返回的 `items`。明确的 `items: []` 才表示空工作空间；缺少 `items`、`items: null` 或非数组响应属于服务端协议错误，客户端不能把它当成空列表或清理本地选择。个人空间可以为空，服务端不返回个人空间时客户端不得补造；服务端返回空列表时，登录仍然成功，但所有需要工作空间的命令应返回可操作的 `workspace_required`。
+工作空间发现以 `GET /api/v2/me/workspaces` 为唯一来源。服务端只把仍处于 active 状态且当前身份仍有有效成员关系的组织作为可选空间返回；已暂停组织即使保留历史成员关系，也不应出现在客户端选择器中。响应中的 `personal_workspace_enabled` 表示历史资格和迁移状态；客户端仍然只消费服务端返回的 `items`。明确的 `items: []` 才表示空工作空间；缺少 `items`、`items: null` 或非数组响应属于服务端协议错误，客户端不能把它当成空列表或清理本地选择。每个项目还必须带有非空 `id`、`status` 和 `type`；未知类型、空 ID 或空状态属于 `invalid_response`，Desktop 应保留当前选择并提示刷新或升级，不能把它误判成没有个人空间。个人空间可以为空，服务端不返回个人空间时客户端不得补造；服务端返回空列表时，登录仍然成功，但所有需要工作空间的命令应返回可操作的 `workspace_required`。
 
 默认空间选择遵循稳定、可解释的规则：
 
@@ -49,7 +49,7 @@ ApeMind 线上已经默认关闭新账户的个人空间，也不保证新账户
 
 `workspace list` 和 `workspace current` 可以在空选择状态下工作；空列表时前者返回空数组，后者返回 `current: null`，两者都是成功的发现结果。`workspace use ID` 只能选择当前服务端已经发现、类型属于 `personal` 或 `organization` 且状态为 `active` 的工作空间；客户端保存的是选择，不保存成员关系和权限的最终判断。刷新时会清理服务端已不再返回的历史选择。
 
-未绑定组织的 API Key 只有在服务端明确声明个人空间仍可用时才能建立个人连接。个人空间关闭后，未绑定 Key 必须返回 `workspace_required`，提示创建绑定组织的 Key；客户端不能用 `personal:<user_id>` 伪装绑定结果。组织绑定 Key 固定在该组织空间，不能用 `--workspace` 或 `--all-workspaces` 扩大范围。
+未绑定组织的 API Key 只有在服务端身份投影明确声明个人空间仍可用时才能建立个人连接。API Key 不调用只面向交互式 OAuth 的 `/api/v2/me/workspaces` 枚举空间；个人空间关闭、迁移完成或身份投影缺失后，未绑定 Key 必须返回 `workspace_required`，提示创建绑定组织的 Key。客户端不能用 `personal:<user_id>` 伪装绑定结果。组织绑定 Key 固定在该组织空间，不能用 `--workspace` 或 `--all-workspaces` 扩大范围。
 
 服务端验证未绑定 Key 时应先解析 workspace presence，再计算 Key 的知识库范围。个人空间已经关闭或迁移完成时，认证不会读取旧个人知识库；Key 可以继续用于账户级状态与撤销查询，但数据请求必须显示 `workspace_required`。这里要区分两个阶段：有效 OAuth/API Key 可以建立身份，不能因为身份有效就获得一个不存在的个人空间；MCP 和其他 workspace-aware 请求会在限流、扣额、写库或工具执行前由服务端统一 gate 返回 `workspace_required`。无效、过期或未明确提供的凭据仍然按认证错误处理。Desktop 只展示 CLI 的结果，不把“Key 验证成功”解释成个人空间仍然存在。
 

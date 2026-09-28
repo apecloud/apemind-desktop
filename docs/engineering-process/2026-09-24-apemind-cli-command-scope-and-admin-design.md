@@ -2,7 +2,7 @@
 
 本文把 ApeMind CLI 的产品边界、命令语义和服务端授权合同收敛为一套可执行设计，重点解释本轮审计发现了什么、哪些现有行为需要调整、哪些能力应保留，以及后续如何让 Agent 不容易误用命令。
 
-本文是 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md) 和 [ApeMind CLI 对标 gh 的能力分析与产品技术设计](2026-09-16-apemind-cli-gh-capability-design.md) 关于命令范围、组织治理、工作空间、管理员能力和授权矩阵的当前补充；身份、凭据、Desktop 集成和异步资源的基础原则仍由前两篇文档共同定义。工作空间必须以服务端 presence 为准：个人空间是可选的历史命名空间，线上新账户默认没有个人空间，个人空间存在、为空或不存在都属于需要支持的合法状态，空列表也不表示登录失败。
+本文是 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md) 和 [ApeMind CLI 对标 gh 的能力分析与产品技术设计](2026-09-16-apemind-cli-gh-capability-design.md) 关于命令范围、组织治理、工作空间、管理员能力和授权矩阵的当前补充；身份、凭据、Desktop 集成和异步资源的基础原则仍由前两篇文档共同定义。工作空间必须以服务端 presence 为准：个人空间是可选的历史命名空间，线上新账户默认没有个人空间，个人空间存在、为空或不存在都属于需要支持的合法状态，空列表也不表示登录失败。跨资源实施顺序见 [个人空间退出基线与执行计划](2026-09-28-personal-workspace-exit-plan.md)。
 
 本轮审计针对 `apemind` CLI 当前实现、`aperag-enterprise` 的 `/api/v2` 路由和服务端权限代码进行交叉检查。文中把“当前代码事实”“目标产品语义”和“需要修改的合同”分开书写；设计完成不等于代码、发布或线上验收已经完成。
 
@@ -66,7 +66,7 @@ apemind auth connect --connection NAME --api-key-stdin
 
 ### Workspace 是数据命名空间
 
-Workspace 统一表示当前身份实际可访问的命名空间，可能包含遗留个人空间、组织空间，也可能为空。`workspace list` 返回服务端实际返回的空间及其角色、状态和能力摘要；`workspace current` 在没有当前空间时返回 `current: null`；`workspace use ID` 只写入服务端返回且类型已知、状态为 active 的本地默认选择。刷新空间时，已经不在服务端列表中的历史选择必须清理。
+Workspace 统一表示当前身份实际可访问的命名空间，可能包含遗留个人空间、组织空间，也可能为空。`workspace list` 返回服务端实际返回的空间及其角色、状态和能力摘要；`workspace current` 在没有当前空间时返回 `current: null`；`workspace use ID` 只写入服务端返回且类型已知、状态为 active 的本地默认选择。每个项目缺少 canonical `id`、`status` 或已知 `type` 时属于 `invalid_response`，不能被静默过滤成空列表。刷新空间时，已经不在服务端列表中的历史选择必须清理。
 
 ```bash
 apemind workspace list
