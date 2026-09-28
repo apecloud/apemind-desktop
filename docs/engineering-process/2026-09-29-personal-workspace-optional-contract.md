@@ -1,6 +1,6 @@
 # 个人空间可选合同
 
-本文给出 ApeMind Desktop、ApeMind CLI 和 ApeMind 服务端共同遵守的个人空间合同。它回答一个问题：当线上新账户默认没有个人空间、历史账户可能仍有个人空间、未来个人空间可能完全退出时，登录、选空间和数据操作应怎样保持一致。
+本文给出 ApeMind Desktop、ApeMind CLI 和 ApeMind 服务端共同遵守的个人空间合同。它回答一个问题：当线上新账户默认没有个人空间、历史账户可能仍有个人空间、未来个人空间可能完全退出时，登录、选空间和数据操作应怎样保持一致。服务端的入口与副作用顺序以 [aperag-enterprise 的个人空间可选化服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准，本文只定义跨客户端的产品语义和调用边界。
 
 ## 产品基线
 
