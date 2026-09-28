@@ -28,7 +28,7 @@ OAuth、API Key 和 MCP 都先建立身份，再由服务端实时校验 workspa
 
 ## CLI 和 Desktop 的职责
 
-`apemind` 是 Agent 使用 ApeMind 的正式接口。`workspace list` 在空列表时成功返回空数组，`workspace current` 返回 `current: null`，数据命令返回机器可识别的 `workspace_required`、`workspace_stale` 或 `invalid_response`。`workspace use` 只能选择当前服务端返回的 active workspace。
+`apemind` 是 Agent 使用 ApeMind 的正式接口。`workspace list` 在空列表时成功返回空数组，`workspace current` 返回 `current: null`，数据命令返回机器可识别的 `workspace_required`、`workspace_stale` 或 `invalid_response`。服务端对迁移 alias 返回的 `workspace_stale` 必须原样保留，CLI 不得把它降级成通用冲突或自动重试旧 alias。`workspace use` 只能选择当前服务端返回的 active workspace。
 
 Desktop 是 CLI 的图形化语法糖。登录、空间发现、空间切换、API Key 连接、错误解释和刷新都调用同一套 CLI 合同；Renderer 不复制授权逻辑、不拼接工作空间 ID，也不把登录快照当作实时权限证明。
 
