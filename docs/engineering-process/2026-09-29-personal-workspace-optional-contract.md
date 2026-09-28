@@ -59,6 +59,8 @@ Desktop 是 CLI 的图形化语法糖。登录、空间发现、空间切换、A
 
 ## 剩余工作和收口顺序
 
+下面是客户端视角的收口顺序；跨仓库的阶段依赖、发布边界和生产证据以 [服务端个人空间退出执行板](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-28-personal-workspace-exit-plan.md#2026-09-29-执行板) 为准。它把“代码完成、定向测试、主干/镜像发布、线上收据”分开计证，Desktop 不能因为本地 UI 测试通过就把服务端或线上阶段标成完成。
+
 | 顺序 | 工作包 | 收口证据 |
 | --- | --- | --- |
 | 1 | 服务端资源入口审计和副作用顺序 | 从真实 HTTP/MCP 入口证明 presence、成员和资源权限检查先于业务副作用 |
