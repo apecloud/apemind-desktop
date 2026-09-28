@@ -1,10 +1,14 @@
 # 个人空间可选化与组织工作空间迁移设计
 
+> 本文是迁移背景和历史执行稿。当前跨仓库产品合同以[个人空间可选合同](2026-09-29-personal-workspace-optional-contract.md)为准；本文保留迁移阶段的上下文和验收矩阵，新增实现不得把本文当作并列的第二份规范。
+
 > 本文定义 ApeMind CLI、ApeMind Desktop 和 ApeMind 服务端在个人空间逐步退出期间必须遵守的统一合同。它补充并收敛 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md)、[登录与工作空间设计](2026-09-12-apemind-desktop-login-v2.md) 和 [CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)。当前可选空间、空列表、权限前置和剩余工作以 [个人空间可选合同](2026-09-29-personal-workspace-optional-contract.md) 为准。服务端实现和 `/api/v2` 合同以 [aperag-enterprise 的个人空间服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；跨资源执行顺序见 [个人空间退出基线与执行计划](2026-09-28-personal-workspace-exit-plan.md)。
 
 ## 现状
 
 ApeMind 线上已经默认关闭新账户的个人空间，也不保证新账户已经加入组织。过渡期内，历史账户可能仍有个人空间，也可能只有一个或多个组织工作空间，还可能已经登录但暂时没有任何可用工作空间。长期产品方向是以组织工作空间承载数据、权限和配额，个人空间属于可迁移、可导出、可最终下线的遗留能力。
+
+组织工作空间是长期的数据、权限和配额边界。个人空间完全退出后，账户仍然可以登录、刷新、切换组织和使用组织能力；Desktop 不为了保持旧界面而创建隐藏的个人 Key、quota、Bot 或默认模型。
 
 这条生产基线会持续生效：新账户不能因为登录、刷新、默认初始化或客户端升级重新获得个人空间。未来完全没有个人空间的账户是正常账户形态，所有 CLI、Desktop 和插件页面都必须在该形态下可用。个人空间仍存在时只作为服务端返回的兼容资源；它的 ID、类型和状态都以 `GET /api/v2/me/workspaces` 返回的项目为准。
 
@@ -21,6 +25,8 @@ ApeMind 线上已经默认关闭新账户的个人空间，也不保证新账户
 3. 没有任何工作空间。
 
 工作空间发现以 `GET /api/v2/me/workspaces` 为唯一来源。服务端只把仍处于 active 状态且当前身份仍有有效成员关系的组织作为可选空间返回；已暂停组织即使保留历史成员关系，也不应出现在客户端选择器中。响应中的 `personal_workspace_enabled` 表示历史资格和迁移状态；客户端仍然只消费服务端返回的 `items`。明确的 `items: []` 才表示空工作空间；缺少 `items`、`items: null` 或非数组响应属于服务端协议错误，客户端不能把它当成空列表或清理本地选择。每个项目还必须带有非空 `id`、`status` 和 `type`；未知类型、空 ID 或空状态属于 `invalid_response`，Desktop 应保留当前选择并提示刷新或升级，不能把它误判成没有个人空间。个人空间可以为空，服务端不返回个人空间时客户端不得补造；服务端返回空列表时，登录仍然成功，但所有需要工作空间的命令应返回可操作的 `workspace_required`。
+
+迁移完成后的旧 `personal:<user_id>` 只保留历史兼容边界：服务端原生 GET/HEAD 可以在 presence 和成员关系确认后映射到目标组织，写入和 MCP 调用返回 `409`、`error_code=workspace_stale`，要求刷新列表并改用 canonical 组织 ID。CLI 和 Desktop 不保存 alias 作为新的默认空间，也不在旧 alias 上重试写入；内部幂等匹配若需兼容必须由服务端入口显式声明。
 
 默认空间选择遵循稳定、可解释的规则：
 
@@ -97,9 +103,9 @@ Desktop 继续作为 CLI 的图形化语法糖：工作空间发现、选择、A
 
 ## 当前进展和交付边界
 
-截至 2026-09-29，个人空间可选、空列表和 `workspace_required` 合同已经同步到登录、CLI-first、命令范围、gh 能力设计以及服务端接入文档。代码、定向测试、主干合并、发布和线上验收仍分别计证；任何单个资源的实现都不能代表整个个人空间项目已经完成。
+截至 2026-09-29，线上新账户默认关闭个人空间已经是生产基线；个人空间可选、空列表和 `workspace_required` 合同已经同步到登录、CLI-first、命令范围、gh 能力设计以及服务端接入文档。服务端按“已有代码/定向测试证据”和“尚未证明的交付证据”维护跨资源状态账本，见 [aperag-enterprise 的个人空间退出基线与执行计划](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-28-personal-workspace-exit-plan.md#当前执行状态按已有代码定向测试证据和尚未证明的交付证据分开记录)。代码、定向测试、主干合并、发布和线上验收仍分别计证，任何单个资源的实现都不能代表整个个人空间项目已经完成。
 
-候选代码覆盖 presence、认证投影、默认初始化、CLI 空选择，以及知识库、Bot/Chat、标签、MCP、Marketplace 和 Computer 等入口。Computer 的状态、打开和停止请求会把 OAuth/API Key 绑定的组织空间传给服务层；个人空间不存在时在实例查询或创建前返回 `workspace_required`，请求中的冲突空间 selector 在调用服务前拒绝。检索限流顺序、集合写权限和导出创建、状态读取、下载边界已经有局部合同测试；六种账户状态下的资源和线上收据仍需继续收口。候选分支有代码或局部测试通过，不代表主干、发布版本和线上环境已具备该行为。本文不维护逐次提交的完成流水账；实际测试、发布和验收收据放在 Issue / PR。
+候选代码覆盖 presence、认证投影、默认初始化、CLI 空选择，以及知识库、Bot/Chat、标签、MCP、Marketplace 和 Computer 等入口。Computer 的状态、打开和停止请求会把 OAuth/API Key 绑定的组织空间传给服务层；个人空间不存在时在实例查询或创建前返回 `workspace_required`，请求中的冲突空间 selector 在调用服务前拒绝。Chat 隐藏附件 Collection 现在继承父 Bot 的 `org_id`，附件读取、删除和 promote 会在调用文档服务前重新校验 Collection 与 Bot 的 namespace，历史失配记录按不存在处理。Marketplace 目录仍可作为无空间发现入口，内容读取和订阅操作已补上无空间时的前置拒绝，避免浏览器会话沿用旧个人订阅；这项行为仍需随六态 HTTP 收据在打包应用中验收。检索限流顺序、集合写权限和导出创建、状态读取、下载边界已经有局部合同测试；六种账户状态下的资源和线上收据仍需继续收口。候选分支有代码或局部测试通过，不代表主干、发布版本和线上环境已具备该行为。本文不维护逐次提交的完成流水账；实际测试、发布和验收收据放在 Issue / PR。
 
 CLI 的下一步收口已经明确为“服务端列表优先”：当连接缓存了 `/api/v2/me/workspaces` 的快照时，原生知识库读取、Bot/Turn 写入和通用 `apemind api` 的显式 OAuth workspace 必须命中其中的 active 项，否则在网络请求前返回 `workspace_stale`。旧连接没有快照时仍保留不透明 workspace ID，由服务端完成最终鉴权；在线能力诊断直接读取服务端列表，不把旧缓存当作实时授权。Desktop 只展示和传递 CLI 的结果，不能在 Renderer 中重新合成个人空间。
 

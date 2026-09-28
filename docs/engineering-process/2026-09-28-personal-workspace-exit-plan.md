@@ -1,6 +1,6 @@
 # 个人空间退出基线与执行计划
 
-本文记录 2026-09-29 的产品基线和跨仓库执行顺序。服务端接口合同以 [aperag-enterprise 的个人空间可选化服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；统一的可选空间、空列表、权限前置和剩余工作以 [个人空间可选合同](2026-09-29-personal-workspace-optional-contract.md) 为准。本文把“当前兼容”和“最终退出”拆成可验证的工作包，不能把局部代码或测试写成已经发布。
+本文记录 2026-09-29 的产品基线和跨仓库执行顺序。线上新账户默认关闭个人空间已经是当前生产事实；这不等于历史个人数据已经删除，也不等于最终退出项目已经完成。服务端接口合同以 [aperag-enterprise 的个人空间可选化服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；统一的可选空间、空列表、权限前置和剩余工作以 [个人空间可选合同](2026-09-29-personal-workspace-optional-contract.md) 为准。本文把“当前兼容”和“最终退出”拆成可验证的工作包，不能把局部代码或测试写成已经发布。
 
 ## 产品基线
 
@@ -34,7 +34,9 @@
 
 ## 当前执行状态
 
-服务端和 CLI 已经把“个人空间存在、存在但为空、完全不存在”作为不同状态处理；Desktop 侧已同步登录、工作空间、API Key 和空状态合同。Desktop 当前只消费 CLI/服务端返回的 canonical workspace，不会从用户 ID 或旧 flag 合成个人空间。文档和定向测试可以证明合同一致，不能代表打包应用已经完成六态验收或线上版本已经更新。
+服务端和 CLI 已经把“个人空间存在、存在但为空、完全不存在”作为不同状态处理；Desktop 侧已同步登录、工作空间、API Key 和空状态合同。Desktop 当前只消费 CLI/服务端返回的 canonical workspace，不会从用户 ID 或旧 flag 合成个人空间。服务端 Chat 附件路径也已保证隐藏 Collection 继承父 Bot 的 namespace，并在历史失配时 fail closed；对应定向测试当前为 45 passed。文档和定向测试可以证明合同一致，不能代表打包应用已经完成六态验收或线上版本已经更新。
+
+服务端最近的权限审计还明确了“内容读取”和“上传管理”是两种权限：组织只读成员可以读取被授权的普通文档内容；暂存文档、站点抓取配置和任务状态仍要求所有者或组织知识库成员。Desktop 只展示服务端返回的结果，不应把订阅读取成功解释成拥有上传管理权限。服务端分支上的该修复已有 27 + 33 个定向测试通过，仍需在主干发布和真实六态环境中验收。
 
 后续 Desktop 工作只保留必要的图形化收口：在真实打包产物中验证 `workspace list/current/use`、历史选择失效、无空间登录、多组织选择、个人空间关闭后的恢复动作，以及内置 CLI 版本。服务端资源审计、个人数据迁移和 Widget 组织授权仍以服务端仓库的执行计划为准，不能在 Desktop 内复制第二套授权逻辑。
 
@@ -57,11 +59,12 @@
 
 1. **服务端入口审计**：逐条审计 Document、知识库导入和导出、Quota、Model、API Key、Bot、Chat、Turn、证据、附件、Tagging、分享、Marketplace、MCP、Computer、历史恢复和初始化路径。记录真实入口、presence/member/resource gate、可能的副作用和现有测试。
 2. **服务端合同测试**：为每个入口补齐六种状态，重点检查错误码、跨组织拒绝、旧选择失效，以及失败前没有额度扣减、幂等收据、后台任务、outbox 或工具调用。测试要从 HTTP/MCP 入口开始，不能只测内部 helper。
-3. **CLI 收口**：完成登录/刷新、空间列表和选择、失效选择清理、未知类型拒绝、组织 API Key、账户级 Key、模型代理、通用 `api` 和 `--all-workspaces` 的真实二进制验收；统一 JSON、JSONL、退出码和部分失败输出。
-4. **Desktop 收口**：在打包应用中验收空列表、唯一组织、多组织、空间失效、个人配额/默认 Agent 不出现、CLI 版本一致和恢复动作；UI 不新增第二套业务客户端。
-5. **Widget 决策**：在个人空间最终退出前，为组织 Agent 定义 Widget 的授权、公开访问和运行时空间边界；如果不继续支持组织 Widget，先完成下线、迁移和已发布实例处置方案。
-6. **个人数据迁移项目**：单独完成数据盘点、导出、备份、迁移、删除、回滚和执行收据，确认旧 `personal:<user_id>` 别名和恢复入口的清理范围。删除前必须有演练、回滚窗口和人工验收。
-7. **分环境发布验收**：先在 staging 取得六态的 `/api/v2/me`、`/api/v2/me/workspaces`、知识库、模型、API Key、MCP、CLI 和 Desktop 收据，再安排生产发布。缺少某种真实账户状态时要明确记录“未覆盖”，不能修改真实用户数据凑矩阵。
+3. **旧 `personal:<user_id>` alias 边界**：服务端原生 HTTP 已限制为 GET/HEAD 历史读取，写入和 MCP 返回 `workspace_stale`；CLI/Desktop 仍要拒绝把 alias 作为新写入目标，并补齐旧连接、后台恢复和 alias 流量收据后，再决定收窄或移除。
+4. **CLI 收口**：完成登录/刷新、空间列表和选择、失效选择清理、未知类型拒绝、组织 API Key、账户级 Key、模型代理、通用 `api` 和 `--all-workspaces` 的真实二进制验收；统一 JSON、JSONL、退出码和部分失败输出。
+5. **Desktop 收口**：在打包应用中验收空列表、唯一组织、多组织、空间失效、个人配额/默认 Agent 不出现、CLI 版本一致和恢复动作；UI 不新增第二套业务客户端。
+6. **Widget 决策**：在个人空间最终退出前，为组织 Agent 定义 Widget 的授权、公开访问和运行时空间边界；如果不继续支持组织 Widget，先完成下线、迁移和已发布实例处置方案。
+7. **个人数据迁移项目**：单独完成数据盘点、导出、备份、迁移、删除、回滚和执行收据，确认旧 `personal:<user_id>` 别名和恢复入口的清理范围。删除前必须有演练、回滚窗口和人工验收。
+8. **分环境发布验收**：先在 staging 取得六态的 `/api/v2/me`、`/api/v2/me/workspaces`、知识库、模型、API Key、MCP、CLI 和 Desktop 收据，再安排生产发布。缺少某种真实账户状态时要明确记录“未覆盖”，不能修改真实用户数据凑矩阵。
 
 ## 完成标准
 

@@ -1,12 +1,20 @@
 # 个人空间可选合同
 
-本文给出 ApeMind Desktop、ApeMind CLI 和 ApeMind 服务端共同遵守的个人空间合同。它回答一个问题：当线上新账户默认没有个人空间、历史账户可能仍有个人空间、未来个人空间可能完全退出时，登录、选空间和数据操作应怎样保持一致。
+本文给出 ApeMind Desktop、ApeMind CLI 和 ApeMind 服务端共同遵守的个人空间合同。它回答一个问题：当线上新账户默认没有个人空间、历史账户可能仍有个人空间、未来个人空间可能完全退出时，登录、选空间和数据操作应怎样保持一致。服务端的入口与副作用顺序以 [aperag-enterprise 的个人空间可选化服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准，本文只定义跨客户端的产品语义和调用边界。
 
 ## 产品基线
 
 线上新账户默认关闭个人空间。过渡期内，历史账户可能有一个仍可用的个人空间、一个空的个人空间、一个或多个组织空间，或者没有任何工作空间。个人空间长期退出后，完全没有个人空间仍是正常账户状态。
 
 个人空间存在、个人空间存在但为空、个人空间不存在是三个不同结果。登录成功只证明身份已经建立，不证明存在数据命名空间；空知识库也不等于没有个人空间。登录、刷新、账户信息和凭据撤销在没有工作空间时仍应可用。
+
+“没有个人空间”不是 Desktop 的降级登录态，而是长期合法的产品状态。未来服务端可能永远只返回组织空间，也可能返回 `items: []`；Renderer 必须照常展示账户和恢复入口，不能等待一个个人项、合成 `personal:<user_id>`，或因为空列表触发个人资源初始化。个人空间一旦从服务端列表消失，旧的本地选择只能被清理并提示重新选择，不能由登录快照、旧 flag 或缓存恢复。
+
+## 长期产品方向
+
+组织空间是长期的数据、权限和配额边界，个人空间只作为历史账户的兼容类型存在。未来服务端完全删除个人空间后，CLI、Desktop 和插件页面仍然可以登录、刷新账户和使用组织能力，只是列表中不再出现 `type=personal`。客户端不能把“没有个人项”当成需要修复的异常，也不能为兼容旧 UI 重新创建隐藏 Key、quota、Bot 或默认模型。
+
+新的功能和页面必须以服务端返回的 workspace 项为入口；任何依赖个人命名空间的历史能力都要在没有 canonical 个人 ID 时明确显示不可用，并返回 `workspace_required`。个人数据迁移、导出、删除和旧 alias 清理属于独立项目，不能随登录、空间刷新、客户端升级或组织 onboarding 自动执行。
 
 ## 统一发现和选择合同
 
@@ -20,13 +28,17 @@
 
 OAuth、API Key 和 MCP 都先建立身份，再由服务端实时校验 workspace、成员关系、资源权限和凭据绑定。没有工作空间、没有明确选择空间或 API Key 没有绑定空间时，workspace-aware 请求必须在限流、额度扣减、写库、幂等收据、后台任务和工具执行之前返回 `workspace_required`。
 
-账户级查询可以继续使用；它们不能被解释成数据空间存在。未绑定组织的旧 API Key 只有在服务端明确返回仍可用的 canonical 个人空间时才可访问个人数据。组织 API Key 固定绑定一个组织，不能用 `--workspace` 或 `--all-workspaces` 扩大范围。服务端不自动创建隐藏 API Key、quota、Bot 或个人资源来填补空列表。
+账户级查询可以继续使用；它们不能被解释成数据空间存在。数据库连接记录当前属于账户级凭据，可以在没有 workspace 时创建和测试，但它不授予任何数据访问权，也不能直接挂到组织知识库；组织数据库知识库需要独立的组织绑定凭据和成员权限合同。未绑定组织的旧 API Key 只有在服务端明确返回仍可用的 canonical 个人空间时才可访问个人数据。组织 API Key 固定绑定一个组织，不能用 `--workspace` 或 `--all-workspaces` 扩大范围。服务端不自动创建隐藏 API Key、quota、Bot 或个人资源来填补空列表。
+
+资源读取和上传管理也必须保持两条边界：普通文档内容读取可以由所有者、组织成员或有效订阅授权；暂存文档、站点抓取配置和抓取任务状态属于上传管理面，只对所有者或组织知识库成员开放。Desktop 和 CLI 应展示服务端的真实权限结果，不把订阅读取能力推断成上传或任务管理能力。
+
+Marketplace 的公开目录可以在没有工作空间时展示；知识库文档、预览、对象、图谱和证据属于内容读取，必须先选择服务端实际返回的工作空间。浏览器会话如果个人空间已经关闭，Desktop 不应继续使用旧个人订阅行；服务端返回 `workspace_required` 后，界面应提示选择或加入组织，并在选择后重新读取。订阅、取消订阅和订阅列表同样要求工作空间，不能用目录展示成功推断内容授权。
 
 个人迁移、导出、删除、回滚、旧 alias 清理以及组织 Widget 授权属于独立项目。登录、刷新、客户端升级和组织 onboarding 不得隐式执行这些动作。
 
 ## CLI 和 Desktop 的职责
 
-`apemind` 是 Agent 使用 ApeMind 的正式接口。`workspace list` 在空列表时成功返回空数组，`workspace current` 返回 `current: null`，数据命令返回机器可识别的 `workspace_required`、`workspace_stale` 或 `invalid_response`。`workspace use` 只能选择当前服务端返回的 active workspace。
+`apemind` 是 Agent 使用 ApeMind 的正式接口。`workspace list` 在空列表时成功返回空数组，`workspace current` 返回 `current: null`，数据命令返回机器可识别的 `workspace_required`、`workspace_stale` 或 `invalid_response`。服务端对迁移 alias 返回的 `workspace_stale` 必须原样保留，CLI 不得把它降级成通用冲突或自动重试旧 alias。`workspace use` 只能选择当前服务端返回的 active workspace。
 
 Desktop 是 CLI 的图形化语法糖。登录、空间发现、空间切换、API Key 连接、错误解释和刷新都调用同一套 CLI 合同；Renderer 不复制授权逻辑、不拼接工作空间 ID，也不把登录快照当作实时权限证明。
 
@@ -47,6 +59,8 @@ Desktop 是 CLI 的图形化语法糖。登录、空间发现、空间切换、A
 
 ## 剩余工作和收口顺序
 
+下面是客户端视角的收口顺序；跨仓库的阶段依赖、发布边界和生产证据以 [服务端个人空间退出执行板](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-28-personal-workspace-exit-plan.md#2026-09-29-执行板) 为准。它把“代码完成、定向测试、主干/镜像发布、线上收据”分开计证，Desktop 不能因为本地 UI 测试通过就把服务端或线上阶段标成完成。
+
 | 顺序 | 工作包 | 收口证据 |
 | --- | --- | --- |
 | 1 | 服务端资源入口审计和副作用顺序 | 从真实 HTTP/MCP 入口证明 presence、成员和资源权限检查先于业务副作用 |
@@ -57,6 +71,8 @@ Desktop 是 CLI 的图形化语法糖。登录、空间发现、空间切换、A
 | 6 | 个人数据迁移和最终删除 | 盘点、备份、演练、回滚窗口和人工授权 |
 
 本合同的“已实现”只表示代码和定向测试具备相应证据；主干合并、镜像发布、部署完成和线上验收必须分别记录。局部绿色测试不能代表所有资源或所有环境已经完成。
+
+当前执行时还要单独跟踪两个容易被误判为“已经支持”的边界：服务端 Widget 目前仍是个人空间专属能力，组织 Widget 的授权和公开运行时尚未定稿；服务端的 `personal:<user_id>` alias 仍是迁移兼容路径。服务端原生 HTTP 只允许 GET/HEAD 历史读取映射，写入和 MCP 返回 `409`、`error_code=workspace_stale`；CLI 和 Desktop 必须在写入前使用 `/api/v2/me/workspaces` 返回的 canonical 组织 ID，不得把 alias 当成普通 workspace。两项都必须在服务端合同、CLI 选择和 Desktop 空状态中保持一致。
 
 ## 不解决什么
 
