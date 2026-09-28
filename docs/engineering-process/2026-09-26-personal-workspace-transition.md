@@ -1,6 +1,6 @@
 # 个人空间可选化与组织工作空间迁移设计
 
-> 本文定义 ApeMind CLI、ApeMind Desktop 和 ApeMind 服务端在个人空间逐步退出期间必须遵守的统一合同。它补充并收敛 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md)、[登录与工作空间设计](2026-09-12-apemind-desktop-login-v2.md) 和 [CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)。服务端实现和 `/api/v2` 合同以 [aperag-enterprise 的个人空间服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；跨资源执行顺序见 [个人空间退出基线与执行计划](2026-09-28-personal-workspace-exit-plan.md)。
+> 本文定义 ApeMind CLI、ApeMind Desktop 和 ApeMind 服务端在个人空间逐步退出期间必须遵守的统一合同。它补充并收敛 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md)、[登录与工作空间设计](2026-09-12-apemind-desktop-login-v2.md) 和 [CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)。当前可选空间、空列表、权限前置和剩余工作以 [个人空间可选合同](2026-09-29-personal-workspace-optional-contract.md) 为准。服务端实现和 `/api/v2` 合同以 [aperag-enterprise 的个人空间服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；跨资源执行顺序见 [个人空间退出基线与执行计划](2026-09-28-personal-workspace-exit-plan.md)。
 
 ## 现状
 
@@ -97,7 +97,7 @@ Desktop 继续作为 CLI 的图形化语法糖：工作空间发现、选择、A
 
 ## 当前进展和交付边界
 
-截至 2026-09-28，合同已同步到登录、CLI-first、命令范围、gh 能力设计以及服务端接入文档。服务端实现与 CLI 收口由 [aperag-enterprise Issue #5893](https://github.com/apecloud/aperag-enterprise/issues/5893) 跟踪；具体代码以服务端主干、关联 PR 和合同测试为准，不能把某一个资源的 PR 当作整个个人空间项目已经完成。
+截至 2026-09-29，个人空间可选、空列表和 `workspace_required` 合同已经同步到登录、CLI-first、命令范围、gh 能力设计以及服务端接入文档。代码、定向测试、主干合并、发布和线上验收仍分别计证；任何单个资源的实现都不能代表整个个人空间项目已经完成。
 
 候选代码覆盖 presence、认证投影、默认初始化、CLI 空选择，以及知识库、Bot/Chat、标签、MCP、Marketplace 和 Computer 等入口。Computer 的状态、打开和停止请求会把 OAuth/API Key 绑定的组织空间传给服务层；个人空间不存在时在实例查询或创建前返回 `workspace_required`，请求中的冲突空间 selector 在调用服务前拒绝。检索限流顺序、集合写权限和导出创建、状态读取、下载边界已经有局部合同测试；六种账户状态下的资源和线上收据仍需继续收口。候选分支有代码或局部测试通过，不代表主干、发布版本和线上环境已具备该行为。本文不维护逐次提交的完成流水账；实际测试、发布和验收收据放在 Issue / PR。
 
