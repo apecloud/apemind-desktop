@@ -6,6 +6,7 @@
 - 异步能力统一遵循服务端资源合同：当前系统没有统一的 `task` 产品对象，CLI 不创建跨资源任务命令、状态表或输出字段；等待和取消使用 `document`、`turn`、`import`、`export` 等真实资源。
 - [登录与工作空间设计](engineering-process/2026-09-12-apemind-desktop-login-v2.md)：产品体验、UI、PKCE、设备码、API Key、服务端接口、权限与验收标准。
 - [个人空间可选化与组织工作空间迁移设计](engineering-process/2026-09-26-personal-workspace-transition.md)：个人空间逐步退出期间的空工作空间、默认选择、OAuth/API Key 边界、Desktop 行为和跨仓库实施计划。
+- [个人空间可选合同](engineering-process/2026-09-29-personal-workspace-optional-contract.md)：Desktop、CLI 与服务端共同遵守的可选个人空间、空列表、权限前置和剩余工作合同。
 - [个人空间退出基线与执行计划](engineering-process/2026-09-28-personal-workspace-exit-plan.md)：个人空间默认关闭、最终不存在时的统一产品基线、六种账户状态和服务端、CLI、Desktop、Widget、迁移及发布剩余工作。
 - 服务端对应的 `/api/v2` presence、权限前置检查和迁移退出合同见 [aperag-enterprise 的个人空间服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md)。
 - 个人空间当前已是生产中的可选遗留能力：线上新账户默认关闭，长期可以完全移除；CLI 与 Desktop 只消费服务端返回的 workspace ID 和 `type`，不从 ID 前缀合成个人空间。

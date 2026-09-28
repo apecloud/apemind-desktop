@@ -1,6 +1,6 @@
 # 个人空间退出基线与执行计划
 
-本文记录 2026-09-28 的产品基线和跨仓库执行顺序。服务端接口合同以 [aperag-enterprise 的个人空间可选化服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；Desktop、CLI 和服务端的用户体验与调用边界见 [个人空间可选化与组织工作空间迁移设计](2026-09-26-personal-workspace-transition.md)。本文把“当前兼容”和“最终退出”拆成可验证的工作包，不能把局部代码或测试写成已经发布。
+本文记录 2026-09-29 的产品基线和跨仓库执行顺序。服务端接口合同以 [aperag-enterprise 的个人空间可选化服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；统一的可选空间、空列表、权限前置和剩余工作以 [个人空间可选合同](2026-09-29-personal-workspace-optional-contract.md) 为准。本文把“当前兼容”和“最终退出”拆成可验证的工作包，不能把局部代码或测试写成已经发布。
 
 ## 产品基线
 
