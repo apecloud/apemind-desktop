@@ -34,7 +34,7 @@
 
 ## 当前执行状态
 
-服务端和 CLI 已经把“个人空间存在、存在但为空、完全不存在”作为不同状态处理；Desktop 侧已同步登录、工作空间、API Key 和空状态合同。Desktop 当前只消费 CLI/服务端返回的 canonical workspace，不会从用户 ID 或旧 flag 合成个人空间。文档和定向测试可以证明合同一致，不能代表打包应用已经完成六态验收或线上版本已经更新。
+服务端和 CLI 已经把“个人空间存在、存在但为空、完全不存在”作为不同状态处理；Desktop 侧已同步登录、工作空间、API Key 和空状态合同。Desktop 当前只消费 CLI/服务端返回的 canonical workspace，不会从用户 ID 或旧 flag 合成个人空间。服务端 Chat 附件路径也已保证隐藏 Collection 继承父 Bot 的 namespace，并在历史失配时 fail closed。文档和定向测试可以证明合同一致，不能代表打包应用已经完成六态验收或线上版本已经更新。
 
 后续 Desktop 工作只保留必要的图形化收口：在真实打包产物中验证 `workspace list/current/use`、历史选择失效、无空间登录、多组织选择、个人空间关闭后的恢复动作，以及内置 CLI 版本。服务端资源审计、个人数据迁移和 Widget 组织授权仍以服务端仓库的执行计划为准，不能在 Desktop 内复制第二套授权逻辑。
 
