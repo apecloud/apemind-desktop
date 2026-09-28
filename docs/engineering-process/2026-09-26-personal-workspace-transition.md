@@ -1,6 +1,6 @@
 # 个人空间可选化与组织工作空间迁移设计
 
-> 本文定义 ApeMind CLI、ApeMind Desktop 和 ApeMind 服务端在个人空间逐步退出期间必须遵守的统一合同。它补充并收敛 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md)、[登录与工作空间设计](2026-09-12-apemind-desktop-login-v2.md) 和 [CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)。服务端实现和 `/api/v2` 合同以 [aperag-enterprise 的个人空间服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准。
+> 本文定义 ApeMind CLI、ApeMind Desktop 和 ApeMind 服务端在个人空间逐步退出期间必须遵守的统一合同。它补充并收敛 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md)、[登录与工作空间设计](2026-09-12-apemind-desktop-login-v2.md) 和 [CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)。服务端实现和 `/api/v2` 合同以 [aperag-enterprise 的个人空间服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；跨资源执行顺序见 [个人空间退出基线与执行计划](2026-09-28-personal-workspace-exit-plan.md)。
 
 ## 现状
 
