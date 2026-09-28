@@ -60,7 +60,7 @@ Desktop 是 CLI 的图形化语法糖。登录、空间发现、空间切换、A
 
 本合同的“已实现”只表示代码和定向测试具备相应证据；主干合并、镜像发布、部署完成和线上验收必须分别记录。局部绿色测试不能代表所有资源或所有环境已经完成。
 
-当前执行时还要单独跟踪两个容易被误判为“已经支持”的边界：服务端 Widget 目前仍是个人空间专属能力，组织 Widget 的授权和公开运行时尚未定稿；服务端的 `personal:<user_id>` alias 仍是迁移兼容路径，不能在最终退出前被当成普通 workspace 发现或新写入目标。两项都必须在服务端合同、CLI 选择和 Desktop 空状态中保持一致。
+当前执行时还要单独跟踪两个容易被误判为“已经支持”的边界：服务端 Widget 目前仍是个人空间专属能力，组织 Widget 的授权和公开运行时尚未定稿；服务端的 `personal:<user_id>` alias 仍是迁移兼容路径。服务端原生 HTTP 只允许 GET/HEAD 历史读取映射，写入和 MCP 返回 `409`、`error_code=workspace_stale`；CLI 和 Desktop 必须在写入前使用 `/api/v2/me/workspaces` 返回的 canonical 组织 ID，不得把 alias 当成普通 workspace。两项都必须在服务端合同、CLI 选择和 Desktop 空状态中保持一致。
 
 ## 不解决什么
 

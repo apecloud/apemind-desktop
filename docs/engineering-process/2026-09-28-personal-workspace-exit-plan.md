@@ -57,7 +57,7 @@
 
 1. **服务端入口审计**：逐条审计 Document、知识库导入和导出、Quota、Model、API Key、Bot、Chat、Turn、证据、附件、Tagging、分享、Marketplace、MCP、Computer、历史恢复和初始化路径。记录真实入口、presence/member/resource gate、可能的副作用和现有测试。
 2. **服务端合同测试**：为每个入口补齐六种状态，重点检查错误码、跨组织拒绝、旧选择失效，以及失败前没有额度扣减、幂等收据、后台任务、outbox 或工具调用。测试要从 HTTP/MCP 入口开始，不能只测内部 helper。
-3. **旧 `personal:<user_id>` alias 边界**：当前仍是迁移兼容路径，不能把它当成普通空间发现或新写入目标；先明确历史读取/幂等匹配范围、最低客户端版本和服务端 alias 流量收据，再决定收窄或移除。
+3. **旧 `personal:<user_id>` alias 边界**：服务端原生 HTTP 已限制为 GET/HEAD 历史读取，写入和 MCP 返回 `workspace_stale`；CLI/Desktop 仍要拒绝把 alias 作为新写入目标，并补齐旧连接、后台恢复和 alias 流量收据后，再决定收窄或移除。
 4. **CLI 收口**：完成登录/刷新、空间列表和选择、失效选择清理、未知类型拒绝、组织 API Key、账户级 Key、模型代理、通用 `api` 和 `--all-workspaces` 的真实二进制验收；统一 JSON、JSONL、退出码和部分失败输出。
 5. **Desktop 收口**：在打包应用中验收空列表、唯一组织、多组织、空间失效、个人配额/默认 Agent 不出现、CLI 版本一致和恢复动作；UI 不新增第二套业务客户端。
 6. **Widget 决策**：在个人空间最终退出前，为组织 Agent 定义 Widget 的授权、公开访问和运行时空间边界；如果不继续支持组织 Widget，先完成下线、迁移和已发布实例处置方案。
