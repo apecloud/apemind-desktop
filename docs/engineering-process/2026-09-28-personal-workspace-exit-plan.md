@@ -1,6 +1,6 @@
 # 个人空间退出基线与执行计划
 
-本文记录 2026-09-28 的产品基线和跨仓库执行顺序。服务端接口合同以 [aperag-enterprise 的个人空间可选化服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；Desktop、CLI 和服务端的用户体验与调用边界见 [个人空间可选化与组织工作空间迁移设计](2026-09-26-personal-workspace-transition.md)。本文把“当前兼容”和“最终退出”拆成可验证的工作包，不能把局部代码或测试写成已经发布。
+本文记录 2026-09-29 的产品基线和跨仓库执行顺序。线上新账户默认关闭个人空间已经是当前生产事实；这不等于历史个人数据已经删除，也不等于最终退出项目已经完成。服务端接口合同以 [aperag-enterprise 的个人空间可选化服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；Desktop、CLI 和服务端的用户体验与调用边界见 [个人空间可选化与组织工作空间迁移设计](2026-09-26-personal-workspace-transition.md)。本文把“当前兼容”和“最终退出”拆成可验证的工作包，不能把局部代码或测试写成已经发布。
 
 ## 产品基线
 
@@ -34,7 +34,7 @@
 
 ## 当前执行状态
 
-服务端和 CLI 已经把“个人空间存在、存在但为空、完全不存在”作为不同状态处理；Desktop 侧已同步登录、工作空间、API Key 和空状态合同。Desktop 当前只消费 CLI/服务端返回的 canonical workspace，不会从用户 ID 或旧 flag 合成个人空间。服务端 Chat 附件路径也已保证隐藏 Collection 继承父 Bot 的 namespace，并在历史失配时 fail closed。文档和定向测试可以证明合同一致，不能代表打包应用已经完成六态验收或线上版本已经更新。
+服务端和 CLI 已经把“个人空间存在、存在但为空、完全不存在”作为不同状态处理；Desktop 侧已同步登录、工作空间、API Key 和空状态合同。Desktop 当前只消费 CLI/服务端返回的 canonical workspace，不会从用户 ID 或旧 flag 合成个人空间。服务端 Chat 附件路径也已保证隐藏 Collection 继承父 Bot 的 namespace，并在历史失配时 fail closed；对应定向测试当前为 45 passed。文档和定向测试可以证明合同一致，不能代表打包应用已经完成六态验收或线上版本已经更新。
 
 后续 Desktop 工作只保留必要的图形化收口：在真实打包产物中验证 `workspace list/current/use`、历史选择失效、无空间登录、多组织选择、个人空间关闭后的恢复动作，以及内置 CLI 版本。服务端资源审计、个人数据迁移和 Widget 组织授权仍以服务端仓库的执行计划为准，不能在 Desktop 内复制第二套授权逻辑。
 
