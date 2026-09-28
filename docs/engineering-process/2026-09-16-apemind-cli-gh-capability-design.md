@@ -2,7 +2,7 @@
 
 本文回答 ApeMind CLI 如何成为类似 `gh` 的统一客户端：当前使用体验有哪些差距，ApeMind 服务端有哪些能力尚未暴露，以及命令、API、MCP、Desktop 和 Skill 应如何分工。
 
-本文延续 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md) 的单一客户端、凭据和工作空间边界，并扩展通用 API、MCP、业务命令和能力发现方案。普通用户命令、organization/workspace/admin 语义和本轮服务端审计以 [ApeMind CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md) 为准；个人空间可能不存在，空工作空间也是合法状态，长期数据边界以组织空间为主，具体过渡合同见 [个人空间可选化与组织工作空间迁移设计](2026-09-26-personal-workspace-transition.md)，跨资源收口顺序见 [个人空间退出基线与执行计划](2026-09-28-personal-workspace-exit-plan.md)。能力差距分析保留 2026-09-16 的调查快照，不作为今天的完成清单；建议命令和事件示例属于目标设计，不代表已实现。具体参数和输出合同需要在实现对应能力时定稿。ApeMind 当前公开的是工作空间、知识库、文档、Chat、Turn、导入和导出等领域资源，没有统一的 Task 产品对象；CLI 只映射这些真实资源和服务端事件，不把一次命令执行包装成新的 `task` 资源。
+本文延续 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md) 的单一客户端、凭据和工作空间边界，并扩展通用 API、MCP、业务命令和能力发现方案。普通用户命令、organization/workspace/admin 语义和本轮服务端审计以 [ApeMind CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md) 为准；个人空间可能不存在，空工作空间也是合法状态，长期数据边界以组织空间为主，统一合同见 [个人空间可选合同](2026-09-29-personal-workspace-optional-contract.md)，跨资源收口顺序见 [个人空间退出基线与执行计划](2026-09-28-personal-workspace-exit-plan.md)。能力差距分析保留 2026-09-16 的调查快照，不作为今天的完成清单；建议命令和事件示例属于目标设计，不代表已实现。具体参数和输出合同需要在实现对应能力时定稿。ApeMind 当前公开的是工作空间、知识库、文档、Chat、Turn、导入和导出等领域资源，没有统一的 Task 产品对象；CLI 只映射这些真实资源和服务端事件，不把一次命令执行包装成新的 `task` 资源。
 
 当前系统没有统一的 Task 产品对象，因此本文所有“等待”“观看”“取消”都指向具体的服务端资源。CLI 的公共命令、JSON 字段、事件类型和本地状态不能使用一个跨资源的 `task` 名称来代替这些资源；需要统一的地方统一的是传输、错误、分页和输出机制，不是业务对象。
 
@@ -25,7 +25,7 @@ apemind document list --knowledge-base ID
 apemind document content DOCUMENT_ID --knowledge-base ID
 ```
 
-本轮实测中，登录状态正常，当前账户可看到 6 个工作空间，当前空间知识库列表返回 5 个结果。这个结果证明本轮账户下的认证、工作空间发现和基础读取链路可用，不代表已完成所有跨平台、写入和故障恢复场景的验收。
+本轮历史实测中，登录状态正常，测试账户曾看到 6 个工作空间，当前空间知识库列表返回 5 个结果。这只是当时账户的验收收据，不是 CLI 的产品假设，也不代表每个账户必须有个人空间或至少有一个空间。线上新账户默认关闭个人空间，个人数据迁移后 `/api/v2/me/workspaces` 也可能返回 `items: []`；此时 `workspace list` 仍成功，数据命令在副作用前返回 `workspace_required`。该历史结果证明的是当时账户下的认证、工作空间发现和基础读取链路可用，不代表已完成所有跨平台、写入和故障恢复场景的验收。
 
 代码调查依据为 `aperag-enterprise` 中的 CLI 命令入口 `tools/apemind-cli/internal/nativecli/root.go`、CLI README、服务端 OpenAPI 和 MCP 注册表。调查快照中的 OpenAPI 包含 304 个路径，其中 296 个为 `/api/v2` 路径，共有 384 个 HTTP 操作；MCP 注册表列出 17 个内置工具。接口存在不等于当前 CLI OAuth 身份已经能够调用，后续接入必须同时验证认证、scope、空间上下文和部署状态。
 
