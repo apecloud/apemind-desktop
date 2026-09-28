@@ -25,7 +25,7 @@ apemind document list --knowledge-base ID
 apemind document content DOCUMENT_ID --knowledge-base ID
 ```
 
-本轮实测中，登录状态正常，当前账户可看到 6 个工作空间，当前空间知识库列表返回 5 个结果。这个结果证明本轮账户下的认证、工作空间发现和基础读取链路可用，不代表已完成所有跨平台、写入和故障恢复场景的验收。
+本轮历史实测中，登录状态正常，测试账户曾看到 6 个工作空间，当前空间知识库列表返回 5 个结果。这只是当时账户的验收收据，不是 CLI 的产品假设，也不代表每个账户必须有个人空间或至少有一个空间。线上新账户默认关闭个人空间，个人数据迁移后 `/api/v2/me/workspaces` 也可能返回 `items: []`；此时 `workspace list` 仍成功，数据命令在副作用前返回 `workspace_required`。该历史结果证明的是当时账户下的认证、工作空间发现和基础读取链路可用，不代表已完成所有跨平台、写入和故障恢复场景的验收。
 
 代码调查依据为 `aperag-enterprise` 中的 CLI 命令入口 `tools/apemind-cli/internal/nativecli/root.go`、CLI README、服务端 OpenAPI 和 MCP 注册表。调查快照中的 OpenAPI 包含 304 个路径，其中 296 个为 `/api/v2` 路径，共有 384 个 HTTP 操作；MCP 注册表列出 17 个内置工具。接口存在不等于当前 CLI OAuth 身份已经能够调用，后续接入必须同时验证认证、scope、空间上下文和部署状态。
 
