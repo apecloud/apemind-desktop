@@ -9,7 +9,7 @@
 - [个人空间可选合同](engineering-process/2026-09-29-personal-workspace-optional-contract.md)：Desktop、CLI 与服务端共同遵守的可选个人空间、空列表、权限前置和剩余工作合同。
 - [个人空间退出基线与执行计划](engineering-process/2026-09-28-personal-workspace-exit-plan.md)：个人空间默认关闭、最终不存在时的统一产品基线、六种账户状态和服务端、CLI、Desktop、Widget、迁移及发布剩余工作。
 - 服务端对应的 `/api/v2` presence、权限前置检查和迁移退出合同见 [aperag-enterprise 的个人空间服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md)。
-- 个人空间当前已是生产中的可选遗留能力：线上新账户默认关闭，长期可以完全移除；CLI 与 Desktop 只消费服务端返回的 workspace ID 和 `type`，不从 ID 前缀合成个人空间。
+- 个人空间当前已是生产中的可选遗留能力：线上新账户默认关闭，长期可以完全移除；组织空间是长期的数据、权限和配额边界。CLI 与 Desktop 只消费服务端返回的 workspace ID 和 `type`，不从 ID 前缀合成个人空间。
 - 空工作空间是正常登录结果，不是异常登录态：`items: []` 时仍可查看账户和刷新状态，所有需要命名空间的命令由 CLI/服务端返回 `workspace_required`，Desktop 只呈现恢复动作。个人数据迁移、导出、删除和旧 alias 清理不随客户端发布隐式执行。
 - 工作空间响应必须包含明确的 `items` 数组；缺少字段、`null` 或其他类型属于服务端协议错误，客户端显示同步失败并保留原选择，不能把坏响应误判为空空间。
 - [API Key 连接说明](engineering-process/2026-09-11-apemind-desktop-login.md)：高级连接实现与历史验证记录。
