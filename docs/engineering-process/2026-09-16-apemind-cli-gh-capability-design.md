@@ -244,7 +244,7 @@ apemind knowledge list
 这是 ApeMind 和 GitHub 的重要区别之一：
 
 - GitHub 通常以 repository、organization 为主要资源上下文；
-- ApeMind 必须把个人空间和组织空间作为一等边界；
+- ApeMind 必须把组织空间作为长期一等边界，并兼容仍由服务端返回的历史个人空间；个人项可以不存在，不能被客户端合成；
 - Agent 不能因为某个空间访问失败，就自动切换到另一个空间；
 - 不能为了“找到结果”偷偷遍历所有组织。
 
@@ -598,7 +598,7 @@ usage
 - `agent` 为正式名称；
 - `bot` 作为兼容别名；
 - `search` 作为 `knowledge search` 的便利入口；
-- `workspace` 统一表示个人空间和组织空间；
+- `workspace` 统一表示服务端返回的个人或组织空间；个人空间是可选的历史状态，空列表不能被补成个人空间；
 - `org` 作为组织治理入口。
 
 ### 第二层：通用 REST API
