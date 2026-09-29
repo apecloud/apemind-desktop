@@ -106,7 +106,7 @@ Electron 二进制（`electron@44.0.0`）**首次调用时按需下载**，不�
 所以那三个签名/公证硬门槛（`resolveDesktopAppId` / `resolveMacOSSigningEnvironment` /
 `resolveMacOSNotarizationEnvironment`）根本不参与。实测印证：全程零凭据提示。
 
-## 出可安装产物是另一条路（本指南不覆盖）
+## 本机测试包与正式安装包
 
 > **`.app` 机位**：已构建的未签名 `.app` **只存在于构建它那台开发机上**，在该机可双击运行；
 > **其他机器的 `/Applications` 里没有它**（`/Applications` 各机独立）。
@@ -119,23 +119,34 @@ Electron 二进制（`electron@44.0.0`）**首次调用时按需下载**，不�
 - `DSH_DESKTOP_MACOS_TEAM_ID`（10 位）
 - 一套完整公证凭据（App Store Connect API key / Apple ID / keychain profile 三选一）
 
-缺凭据时会有**两道门**依次拦住，且第二道在很后面才触发（会白跑一大段下载构建）：
+当前上游先从 `apps/desktop/.env.macos` 读取并检查配置，再开始准备安装包。
+`DSH_DESKTOP_APP_ID`、更新源、策略源和签名配置以该文件为准；同名 shell 环境变量不会补齐或覆盖它。
+正式包按 `.env.macos.example` 配置签名、公证和发行服务；`--dir` 只选择输出目录，不能跳过签名要求。
 
-1. `electron-builder.config.mjs` 构造 config 时无条件解析凭据 → 抛错；
-   **`--dir` 绕不过去**（`--dir` 只影响 electron-builder 参数，不改 config 构造路径）。
-2. `apps/desktop/scripts/prepare-seed.ts:166` 再次解析签名环境 → 抛错。
+本机功能验收使用 `DSH_DESKTOP_UNSIGNED=1`。在同步后的 `work/dsh-desktop` 中创建以下最小 `.env.macos`；若文件已存在，只编辑必要字段，不覆盖已有签名设置。该文件由上游 Git 忽略，不提交：
 
-本仓 overlay 已提供 `DSH_DESKTOP_UNSIGNED=1`，用于本机功能验收。执行目录为同步后的 `work/dsh-desktop`：
+```dotenv
+DSH_DESKTOP_APP_ID=com.apemind.desktop
+DSH_DESKTOP_AUTO_UPDATE_ENV=test
+DOWNLOAD_TEST_ORIGIN=https://apemind.ai
+DOWNLOAD_TEST_RELEASE_ID=<替换为 openssl rand -hex 16 的输出，同批重试保留>
+DSH_DESKTOP_MANDATORY_UPDATE_TEST_ORIGIN=https://apemind.ai
+DSH_DESKTOP_MANDATORY_UPDATE_CONFIG='{"allowedAuthOrigins":["https://apemind.ai"]}'
+```
+
+先检查配置，再打包；执行目录仍为 `work/dsh-desktop`：
 
 ```bash
-DSH_DESKTOP_UNSIGNED=1 DSH_DESKTOP_APP_ID=com.apemind.desktop \
-DOWNLOAD_TEST_ORIGIN=https://apemind.ai \
+DSH_DESKTOP_UNSIGNED=1 \
+pnpm --filter @deepseek-ai/dsh-desktop run package:mac:arm64:dir --check
+
+DSH_DESKTOP_UNSIGNED=1 \
 ELECTRON_MIRROR=https://registry.npmmirror.com/-/binary/electron/ \
 pnpm --filter @deepseek-ai/dsh-desktop run package:mac:arm64:dir
 ```
 
 该构建没有 Apple Developer 签名与公证；完成本机测试不等于已具备公共发行安装包。
-`DOWNLOAD_TEST_ORIGIN` 是上游打包配置必填的更新源地址；目前该地址尚未提供 Desktop 更新 feed，本机验收仍通过手工启动新构建进行升级。不要改为上游 DeepSeek 的生产更新源。
+这些地址让本机包使用 ApeMind 域名；配置校验和打包成功不证明更新 feed、强制更新策略或其认证已经接通。本机验收通过手工启动新构建进行升级，公共发行前还需独立验收这些服务。不要改为上游 DeepSeek 的生产更新源。
 
 ## CLI 制品与运行目录更新
 
