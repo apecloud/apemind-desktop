@@ -168,13 +168,15 @@ patches:
       - target: apps/desktop/electron-builder.config.mjs
       - target: apps/desktop/electron-builder.config.d.mts
       - target: apps/desktop/tests/package-target.spec.ts
+      - target: apps/desktop/tests/package-target-stages.spec.ts
       - target: apps/desktop/scripts/prepare-dsh.ts
       - target: apps/desktop/scripts/package-target.ts
     upstream_logic_changed: true
     reason: >
       将上游 Windows 免签名构建扩展到 macOS，并保留 ApeMind 安装包名称和图标。
       DSH_DESKTOP_UNSIGNED=1 或 --unsigned 跳过证书签名、公证和正式发布收据，
-      产物放在 unsigned-artifacts，关闭自动更新元数据；正式签名路径保持上游行为。
+      安装包和 --dir 目录模式均使用 unsigned-artifacts 并验证同一目录，关闭自动更新元数据；
+      正式签名路径保持上游行为。
     guardrail: 默认关闭；未签名包仅供内部试用，不视为签名、公证完成的正式分发包。
 
 # ── 12-release-cross-platform.patch：发布脚本跨平台归档 ───────────────

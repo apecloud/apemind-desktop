@@ -112,8 +112,8 @@ index 62f4fcbbb2..34b6b671b5 100644
    if (signPrimaryRuntime) await execute(['run', 'sign:primary-runtime', '--dsh'], electronBuilderEnv)
    if (invocation.prepareOnly) return
 -  if (target.platform === 'darwin' && !invocation.directory) {
-+  if (target.platform === 'darwin' && !invocation.directory && invocation.unsigned) {
-+    await execute(desktopElectronBuilderArguments(target, false), electronBuilderEnv)
++  if (target.platform === 'darwin' && invocation.unsigned) {
++    await execute(desktopElectronBuilderArguments(target, invocation.directory), electronBuilderEnv)
 +    await execute(['exec', 'tsx', 'scripts/smoke-packaged-runtime.ts', '--unsigned'], targetEnv)
 +  } else if (target.platform === 'darwin' && !invocation.directory) {
      await execute([
@@ -186,3 +186,33 @@ index c802f668d2..33eeeadd58 100644
      expect(() => parseDesktopPackageInvocation(['--unsigned', '--prepare-only'], 'win32', 'x64'))
        .toThrow(/cannot use --prepare-only/u)
    })
+diff --git a/apps/desktop/tests/package-target-stages.spec.ts b/apps/desktop/tests/package-target-stages.spec.ts
+index 41e1ee8d4e..275ed1efb4 100644
+--- a/apps/desktop/tests/package-target-stages.spec.ts
++++ b/apps/desktop/tests/package-target-stages.spec.ts
+@@ -11,6 +11,7 @@ vi.mock('../scripts/macos-notarization-proxy.ts', () => ({
+ }))
+ vi.mock('../scripts/notarize-macos.mjs', () => ({ notarizeMacOS: vi.fn(async () => {}) }))
+ vi.mock('../scripts/package-macos.ts', () => ({ packageMacOSArtifacts: vi.fn(async () => {}) }))
++vi.mock('../scripts/apemind-cli-runtime.mjs', () => ({ prepareApeMindCli: vi.fn(async () => 'fixture-cli') }))
+
+ vi.mock('../scripts/windows-signing-stage.mjs', () => ({
+   withWindowsSigningStage: vi.fn(async (_options: object, operation: () => Promise<void>) => operation()),
+@@ -130,6 +131,17 @@ it('checks macOS directory packages without writing a release record', async ()
+   expect(writeFileSync).not.toHaveBeenCalled()
+ })
+
++it.each([false, true])('checks the unsigned macOS output without notarizing (directory=%s)', async (directory) => {
++  const { run, stages } = supervisor()
++  await packageTarget(parseDesktopPackageInvocation(['mac-arm64', '--unsigned', ...(directory ? ['--dir'] : [])], 'darwin', 'arm64'), environment, run)
++  const builder = stages.find(stage => stage.startsWith('exec electron-builder '))
++  expect(builder?.includes('--dir')).toBe(directory)
++  expect(stages.at(-1)).toBe('exec tsx scripts/smoke-packaged-runtime.ts --unsigned')
++  expect(withMacOSNotarizationProxy).not.toHaveBeenCalled()
++  expect(packageMacOSArtifacts).not.toHaveBeenCalled()
++  expect(writeFileSync).not.toHaveBeenCalled()
++})
++
+ it.each([undefined, '2'])('passes macOS pack concurrency %s only to workspace packing and download routing only to download stages', async (concurrency) => {
+   const { run } = supervisor()
+   await packageTarget(parseDesktopPackageInvocation(['mac-arm64', '--prepare-only'], 'darwin', 'arm64'), {
