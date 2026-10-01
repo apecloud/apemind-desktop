@@ -67,12 +67,12 @@ Desktop 是 CLI 的图形化语法糖。登录、空间发现、空间切换、A
 | 2 | CLI 空空间、失效选择、组织 Key、模型、通用 `api` 和 `--all-workspaces` | 编译后的二进制、结构化输出、稳定错误码和部分失败测试 |
 | 3 | Desktop 打包应用验收 | 空列表、多组织、失效选择、恢复动作和内置 CLI 版本收据 |
 | 4 | staging 和生产发布验收 | 发布版本、部署收据及六态线上验证；没有真实状态时明确标记未覆盖 |
-| 5 | Widget 组织授权或下线 | 独立授权合同，或迁移、下线和已发布实例处置收据 |
+| 5 | Widget 组织运行时验收或下线 | 跨成员 HTTP/浏览器验收和已发布实例收据，或迁移、下线和实例处置收据 |
 | 6 | 个人数据迁移和最终删除 | 盘点、备份、演练、回滚窗口和人工授权 |
 
 本合同的“已实现”只表示代码和定向测试具备相应证据；主干合并、镜像发布、部署完成和线上验收必须分别记录。局部绿色测试不能代表所有资源或所有环境已经完成。
 
-当前执行时还要单独跟踪两个容易被误判为“已经支持”的边界：服务端 Widget 目前仍是个人空间专属能力，组织 Widget 的授权和公开运行时尚未定稿；服务端的 `personal:<user_id>` alias 仍是迁移兼容路径。服务端原生 HTTP 只允许 GET/HEAD 历史读取映射，写入和 MCP 返回 `409`、`error_code=workspace_stale`；CLI 和 Desktop 必须在写入前使用 `/api/v2/me/workspaces` 返回的 canonical 组织 ID，不得把 alias 当成普通 workspace。两项都必须在服务端合同、CLI 选择和 Desktop 空状态中保持一致。
+当前执行时还要单独跟踪两个容易被误判为“已经完成”的边界：服务端已经支持组织 Widget，但跨成员 HTTP/浏览器运行时和已发布实例仍需取得独立验收收据；服务端的 `personal:<user_id>` alias 仍是迁移兼容路径。服务端原生 HTTP 只允许 GET/HEAD 历史读取映射，写入和 MCP 返回 `409`、`error_code=workspace_stale`；CLI 和 Desktop 必须在写入前使用 `/api/v2/me/workspaces` 返回的 canonical 组织 ID，不得把 alias 当成普通 workspace。两项都必须在服务端合同、CLI 选择和 Desktop 空状态中保持一致。
 
 ## 不解决什么
 
