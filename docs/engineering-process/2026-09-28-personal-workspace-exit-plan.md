@@ -1,6 +1,6 @@
 # 个人空间退出基线与执行计划
 
-本文记录 2026-10-01 的产品基线和跨仓库执行顺序。线上新账户默认关闭个人空间已经是当前生产事实；这不等于历史个人数据已经删除，也不等于最终退出项目已经完成。服务端接口合同以 [aperag-enterprise 的个人空间可选化服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；统一的可选空间、空列表、权限前置和剩余工作以 [个人空间可选合同](2026-09-29-personal-workspace-optional-contract.md) 为准。本文把“当前兼容”和“最终退出”拆成可验证的工作包，不能把局部代码或测试写成已经发布。
+本文记录 2026-10-02 的产品基线和跨仓库执行顺序。线上新账户默认关闭个人空间已经是当前生产事实；这不等于历史个人数据已经删除，也不等于最终退出项目已经完成。服务端接口合同以 [aperag-enterprise 的个人空间可选化服务端合同](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-26-personal-workspace-contract.md) 为准；统一的可选空间、空列表、权限前置和剩余工作以 [个人空间可选合同](2026-09-29-personal-workspace-optional-contract.md) 为准。本文把“当前兼容”和“最终退出”拆成可验证的工作包，不能把局部代码或测试写成已经发布。
 
 ## 产品基线
 
@@ -34,7 +34,7 @@
 
 ## 当前执行状态
 
-服务端 v2.6.126、CLI v0.7.36 和 Desktop v0.1.7-rc.2+cli.0736 已发布。生产只读收据返回 48 个组织 workspace、0 个个人 workspace，当前组织 workspace 的知识库读取成功；Desktop 仍只消费 CLI/服务端返回的 canonical workspace，不会从用户 ID 或旧 flag 合成个人空间。文档和定向测试可以证明合同一致，不能代表打包应用已经完成六态验收或所有资源已经取得线上收据。
+服务端 v2.6.127、CLI v0.7.39 和 Desktop v0.1.7-rc.2+cli.0739 已发布；新加坡生产部署收据见 [v2.6.127 release receipt](https://github.com/apecloud/aperag-enterprise-deploy/blob/main/environments/singapore/releases/v2.6.127.json)。生产只读收据返回 48 个组织 workspace、0 个个人 workspace，当前组织 workspace 的知识库读取成功；Desktop 仍只消费 CLI/服务端返回的 canonical workspace，不会从用户 ID 或旧 flag 合成个人空间。文档和定向测试可以证明合同一致，不能代表打包应用已经完成六态验收或所有资源已经取得线上收据。
 
 服务端最近的权限审计还明确了“内容读取”和“上传管理”是两种权限：组织只读成员可以读取被授权的普通文档内容；暂存文档、站点抓取配置和任务状态仍要求所有者或组织知识库成员。Desktop 只展示服务端返回的结果，不应把订阅读取成功解释成拥有上传管理权限。该修复已进入服务端发布；仍需在真实六态环境中验收。
 
