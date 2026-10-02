@@ -103,7 +103,7 @@ Desktop 继续作为 CLI 的图形化语法糖：工作空间发现、选择、A
 
 ## 当前进展和交付边界
 
-截至 2026-10-01，线上新账户默认关闭个人空间已经是生产基线；个人空间可选、空列表和 `workspace_required` 合同已经同步到登录、CLI-first、命令范围、gh 能力设计以及服务端接入文档。服务端按“已有代码/定向测试证据”和“尚未证明的交付证据”维护跨资源状态账本，见 [aperag-enterprise 的个人空间退出基线与执行计划](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-28-personal-workspace-exit-plan.md#当前执行状态按已有代码定向测试证据和尚未证明的交付证据分开记录)。代码、定向测试、主干合并、发布和线上验收仍分别计证，任何单个资源的实现都不能代表整个个人空间项目已经完成。
+截至 2026-10-02，线上新账户默认关闭个人空间已经是生产基线；服务端 `v2.6.127`、CLI `v0.7.39` 和 Desktop `v0.1.7-rc.2+cli.0739` 已有发布记录，新加坡生产部署收据见 [aperag-enterprise-deploy v2.6.127](https://github.com/apecloud/aperag-enterprise-deploy/blob/main/environments/singapore/releases/v2.6.127.json)。个人空间可选、空列表和 `workspace_required` 合同已经同步到登录、CLI-first、命令范围、gh 能力设计以及服务端接入文档。服务端按“已有代码/定向测试证据”和“尚未证明的交付证据”维护跨资源状态账本，见 [aperag-enterprise 的个人空间退出基线与执行计划](https://github.com/apecloud/aperag-enterprise/blob/main/docs/engineering-process/2026-09-28-personal-workspace-exit-plan.md#当前执行状态按已有代码定向测试证据和尚未证明的交付证据分开记录)。代码、定向测试、主干合并、发布和线上验收仍分别计证，任何单个资源的实现都不能代表整个个人空间项目已经完成。
 
 候选代码覆盖 presence、认证投影、默认初始化、CLI 空选择，以及知识库、Bot/Chat、标签、MCP、Marketplace 和 Computer 等入口。Computer 的状态、打开和停止请求会把 OAuth/API Key 绑定的组织空间传给服务层；个人空间不存在时在实例查询或创建前返回 `workspace_required`，请求中的冲突空间 selector 在调用服务前拒绝。Chat 隐藏附件 Collection 现在继承父 Bot 的 `org_id`，附件读取、删除和 promote 会在调用文档服务前重新校验 Collection 与 Bot 的 namespace，历史失配记录按不存在处理。Marketplace 目录仍可作为无空间发现入口，内容读取和订阅操作已补上无空间时的前置拒绝，避免浏览器会话沿用旧个人订阅；这项行为仍需随六态 HTTP 收据在打包应用中验收。检索限流顺序、集合写权限和导出创建、状态读取、下载边界已经有局部合同测试；六种账户状态下的资源和线上收据仍需继续收口。候选分支有代码或局部测试通过，不代表主干、发布版本和线上环境已具备该行为。本文不维护逐次提交的完成流水账；实际测试、发布和验收收据放在 Issue / PR。
 
