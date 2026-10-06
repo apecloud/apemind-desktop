@@ -13,6 +13,12 @@
 # 变更清单（与 docs/branding.md 一致，改这里必须同步改那边）：
 
 patches:
+  - file: patches/22-branded-cli-launcher.patch
+    targets:
+      - target: apps/desktop/cli/dsh
+      - target: apps/desktop/cli/dsh.cmd
+      - target: apps/desktop/tests/cli-launcher.spec.ts
+    reason: 品牌化后原生应用名称是 ApeMind Desktop；随包 dsh 启动器和回归 fixture 必须使用同一个名称，否则安装包中的 CLI 入口无法启动。
   - file: patches/21-packaged-runtime-test-fixture.patch
     targets:
       - target: apps/desktop/tests/packaged-runtime-verification.spec.ts
