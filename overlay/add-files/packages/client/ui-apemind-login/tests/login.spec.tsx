@@ -249,8 +249,22 @@ it('shows a retained personal workspace in the available workspace list', async 
   const state: AccountState = { ...connected, oauth: personalAccount, oauthConnections: [personalAccount] }
   renderLogin({ state: vi.fn(async () => ({ ok: true as const, value: state })) })
   expect((await screen.findAllByText('Alice space')).length).toBeGreaterThan(0)
-  expect(screen.getByText(en.personalSpace)).toBeTruthy()
+  expect((await screen.findAllByText(en.personalSpace)).length).toBe(2)
   // The selected workspace is shown in both the current-space summary and
   // the available list, so the badge is intentionally rendered twice.
   expect((await screen.findAllByText(en.currentBadge)).length).toBe(2)
+})
+
+it('uses the current organization role in the summary card', async () => {
+  const organizationAccount: OAuthAccountView = {
+    ...account,
+    activeWorkspaceId: 'org:owner',
+    workspaces: [{
+      id: 'org:owner', type: 'organization', name: 'ApeMind Finance', status: 'active', role: 'owner', permissions: [],
+    }],
+  }
+  const state: AccountState = { ...connected, oauth: organizationAccount, oauthConnections: [organizationAccount] }
+  renderLogin({ state: vi.fn(async () => ({ ok: true as const, value: state })) })
+  expect((await screen.findAllByText('owner')).length).toBe(2)
+  expect(screen.queryByText(en.member)).toBeNull()
 })

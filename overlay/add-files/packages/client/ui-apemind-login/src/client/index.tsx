@@ -80,6 +80,10 @@ function WorkspaceRow({ workspace, current, disabled, onSelect, roleLabel, curre
   >{content}</button>
 }
 
+function workspaceRoleLabel(t: LoginSectionProps['t'], workspace: WorkspaceView): string {
+  return workspace.type === 'organization' ? (workspace.role ?? t('member')) : t('personalSpace')
+}
+
 function WaitingPanel({ t, disabled, onCancel, onOpenDevicePage, progress }: {
   t: LoginSectionProps['t']
   disabled: boolean
@@ -160,7 +164,7 @@ function ConnectedPanel({ t, oauth, disabled, onSelectWorkspace, onRefresh, onLo
     <section className="apemind-current-space">
       <h4>{t('currentWorkspace')}</h4>
       {active
-        ? <WorkspaceRow workspace={active} current disabled={disabled} onSelect={() => undefined} roleLabel={t('member')} currentLabel={t('currentBadge')} />
+        ? <WorkspaceRow workspace={active} current disabled={disabled} onSelect={() => undefined} roleLabel={workspaceRoleLabel(t, active)} currentLabel={t('currentBadge')} />
         : <p className="apemind-muted">{t('chooseWorkspace')}</p>}
       <p className="apemind-workspace-hint">{t('workspaceHint')}</p>
       <button type="button" className="apemind-quiet-action" disabled={disabled || !active} onClick={onKnowledge}>{t('viewKnowledge')}</button>
@@ -174,7 +178,7 @@ function ConnectedPanel({ t, oauth, disabled, onSelectWorkspace, onRefresh, onLo
           current={workspace.id === active?.id}
           disabled={disabled}
           onSelect={() => onSelectWorkspace(workspace.id)}
-          roleLabel={workspace.type === 'organization' ? (workspace.role ?? t('member')) : t('personalSpace')}
+          roleLabel={workspaceRoleLabel(t, workspace)}
           currentLabel={t('currentBadge')}
         />)
         : <div className="apemind-empty-workspace" role="status">
