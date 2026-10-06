@@ -1,8 +1,9 @@
 diff --git a/apps/desktop/src/locale.ts b/apps/desktop/src/locale.ts
-index b3f9e53..46f01bc 100644
 --- a/apps/desktop/src/locale.ts
 +++ b/apps/desktop/src/locale.ts
-@@ -4,17 +4,17 @@ export const en = {
+@@ -29,21 +29,21 @@
+   cliCommandOwnershipError: 'The command registration or backup changed. No unrelated command was removed.',
+   cliCommandFailed: 'The command could not be updated. Check that the application is installed and the destination is writable, then retry.',
    application: 'Application',
    fileMenu: 'File',
    closePage: 'Close Page or Window',
@@ -26,7 +27,11 @@ index b3f9e53..46f01bc 100644
    quitActiveTasks: 'Running tasks will be interrupted.',
    quitScheduledTasks: 'Scheduled tasks will not run while the app is closed.',
    quitActiveAndScheduledTasks: 'Running tasks will be interrupted, and scheduled tasks will not run while the app is closed.',
-@@ -29,7 +29,7 @@ export const en = {
+   backgroundNoticeBody: 'Running tasks will continue. You can reopen the window from the system tray.',
+   backgroundNoticeConfirm: 'Confirm',
+@@ -54,24 +54,24 @@
+   redo: 'Redo',
+   cut: 'Cut',
    copy: 'Copy',
    paste: 'Paste',
    selectAll: 'Select All',
@@ -35,7 +40,9 @@ index b3f9e53..46f01bc 100644
    fatalSummary: 'The application could not start or stopped unexpectedly.',
    startupAddressInUse: 'Another DSH instance (such as dsh web or the desktop app) is running. They cannot start at the same time. Quit the other running DSH instance, then restart.',
    diagnosticTruncated: '… Error details shortened.',
-@@ -39,10 +39,10 @@ export const en = {
+   reportWrittenTo: 'Diagnostic report: {path}',
+   startupReinstallAdvice: 'If application files are missing or damaged, close the application and reinstall it. Your tasks are stored separately.',
+   exitApplication: 'Exit',
    restartApplication: 'Restart',
    recoveryOperationFailed: 'The recovery operation failed',
    disableThirdPartyPlugins: 'Disable third-party plugins, back up profile patch, and restart',
@@ -49,28 +56,24 @@ index b3f9e53..46f01bc 100644
    welcomeTaglineAfter: '',
    welcomeDescription: 'Build potential. Explore intelligence.',
    welcomeAuthStarting: 'Opening sign in…',
-@@ -85,7 +85,7 @@ export const en = {
-   updateCurrent: 'No updates available. Current version: V{version}',
-   updateChecking: 'Checking for updates…',
-   updateDownload: 'Download update',
--  updateDownloadedTitle: 'DeepSeek Harness v{version} downloaded',
-+  updateDownloadedTitle: 'ApeMind Desktop v{version} downloaded',
-   updateDownloadedDetail: 'The update package has downloaded. Select “Install and Restart” to restart the app and begin installation.',
-   updateDownloadedTitleWindows: 'New version v{version} is ready',
-   updateDownloadedDetailWindows: 'The app will close temporarily during the update and reopen automatically when it is complete.\n\nThe update may take some time. Please wait and do not launch the app again during installation.',
-@@ -103,9 +103,9 @@ export const en = {
+   welcomeAuthWaiting: 'Browser didn’t open automatically?',
+   welcomeAuthWaitingDescription: 'Copy the sign-in link and open it in your browser to sign in.',
+@@ -128,11 +128,11 @@
+   updateStopTasks: 'Stop tasks and update',
+   updateTasksChanged: 'New tasks have started. Confirm again to stop the tasks and update.',
    updateTasksUnavailable: 'Task status is unavailable. Try updating again when the workspace is ready.',
-   updateStopFailed: 'Tasks could not be stopped safely. The update was not installed. Please try again later.',
+   updateStopFailed: 'Could not safely stop the tasks. The update has not been installed. Please try again later.',
    updateTechnicalDetails: 'View technical details',
 -  updateTitle: 'DeepSeek Harness Update',
 +  updateTitle: 'ApeMind Desktop Update',
-   updateAvailable: 'An update is available',
--  updateDetail: 'DeepSeek Harness {version}\n\nDeepSeek Harness will restart to complete the update.',
-+  updateDetail: 'ApeMind Desktop {version}\n\nApeMind Desktop will restart to complete the update.',
+   updateAvailable: 'New version available: {version}',
+   updateDetail: 'Once the download is complete, you can install the update and restart the app.',
    installAndRestart: 'Install and Restart',
    later: 'Later',
    updateFailedTitle: 'Update Failed',
-@@ -148,17 +148,17 @@ export const zh = {
+@@ -200,21 +200,21 @@
+   cliCommandOwnershipError: '命令注册或备份已改变，未移除无关命令。',
+   cliCommandFailed: '无法更新命令。请检查应用是否已安装、目标位置是否可写，然后重试。',
    application: '应用',
    fileMenu: '文件',
    closePage: '关闭页面或窗口',
@@ -94,7 +97,11 @@ index b3f9e53..46f01bc 100644
    quitActiveTasks: '当前正在运行的任务将会中断',
    quitScheduledTasks: '应用关闭期间，定时任务不会运行',
    quitActiveAndScheduledTasks: '当前正在运行的任务将会中断，且应用关闭期间，定时任务不会运行',
-@@ -173,7 +173,7 @@ export const zh = {
+   backgroundNoticeBody: '正在运行的任务不会中断，可在系统托盘中重新打开窗口',
+   backgroundNoticeConfirm: '确认',
+@@ -225,24 +225,24 @@
+   redo: '重做',
+   cut: '剪切',
    copy: '复制',
    paste: '粘贴',
    selectAll: '全选',
@@ -103,7 +110,9 @@ index b3f9e53..46f01bc 100644
    fatalSummary: '应用无法启动或已意外停止。',
    startupAddressInUse: '有其他正在运行的 DSH（如其他 dsh web、桌面端），无法同时启动，请退出其他正在运行的 DSH 后重启。',
    diagnosticTruncated: '… 错误详情已截短。',
-@@ -183,10 +183,10 @@ export const zh = {
+   reportWrittenTo: '诊断报告：{path}',
+   startupReinstallAdvice: '如果应用文件缺失或损坏，请关闭应用并重新安装。任务数据存储在独立位置。',
+   exitApplication: '退出',
    restartApplication: '重启',
    recoveryOperationFailed: '恢复操作失败',
    disableThirdPartyPlugins: '禁用第三方插件、备份 profile patch 并重启',
@@ -117,24 +126,18 @@ index b3f9e53..46f01bc 100644
    welcomeTaglineAfter: '',
    welcomeDescription: '组装无限可能，共探智能上限',
    welcomeAuthStarting: '正在打开登录…',
-@@ -229,7 +229,7 @@ export const zh = {
-   updateCurrent: '当前暂无可用更新。当前版本：V{version}',
-   updateChecking: '正在检查更新…',
-   updateDownload: '下载更新',
--  updateDownloadedTitle: 'DeepSeek Harness v{version} 下载完成',
-+  updateDownloadedTitle: 'ApeMind Desktop v{version} 下载完成',
-   updateDownloadedDetail: '安装包已下载完毕，点击“安装并重启”，即刻重启客户端，开始部署。',
-   updateDownloadedTitleWindows: '新版本 v{version} 已准备就绪',
-   updateDownloadedDetailWindows: '更新期间应用将暂时关闭，完成后会自动打开。\n\n更新可能需要一些时间，请耐心等待，期间请勿重复启动应用。',
-@@ -247,9 +247,9 @@ export const zh = {
+   welcomeAuthWaiting: '没有自动打开浏览器？',
+   welcomeAuthWaitingDescription: '复制登录链接，用浏览器手动打开完成登录',
+@@ -299,11 +299,11 @@
+   updateStopTasks: '停止任务并更新',
+   updateTasksChanged: '有新任务开始运行，请重新确认是否停止任务并更新。',
    updateTasksUnavailable: '无法确认任务状态，请在工作区就绪后重试更新。',
-   updateStopFailed: '未能安全停止任务，更新未安装。请稍后重试。',
+   updateStopFailed: '未能安全停止任务，更新尚未安装，请稍后重试。',
    updateTechnicalDetails: '查看技术详情',
 -  updateTitle: 'DeepSeek Harness 更新',
 +  updateTitle: 'ApeMind Desktop 更新',
-   updateAvailable: '发现可用更新',
--  updateDetail: 'DeepSeek Harness {version}\n\nDeepSeek Harness 将重启以完成更新。',
-+  updateDetail: 'ApeMind Desktop {version}\n\nApeMind Desktop 将重启以完成更新。',
+   updateAvailable: '发现新版本 {version}',
+   updateDetail: '下载完成后，可安装并重启应用。',
    installAndRestart: '安装并重启',
    later: '稍后',
    updateFailedTitle: '更新失败',

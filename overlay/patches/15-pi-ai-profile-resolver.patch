@@ -1,6 +1,9 @@
+diff --git a/packages/llm/llm-pi-ai/src/index.ts b/packages/llm/llm-pi-ai/src/index.ts
 --- a/packages/llm/llm-pi-ai/src/index.ts
 +++ b/packages/llm/llm-pi-ai/src/index.ts
-@@ -75,7 +75,7 @@
+@@ -73,11 +73,11 @@
+ import type { StoredModelDiscoveryProfile } from './discovery.ts'
+ import { registerPiAiFlows } from './login.ts'
 
  export { PiAiAdapter } from './adapter.ts'
  export type { PiAiAdapterOptions } from './adapter.ts'
@@ -9,3 +12,5 @@
  export type {
    Options,
    PiAiCompatProfile,
+   PiAiModality,
+   PiAiModelOverride,

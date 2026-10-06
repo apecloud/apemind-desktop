@@ -1,0 +1,17 @@
+diff --git a/apps/desktop/tests/packaged-runtime-verification.spec.ts b/apps/desktop/tests/packaged-runtime-verification.spec.ts
+index 9e697e9348..add29b9a66 100644
+--- a/apps/desktop/tests/packaged-runtime-verification.spec.ts
++++ b/apps/desktop/tests/packaged-runtime-verification.spec.ts
+@@ -1,5 +1,12 @@
+ import { describe, expect, it, vi } from 'vitest'
+ 
++vi.mock('../scripts/apemind-cli-runtime.mjs', () => ({
++  resolveApeMindCliResources: () => [
++    { from: '/release/apemind.exe', to: 'apemind/bin/apemind.exe' },
++    { from: '/release/lock.json', to: 'apemind/release.json' },
++  ],
++}))
++
+ const { verifyDesktopRuntime } = vi.hoisted(() => ({
+   verifyDesktopRuntime: vi.fn<(root: string, expected: string) => Promise<void>>(async () => undefined),
+ }))

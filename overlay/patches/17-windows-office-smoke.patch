@@ -1,8 +1,9 @@
 diff --git a/apps/desktop/scripts/smoke-runtime.ts b/apps/desktop/scripts/smoke-runtime.ts
-index f15f10a928..19af1a0f3a 100644
 --- a/apps/desktop/scripts/smoke-runtime.ts
 +++ b/apps/desktop/scripts/smoke-runtime.ts
-@@ -24,6 +24,7 @@ export async function smokeDesktopRuntime(
+@@ -22,10 +22,11 @@
+  */
+ export async function smokeDesktopRuntime(
    root: string, node: string, runtime: DesktopRuntimeDescriptor, environment: NodeJS.ProcessEnv, resourcesRuntime: string,
  ): Promise<void> {
    const home = mkdtempSync(join(tmpdir(), 'dsh-desktop-smoke-'))
@@ -10,7 +11,11 @@ index f15f10a928..19af1a0f3a 100644
    const profile = join(home, 'profiles', 'desktop')
    const host = new DesktopHostProcess(node, root, profile, undefined, { ...environment, DSH_HOME: home },
      undefined, join(resourcesRuntime, 'primary-runtime'),
-@@ -36,10 +37,12 @@ export async function smokeDesktopRuntime(
+     { pnpm: join(resourcesRuntime, 'pnpm', 'bin', 'pnpm.cjs'), nodeBin: join(resourcesRuntime, 'bin') })
+   let timer: ReturnType<typeof setTimeout> | undefined
+@@ -34,14 +35,16 @@
+     const pluginName = 'desktop-runtime-smoke-plugin'
+     const plugin = join(profile, 'node_modules', pluginName)
      mkdirSync(plugin, { recursive: true })
      const primary = join(resourcesRuntime, 'primary-runtime')
      const dependencies = workspaceDependencyPaths(primary, await readPrimaryRuntime(primary))
@@ -27,7 +32,11 @@ index f15f10a928..19af1a0f3a 100644
        bytes: readFileSync(join(home, `input.${extension}`)).toString('base64') }))
      const cordis = runtime.sharedPackages.find(entry => entry.name === '@deepseek-ai/cordis')
      if (cordis === undefined) throw new Error('desktop runtime: missing shared Cordis package')
-@@ -111,6 +114,10 @@ export function apply(ctx) {
+     writeFileSync(join(plugin, 'package.json'), JSON.stringify({
+       name: pluginName, version: '1.0.0', type: 'module', exports: './index.js',
+@@ -109,10 +112,14 @@
+     if (response.status !== 200 || !(await response.text()).includes('<html')) {
+       throw new Error('desktop runtime: packaged frontend smoke failed')
      }
      const pluginResponse = await fetch(new URL('/desktop-smoke', ready.url), { headers: { cookie } })
      if (await pluginResponse.text() !== 'plugin route ready') throw new Error('desktop runtime: plugin HTTP route failed')
@@ -38,3 +47,5 @@ index f15f10a928..19af1a0f3a 100644
      for (const { extension } of inputs) {
        const converted = await fetch(new URL(`/desktop-smoke-office/${extension}`, ready.url), {
          headers: { cookie }, signal: AbortSignal.timeout(120_000),
+       })
+       if (!converted.ok) throw new Error(`desktop runtime: ${extension} conversion failed: ${await converted.text()}`)
