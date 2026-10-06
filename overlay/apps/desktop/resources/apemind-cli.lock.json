@@ -12,7 +12,7 @@
     },
     "win32-x64": {
       "url": "https://apemind.ai/api/v2/public/apemind-cli/releases/v0.7.42/apemind-windows-amd64.exe",
-      "sha256": "059464d75192e22110ea2b3de708ea5431b469e2b05dc56906c464dc1f0c4"
+      "sha256": "059464d75192e22110ea2b3de708ea5431b469e2b05dc56986906c464dc1f0c4"
     }
   }
 }
