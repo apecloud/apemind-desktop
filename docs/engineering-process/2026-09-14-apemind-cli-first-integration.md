@@ -1,5 +1,7 @@
 # ApeMind CLI-first 集成设计
 
+> 个人空间的当前定稿以[个人空间与组织工作空间最终合同](2026-10-07-personal-workspace-policy-final.md)为准。本文保留 CLI-first 的身份、凭据和进程边界；任何“个人空间默认存在”的旧示例均不再适用。
+
 本文定义 ApeMind CLI、ApeMind Desktop 和 ApeMind 服务端的统一产品与技术边界，回答一个问题：如何让 DSH Agent 稳定地读写 ApeMind，同时只维护一套面向 Agent 的能力接口。个人空间是过渡期的可选遗留命名空间，不能作为登录、连接或数据命令的默认前提；长期没有个人空间仍是正常账户状态。
 
 后续命令体验、通用 API、MCP 和业务能力扩展见 [ApeMind CLI 对标 gh 的能力分析与产品技术设计](2026-09-16-apemind-cli-gh-capability-design.md)。个人空间的可选化、空工作空间和组织长期迁移以[个人空间可选合同](2026-09-29-personal-workspace-optional-contract.md)为准，跨资源执行顺序见[个人空间退出基线与执行计划](2026-09-28-personal-workspace-exit-plan.md)。本文继续定义统一身份、凭据与进程调用边界；普通用户、平台 admin、workspace/organization 语义和授权矩阵见 [ApeMind CLI 命令语义、权限范围与管理能力设计修订](2026-09-24-apemind-cli-command-scope-and-admin-design.md)，通用 API 的开放范围以相关设计为准。个人空间是可选的遗留命名空间，线上新账户默认关闭；CLI、Desktop 和服务端都必须兼容个人空间存在、为空或不存在，不能把旧 flag 当作存在证明。
