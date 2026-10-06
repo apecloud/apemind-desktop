@@ -142,11 +142,13 @@ export class AuthorizationController extends TypertRemoteService {
     return status.logged_in && status.connection?.kind === 'oauth' ? this.oauthView(status.connection) : null
   }
 
-  private async login(device: boolean, origin: string): Promise<OAuthAccountView> {
+  private async login(device: boolean, origin: string, connectionId?: string): Promise<OAuthAccountView> {
     if (this.loginAbort) throw new RemoteError('gateway/bad-request', '登录已经在进行中。', {})
     const controller = new AbortController(); this.loginAbort = controller
     try {
-      const args = ['auth', 'login', '--server', origin]; if (device) args.push('--device')
+      const args = ['auth', 'login', '--server', origin]
+      if (connectionId) args.push('--connection', connectionId)
+      if (device) args.push('--device')
       this.loginProgress = null
       const connection = await this.run<CliConnection>(args, {
         signal: controller.signal,
@@ -170,8 +172,12 @@ export class AuthorizationController extends TypertRemoteService {
     }
   }
 
-  @Remote async startBrowserLogin(origin: string): Promise<OAuthAccountView> { return this.login(false, origin) }
-  @Remote async startDeviceLogin(origin: string): Promise<OAuthAccountView> { return this.login(true, origin) }
+  @Remote async startBrowserLogin(origin: string, connectionId?: string): Promise<OAuthAccountView> {
+    return this.login(false, origin, connectionId)
+  }
+  @Remote async startDeviceLogin(origin: string, connectionId?: string): Promise<OAuthAccountView> {
+    return this.login(true, origin, connectionId)
+  }
   @Remote async cancelBrowserLogin(): Promise<void> { this.loginAbort?.abort() }
 
   @Remote
