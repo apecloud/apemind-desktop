@@ -275,9 +275,9 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     else setError(result.error.message)
   }
 
-  async function browserLogin(server = origin): Promise<void> {
+  async function browserLogin(server = origin, connectionId?: string): Promise<void> {
     setWaiting(true)
-    const result = await remote.startBrowserLogin(server)
+    const result = await remote.startBrowserLogin(server, connectionId)
     setWaiting(false)
     if (!alive.current) return
     if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setLoginProgress(null); setMessage(t('loggedIn')) }
@@ -285,9 +285,9 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     else setError(result.error.message)
   }
 
-  async function deviceLogin(): Promise<void> {
+  async function deviceLogin(connectionId?: string): Promise<void> {
     setWaiting(true)
-    const result = await remote.startDeviceLogin(origin)
+    const result = await remote.startDeviceLogin(origin, connectionId)
     setWaiting(false)
     if (!alive.current) return
     if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setLoginProgress(null); setMessage(t('loggedIn')) }
@@ -410,7 +410,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
           {needsSignIn && credentialAccount
             ? <button
               type="button" className="apemind-primary apemind-main-action" disabled={disabled}
-              onClick={() => { void run(() => browserLogin(credentialAccount.origin)) }}
+              onClick={() => { void run(() => browserLogin(credentialAccount.origin, credentialAccount.id)) }}
             >{t('signInAgain')}</button>
             : <button
               type="button" className="apemind-secondary" disabled={disabled}

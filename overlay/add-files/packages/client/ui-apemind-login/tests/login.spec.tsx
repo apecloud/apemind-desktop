@@ -137,7 +137,7 @@ it('reauthenticates with the saved connection server rather than the default ser
   })
   expect(screen.getByRole('heading', { name: en.reauthenticationTitle })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: en.signInAgain }))
-  await waitFor(() => { expect(remote.startBrowserLogin).toHaveBeenCalledWith(account.origin) })
+  await waitFor(() => { expect(remote.startBrowserLogin).toHaveBeenCalledWith(account.origin, account.id) })
   expect(await screen.findByRole('heading', { name: en.connected })).toBeTruthy()
 })
 
