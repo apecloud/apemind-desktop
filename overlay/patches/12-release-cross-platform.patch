@@ -1,20 +1,28 @@
+diff --git a/scripts/release/process.ts b/scripts/release/process.ts
 --- a/scripts/release/process.ts
 +++ b/scripts/release/process.ts
-@@ -22,6 +22,11 @@
+@@ -18,10 +18,15 @@
+ export interface CommandResult {
+   /** Exit status, or null when a signal ended the process. */
+   readonly status: number | null
+   readonly stdout: string
    readonly stderr: string
- }
-
++}
++
 +/** Resolve the tar implementation used to inspect release archives. */
 +export function releaseTarCommand(): string {
 +  return process.platform === 'win32' ? (process.env.DSH_DESKTOP_TAR ?? 'C:\\Windows\\System32\\tar.exe') : 'tar'
-+}
-+
+ }
+
  /**
   * Run a command and capture its output without judging the exit status.
   * @param command - executable name.
+diff --git a/scripts/release/tarball.ts b/scripts/release/tarball.ts
 --- a/scripts/release/tarball.ts
 +++ b/scripts/release/tarball.ts
-@@ -8,7 +8,7 @@
+@@ -6,11 +6,11 @@
+  * currently says.
+  */
 
  import { readFileSync } from 'node:fs'
  import { basename, dirname, join } from 'node:path'
@@ -23,7 +31,11 @@
 
  /** Name of the file recording the order in which a packed family uploads. */
  export const PUBLISH_ORDER_FILE = 'publish-order.txt'
-@@ -28,7 +28,7 @@
+
+ /** What a packed tarball calls itself. */
+@@ -26,20 +26,20 @@
+  * @param tarball - absolute tarball path.
+  * @returns Every path inside the archive.
   */
  export function tarballFiles(tarball: string): string[] {
    // GNU tar reads the colon in a Windows drive path as a remote-host separator, so tar runs beside the tarball.
@@ -32,7 +44,8 @@
  }
 
  /**
-@@ -37,7 +37,7 @@
+  * Read a packed tarball's own manifest.
+  * @param tarball - absolute tarball path.
   * @returns The name and version the tarball declares.
   */
  export function packedIdentity(tarball: string): PackedIdentity {
@@ -41,9 +54,14 @@
    if (manifest === null || typeof manifest !== 'object') throw new Error(`${tarball} has no manifest`)
    const { name, version } = manifest as Record<string, unknown>
    if (typeof name !== 'string' || typeof version !== 'string') throw new Error(`${tarball} manifest lacks name/version`)
+   return { name, version }
+ }
+diff --git a/apps/desktop/scripts/prepare-package-set.ts b/apps/desktop/scripts/prepare-package-set.ts
 --- a/apps/desktop/scripts/prepare-package-set.ts
 +++ b/apps/desktop/scripts/prepare-package-set.ts
-@@ -23,7 +23,7 @@
+@@ -21,11 +21,11 @@
+   DESKTOP_PACKAGES_DIR,
+   DESKTOP_PACKAGE_SET_FILE,
    parseDesktopCorePackageSet,
    type DesktopCorePackageRecord,
  } from '../src/core-package-set.ts'
@@ -52,7 +70,11 @@
  import { tarballFiles } from '../../../scripts/release/tarball.ts'
  import { resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
 
-@@ -88,7 +88,7 @@
+ const DSH_PACKAGE = '@deepseek-ai/dsh'
+ const ROOT_PACKAGES = [DSH_PACKAGE, DESKTOP_HOST_PACKAGE] as const
+@@ -86,11 +86,11 @@
+   }
+   return [...selected.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, packed]) => packed)
  }
 
  function packedManifest(tarball: string): Record<string, unknown> {
@@ -61,3 +83,5 @@
    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
      throw new Error(`desktop package set: ${tarball} has no package manifest`)
    }
+   return value as Record<string, unknown>
+ }

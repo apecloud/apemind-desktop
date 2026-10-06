@@ -1,0 +1,134 @@
+diff --git a/apps/desktop/tests/expected/about-panel.json b/apps/desktop/tests/expected/about-panel.json
+index 8dc6ee9063..887b65284a 100644
+--- a/apps/desktop/tests/expected/about-panel.json
++++ b/apps/desktop/tests/expected/about-panel.json
+@@ -1,11 +1,11 @@
+ {
+   "darwin:en-US": {
+     "menu": [
+-      { "label": "About DeepSeek Harness", "role": "about" },
++      { "label": "About ApeMind Desktop", "role": "about" },
+       { "type": "separator" }
+     ],
+     "options": {
+-      "applicationName": "DeepSeek Harness",
++      "applicationName": "ApeMind Desktop",
+       "applicationVersion": "1.0.0",
+       "version": "",
+       "copyright": "",
+@@ -14,11 +14,11 @@
+   },
+   "darwin:zh-CN": {
+     "menu": [
+-      { "label": "关于 DeepSeek Harness", "role": "about" },
++      { "label": "关于 ApeMind Desktop", "role": "about" },
+       { "type": "separator" }
+     ],
+     "options": {
+-      "applicationName": "DeepSeek Harness",
++      "applicationName": "ApeMind Desktop",
+       "applicationVersion": "1.0.0",
+       "version": "",
+       "copyright": "",
+@@ -27,11 +27,11 @@
+   },
+   "win32:zh-CN": {
+     "menu": [
+-      { "label": "关于 DeepSeek Harness" },
++      { "label": "关于 ApeMind Desktop" },
+       { "type": "separator" }
+     ],
+     "options": {
+-      "applicationName": "DeepSeek Harness",
++      "applicationName": "ApeMind Desktop",
+       "applicationVersion": "1.0.0",
+       "version": "",
+       "copyright": "",
+@@ -40,11 +40,11 @@
+   },
+   "win32:en-US": {
+     "menu": [
+-      { "label": "About DeepSeek Harness" },
++      { "label": "About ApeMind Desktop" },
+       { "type": "separator" }
+     ],
+     "options": {
+-      "applicationName": "DeepSeek Harness",
++      "applicationName": "ApeMind Desktop",
+       "applicationVersion": "1.0.0",
+       "version": "",
+       "copyright": "",
+diff --git a/apps/desktop/tests/expected/application-menu-en-US.json b/apps/desktop/tests/expected/application-menu-en-US.json
+index 4e3c981919..383b25f3d0 100644
+--- a/apps/desktop/tests/expected/application-menu-en-US.json
++++ b/apps/desktop/tests/expected/application-menu-en-US.json
+@@ -7,7 +7,7 @@
+   },
+   {
+     "role": "hide",
+-    "label": "Hide DeepSeek Harness"
++    "label": "Hide ApeMind Desktop"
+   },
+   {
+     "role": "hideOthers",
+@@ -19,6 +19,6 @@
+   },
+   {
+     "role": "quit",
+-    "label": "Quit DeepSeek Harness"
++    "label": "Quit ApeMind Desktop"
+   }
+ ]
+diff --git a/apps/desktop/tests/expected/application-menu-zh-CN.json b/apps/desktop/tests/expected/application-menu-zh-CN.json
+index f39b2d88ae..84501608e6 100644
+--- a/apps/desktop/tests/expected/application-menu-zh-CN.json
++++ b/apps/desktop/tests/expected/application-menu-zh-CN.json
+@@ -7,7 +7,7 @@
+   },
+   {
+     "role": "hide",
+-    "label": "隐藏 DeepSeek Harness"
++    "label": "隐藏 ApeMind Desktop"
+   },
+   {
+     "role": "hideOthers",
+@@ -19,6 +19,6 @@
+   },
+   {
+     "role": "quit",
+-    "label": "退出 DeepSeek Harness"
++    "label": "退出 ApeMind Desktop"
+   }
+ ]
+diff --git a/apps/desktop/tests/main-startup.spec.ts b/apps/desktop/tests/main-startup.spec.ts
+index b6b6fd476f..d0f5e95c5f 100644
+--- a/apps/desktop/tests/main-startup.spec.ts
++++ b/apps/desktop/tests/main-startup.spec.ts
+@@ -510,7 +510,8 @@ describe('desktop main startup', () => {
+     const options = harness.app.setAboutPanelOptions.mock.calls[0]![0]
+     const expected = JSON.parse(readFileSync(new URL('./expected/about-panel.json', import.meta.url), 'utf8')) as Record<string, unknown>
+     const [about, separator] = submenu
+-    expect({ menu: [{ label: about!.label, role: about!.role }, separator], options: { ...options, iconPath: '<app icon>' } })
++    const aboutItem = about!.role === undefined ? { label: about!.label } : { label: about!.label, role: about!.role }
++    expect({ menu: [aboutItem, separator], options: { ...options, iconPath: '<app icon>' } })
+       .toEqual(expected[`${platform}:${locale}`])
+     expect(options.iconPath).toBe(packaged ? join('desktop-test-resources', 'icon.png')
+       : join('desktop-test-app', 'resources', 'icon-windows.png'))
+@@ -521,7 +522,7 @@ describe('desktop main startup', () => {
+     await vi.advanceTimersByTimeAsync(0)
+     const zh = locale === 'zh-CN'
+     expect(harness.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
+-      type: 'info', title: zh ? '关于 DeepSeek Harness' : 'About DeepSeek Harness', message: 'DeepSeek Harness',
++      type: 'info', title: zh ? '关于 ApeMind Desktop' : 'About ApeMind Desktop', message: 'ApeMind Desktop',
+       detail: zh ? '版本 V1.0.0' : 'Version V1.0.0', buttons: [zh ? '确定' : 'OK'], cancelId: 0,
+     }))
+     // A dialog that cannot open is logged, not surfaced as an unhandled rejection.
+@@ -845,7 +846,7 @@ describe('desktop main startup', () => {
+     expect(() => handler(event, 'application', NaN, 34)).toThrow('invalid popup request')
+     const application = handler(event, 'application', 48, 34)
+     expect(harness.menu.buildFromTemplate.mock.lastCall![0].map(item => item.label ?? item.type)).toEqual([
+-      '关于 DeepSeek Harness', 'separator', '检查更新…', '管理 dsh 命令…', 'separator', '退出',
++      '关于 ApeMind Desktop', 'separator', '检查更新…', '管理 dsh 命令…', 'separator', '退出',
+     ])
+     expect(harness.popup.mock.lastCall![0]).toMatchObject({ window, x: 48, y: 34 })
+     expect(harness.popup.mock.lastCall![0].callback).toBeTypeOf('function')

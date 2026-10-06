@@ -1,6 +1,8 @@
+diff --git a/apps/desktop/tests/fixtures/runtime-payload-smoke.mjs b/apps/desktop/tests/fixtures/runtime-payload-smoke.mjs
 --- a/apps/desktop/tests/fixtures/runtime-payload-smoke.mjs
 +++ b/apps/desktop/tests/fixtures/runtime-payload-smoke.mjs
-@@ -2,7 +2,7 @@
+@@ -1,10 +1,10 @@
+ /** Exercise filtered Desktop native and HTML dependencies under its Electron Node runtime. */
 
  import assert from 'node:assert/strict'
  import { execFileSync } from 'node:child_process'
@@ -9,7 +11,11 @@
  import { rm } from 'node:fs/promises'
  import { createRequire } from 'node:module'
  import { tmpdir } from 'node:os'
-@@ -114,6 +114,27 @@
+ import { delimiter, dirname, join, resolve } from 'node:path'
+ import { pathToFileURL } from 'node:url'
+@@ -112,10 +112,31 @@
+   }).trim().replaceAll('\\', '/')
+   assert.equal(run(['--no-heading', '--no-filename', '--line-number', '--fixed-strings', '--', marker, name]), `1:${marker}`)
    assert.equal(run(['--files', '--glob', name, '.']), `./${name}`)
  }
 
@@ -37,7 +43,11 @@
  /** Resolve one system function through Koffi's packaged native module. */
  function checkKoffi() {
    const koffi = requireRuntime('koffi')
-@@ -158,6 +179,7 @@
+   const library = koffi.load(process.platform === 'win32' ? 'kernel32.dll' : null)
+   try {
+@@ -156,10 +177,11 @@
+
+ try {
    const builtin = requireRuntime('node-addon-require-builtin')
    assert.equal(typeof builtin.requireBuiltin('internal/modules/esm/loader').getOrInitializeCascadedLoader, 'function')
    checkPnpm()
@@ -45,7 +55,11 @@
    checkKoffi()
    await checkSharp()
    checkHtml()
-@@ -171,5 +193,5 @@
+   await checkPty()
+   await checkSearch()
+@@ -169,7 +191,7 @@
+ }
+
  // Natural event-loop drain includes node-pty's worker and console-list helper teardown.
  process.once('beforeExit', () => {
    console.log(JSON.stringify({ node: process.versions.node, platform: process.platform, arch: process.arch,

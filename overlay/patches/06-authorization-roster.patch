@@ -1,6 +1,9 @@
+diff --git a/packages/bundle/base/cordis.patch.yml b/packages/bundle/base/cordis.patch.yml
 --- a/packages/bundle/base/cordis.patch.yml
 +++ b/packages/bundle/base/cordis.patch.yml
-@@ -116,6 +116,10 @@
+@@ -114,10 +114,14 @@
+       config:
+         desktopPlatform: !!js "ctx.get('profileContext')?.name === 'desktop' && ['darwin', 'win32'].includes(process.platform) ? process.platform : null"
 
      - id: credentials
        name: '@deepseek-ai/dsh-credentials-local'
@@ -11,9 +14,14 @@
 
      # The pi-ai multi-provider twin, mounted dormant: zero routes (and no extra
      # models in the picker) until a `llm-pi-ai:` settings section supplies provider
+     # profiles — then those routes register live, keys resolving per request
+     # through their apiKeyEnv references, and drop again when the section empties.
+diff --git a/packages/bundle/base/package.json b/packages/bundle/base/package.json
 --- a/packages/bundle/base/package.json
 +++ b/packages/bundle/base/package.json
-@@ -39,6 +39,7 @@
+@@ -37,10 +37,11 @@
+     "@deepseek-ai/dsh-hmr": "workspace:*",
+     "@deepseek-ai/cordis-plugin-timer": "workspace:~",
      "@deepseek-ai/dsh-agent": "workspace:*",
      "@deepseek-ai/dsh-agent-default-model": "workspace:*",
      "@deepseek-ai/dsh-agent-loop": "workspace:*",
@@ -21,13 +29,20 @@
      "@deepseek-ai/dsh-attachment-local": "workspace:*",
      "@deepseek-ai/dsh-shell-env": "workspace:*",
      "@deepseek-ai/dsh-bash-sandbox": "workspace:*",
+     "@deepseek-ai/dsh-command-compact": "workspace:*",
+     "@deepseek-ai/dsh-command-feedback": "workspace:*",
+diff --git a/tsconfig.host.json b/tsconfig.host.json
 --- a/tsconfig.host.json
 +++ b/tsconfig.host.json
-@@ -431,6 +431,7 @@
+@@ -445,10 +445,11 @@
+     { "path": "./packages/subagent/subagent-dsh-sdk" },
+     { "path": "./packages/jobs/jobs" },
      { "path": "./packages/jobs/jobs-local" },
      { "path": "./packages/jobs/tool-jobs" },
      { "path": "./packages/experimental/agent-team" },
 +    { "path": "./packages/credentials/apemind-login" },
      { "path": "./packages/experimental/agent-team-profile" },
+     { "path": "./packages/experimental/inspector-profile" },
      { "path": "./packages/experimental/tool-agent-team" },
      { "path": "./packages/workflow/workflow" },
+     { "path": "./packages/workflow/workflow-ptc" },

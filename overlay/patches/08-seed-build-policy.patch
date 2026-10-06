@@ -1,6 +1,9 @@
+diff --git a/apps/desktop/src/project-manager.ts b/apps/desktop/src/project-manager.ts
 --- a/apps/desktop/src/project-manager.ts
 +++ b/apps/desktop/src/project-manager.ts
-@@ -45,7 +45,7 @@
+@@ -43,11 +43,11 @@
+   if (entries.length === 0) return `packages:\n  - .\n\n${WORKSPACE_SETTINGS}`
+   const coreBuildSpec = overrides[CORE_BUILD_PACKAGE]
    const coreBuildKey = coreBuildSpec === undefined
      ? CORE_BUILD_PACKAGE
      : `${CORE_BUILD_PACKAGE}@${coreBuildSpec.replace('file:./', 'file:')}`
@@ -9,3 +12,5 @@
  }
 
  function migrateProfileSettings(projectDir: string): void {
+   const path = join(projectDir, 'pnpm-workspace.yaml')
+   if (!existsSync(path)) return

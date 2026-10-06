@@ -1,14 +1,17 @@
 diff --git a/apps/desktop/scripts/smoke-packaged-runtime.ts b/apps/desktop/scripts/smoke-packaged-runtime.ts
-index 106830b5ad..38892963e7 100644
 --- a/apps/desktop/scripts/smoke-packaged-runtime.ts
 +++ b/apps/desktop/scripts/smoke-packaged-runtime.ts
-@@ -1,4 +1,5 @@
+@@ -1,6 +1,7 @@
  /** Validate the assembled application, including native Office conversion outside ASAR. */
 +import { readdirSync } from 'node:fs'
  import { join } from 'node:path'
  import { parseArgs } from 'node:util'
  import { resolveDesktopBuildTarget, resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
-@@ -11,12 +12,18 @@ const paths = resolveDesktopTargetBuildPaths()
+ import { readDesktopRuntime, verifyDesktopRuntime } from '../src/runtime-tree.ts'
+ import { verifyWindowsCode } from './windows-runtime-signature.mjs'
+@@ -9,15 +10,21 @@
+
+ const paths = resolveDesktopTargetBuildPaths()
  const { values } = parseArgs({ options: { unsigned: { type: 'boolean', default: false } }, allowPositionals: false })
  const target = resolveDesktopBuildTarget()
  const windows = target === 'win-x64'
@@ -31,3 +34,4 @@ index 106830b5ad..38892963e7 100644
  const descriptor = await verifyDesktopRuntime(paths.dsh, readDesktopRuntime(paths.dsh).release.version,
    resolveDesktopPackageTarget(target))
  if (windows && !values.unsigned) await verifyWindowsCode(application)
+ await smokePreparedRuntime(join(resources, 'app.asar', 'dsh'), executable, join(resources, 'runtime'), descriptor)

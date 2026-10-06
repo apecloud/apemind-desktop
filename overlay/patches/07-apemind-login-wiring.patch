@@ -1,58 +1,84 @@
+diff --git a/packages/api/remotes/package.json b/packages/api/remotes/package.json
 --- a/packages/api/remotes/package.json
 +++ b/packages/api/remotes/package.json
-@@ -52,7 +52,8 @@
+@@ -49,11 +49,12 @@
+     "lib/types/**/*.js",
+     "lib/types/**/*.d.ts"
+   ],
    "dependencies": {
      "@deepseek-ai/dsh-deque": "workspace:*",
-     "@deepseek-ai/dsh-session": "workspace:*",
 -    "@deepseek-ai/dsh-util-values": "workspace:*"
 +    "@deepseek-ai/dsh-util-values": "workspace:*",
 +    "@deepseek-ai/dsh-apemind-login": "workspace:*"
    },
    "peerDependencies": {
      "@deepseek-ai/cordis": "workspace:~",
+     "@deepseek-ai/dsh-scope": "workspace:*"
+   },
+diff --git a/packages/api/remotes/src/client/index.ts b/packages/api/remotes/src/client/index.ts
 --- a/packages/api/remotes/src/client/index.ts
 +++ b/packages/api/remotes/src/client/index.ts
-@@ -2,6 +2,7 @@
+@@ -2,10 +2,11 @@
 
  import type { Context } from '@deepseek-ai/cordis'
+ import productAnalyticsRemote from '@deepseek-ai/dsh-client-product-analytics/remote'
+ export type {} from '@deepseek-ai/dsh-client-product-analytics/remote'
  import agentPresetsRemote from '@deepseek-ai/dsh-agent-preset-registry/remote'
 +import authorizationRemote from '@deepseek-ai/dsh-apemind-login/remote'
+ import userQuestionsRemote from '@deepseek-ai/dsh-user-questions/remote'
  import commandsRemote from '@deepseek-ai/dsh-commands/remote'
  import accountRemote from '@deepseek-ai/dsh-api-account-controller/remote'
  import settingsControllerRemote from '@deepseek-ai/dsh-api-settings-controller/remote'
-@@ -37,6 +38,7 @@
+ import officeToPdfRemote from '@deepseek-ai/dsh-office-to-pdf/remote'
+@@ -38,10 +39,11 @@
+ } from '@deepseek-ai/dsh-plugin-manager/types'
+ export type {} from '@deepseek-ai/dsh-plugin-manager/remote'
  export type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/remote'
  export type { PluginInventorySnapshot } from '@deepseek-ai/dsh-host-plugin-inventory/types'
  export type {} from '@deepseek-ai/dsh-agent-preset-registry/remote'
 +export type {} from '@deepseek-ai/dsh-apemind-login/remote'
+ export type {} from '@deepseek-ai/dsh-user-questions/remote'
  export type {} from '@deepseek-ai/dsh-commands/remote'
  export type {} from '@deepseek-ai/dsh-api-settings-controller/remote'
  export type {} from '@deepseek-ai/dsh-api-account-controller/remote'
-@@ -175,7 +177,7 @@
+ export type {} from '@deepseek-ai/dsh-goal/remote'
+@@ -177,11 +179,11 @@
+  */
+ export async function apply(ctx: Context): Promise<() => Promise<void>> {
    const disposers: Array<() => Promise<void>> = []
    try {
      for (const contribution of [
--      agentPresetsRemote, commandsRemote, settingsControllerRemote, accountRemote, goalsRemote, llmRemote, dynamicRemote, scheduleRemote,
-+      authorizationRemote, agentPresetsRemote, commandsRemote, settingsControllerRemote, accountRemote, goalsRemote, llmRemote, dynamicRemote, scheduleRemote,
+-      productAnalyticsRemote, agentPresetsRemote, commandsRemote, settingsControllerRemote, accountRemote,
++      productAnalyticsRemote, authorizationRemote, agentPresetsRemote, commandsRemote, settingsControllerRemote, accountRemote,
+       goalsRemote, llmRemote, dynamicRemote, scheduleRemote,
        pluginInventoryRemote, pluginManagerRemote, pluginRegistryProbeRemote, messageFeedbackRemote, sessionFeedbackRemote,
        fileUploadsRemote, sessionReferencesRemote,
        permissionPresetsRemote, subagentsRemote, sessionRemote, jobRemote, workspaceRemote, workspaceFilesRemote, terminalRemote,
+       officeToPdfRemote, userQuestionsRemote,
+diff --git a/packages/bundle/web-app/cordis.patch.yml b/packages/bundle/web-app/cordis.patch.yml
 --- a/packages/bundle/web-app/cordis.patch.yml
 +++ b/packages/bundle/web-app/cordis.patch.yml
-@@ -287,6 +287,10 @@
+@@ -305,10 +305,14 @@
+       name: '@deepseek-ai/dsh-client-ui-settings-general'
 
      - id: ui-settings-models
        name: '@deepseek-ai/dsh-client-ui-settings-models'
-+
+
 +    # ApeMind Desktop overlay: the ApeMind sign-in settings section.
 +    - id: ui-apemind-login
 +      name: '@deepseek-ai/dsh-client-ui-apemind-login'
-
++
      # Plugin management: the sidebar Plugins page installs, enables, disables,
      # and removes the profile's bundles through the `pluginManager` Remote.
+     # Without a profile-backed Host it reports itself unavailable.
+     - id: ui-plugin-manager
+       name: '@deepseek-ai/dsh-client-ui-plugin-manager'
+diff --git a/packages/bundle/web-app/package.json b/packages/bundle/web-app/package.json
 --- a/packages/bundle/web-app/package.json
 +++ b/packages/bundle/web-app/package.json
-@@ -50,6 +50,7 @@
+@@ -49,10 +49,11 @@
+         "./presets/cordis.patch.yml"
+       ]
      }
    },
    "dependencies": {
@@ -60,9 +86,14 @@
      "@deepseek-ai/dsh-agent-instructions": "workspace:*",
      "@deepseek-ai/dsh-agent-preset": "workspace:*",
      "@deepseek-ai/dsh-agent-preset-registry": "workspace:*",
+     "@deepseek-ai/dsh-agent-tool-presentation": "workspace:*",
+     "@deepseek-ai/dsh-api-job-controller": "workspace:*",
+diff --git a/tsconfig.client.json b/tsconfig.client.json
 --- a/tsconfig.client.json
 +++ b/tsconfig.client.json
-@@ -83,6 +83,7 @@
+@@ -91,10 +91,11 @@
+     { "path": "./packages/client/shortcuts/tsconfig.client.json" },
+     { "path": "./packages/client/ui-shortcuts" },
      { "path": "./packages/client/ui-layout" },
      { "path": "./packages/client/ui-sidebar" },
      { "path": "./packages/client/ui-brand-official" },
@@ -70,3 +101,5 @@
      { "path": "./packages/client/ui-approval" },
      { "path": "./packages/client/ui-chat/tsconfig.client.json" },
      { "path": "./packages/client/ui-conversation/tsconfig.client.json" },
+     { "path": "./packages/client/ui-tool" },
+     { "path": "./packages/client/ui-deliverables/tsconfig.client.json" },

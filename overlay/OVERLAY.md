@@ -13,6 +13,25 @@
 # 变更清单（与 docs/branding.md 一致，改这里必须同步改那边）：
 
 patches:
+  - file: patches/21-packaged-runtime-test-fixture.patch
+    targets:
+      - target: apps/desktop/tests/packaged-runtime-verification.spec.ts
+    reason: 打包运行时单元测试只验证版本传递，使用确定的 CLI 资源映射 fixture，避免在本机测试 Windows 目标时下载或伪造跨平台二进制。
+  - file: patches/20-brand-about-panel.patch
+    targets:
+      - target: apps/desktop/src/main.ts
+    reason: 原生 About 面板的 applicationName 也属于用户可见品牌，必须与菜单文案和应用名保持一致。
+  - file: patches/19-pi-ai-export-test.patch
+    targets:
+      - target: packages/llm/llm-pi-ai/tests/adapter.spec.ts
+    reason: 登录插件复用上游模型 profile 解析器的公开导出；同步调整上游“包根不导出辅助函数”的测试断言，避免把必要的稳定 seam 当成回归。
+  - file: patches/18-brand-test-expectations.patch
+    targets:
+      - target: apps/desktop/tests/main-startup.spec.ts
+      - target: apps/desktop/tests/expected/about-panel.json
+      - target: apps/desktop/tests/expected/application-menu-en-US.json
+      - target: apps/desktop/tests/expected/application-menu-zh-CN.json
+    reason: 品牌化会改变原生 About、菜单和 Windows 弹窗中的产品名；测试快照必须验证 ApeMind Desktop，避免旧品牌断言掩盖真实行为。
   - file: patches/15-pi-ai-profile-resolver.patch
     targets:
       - target: packages/llm/llm-pi-ai/src/index.ts
