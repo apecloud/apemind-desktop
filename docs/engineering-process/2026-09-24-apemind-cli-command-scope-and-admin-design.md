@@ -1,5 +1,7 @@
 # ApeMind CLI 命令语义、权限范围与管理能力设计修订
 
+> 个人空间的当前定稿以[个人空间与组织工作空间最终合同](2026-10-07-personal-workspace-policy-final.md)为准。本文保留命令范围、组织治理和 admin 控制面的合同。
+
 本文把 ApeMind CLI 的产品边界、命令语义和服务端授权合同收敛为一套可执行设计，重点解释本轮审计发现了什么、哪些现有行为需要调整、哪些能力应保留，以及后续如何让 Agent 不容易误用命令。
 
 本文是 [ApeMind CLI-first 集成设计](2026-09-14-apemind-cli-first-integration.md) 和 [ApeMind CLI 对标 gh 的能力分析与产品技术设计](2026-09-16-apemind-cli-gh-capability-design.md) 关于命令范围、组织治理、工作空间、管理员能力和授权矩阵的当前补充；身份、凭据、Desktop 集成和异步资源的基础原则仍由前两篇文档共同定义。工作空间必须以服务端 presence 为准：个人空间是可选的历史命名空间，线上新账户默认没有个人空间，个人空间存在、为空或不存在都属于需要支持的合法状态，空列表也不表示登录失败。统一个人空间合同见 [个人空间可选合同](2026-09-29-personal-workspace-optional-contract.md)，跨资源实施顺序见 [个人空间退出基线与执行计划](2026-09-28-personal-workspace-exit-plan.md)。
