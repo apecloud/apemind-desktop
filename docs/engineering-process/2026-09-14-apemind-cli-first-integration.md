@@ -20,7 +20,7 @@ ApeMind CLI     = Agent 操作 ApeMind 的正式接口
 ApeMind API     = CLI 使用的服务端协议
 ```
 
-Desktop 中的登录、空间选择、知识库查询、文档写入和配置修改，最终都通过 ApeMind CLI 完成。Desktop 不维护一套独立的 ApeMind API 客户端，也不把插件内部 Remote 当成 Agent 的第二套能力入口。
+Desktop 中的登录和连接管理最终都通过 ApeMind CLI 完成；工作空间选择、知识库查询、文档写入和配置修改只由 CLI 提供。Desktop 的 ApeMind 插件只展示登录状态并打开 ApeMind Web，不维护业务页面，也不把插件内部 Remote 当成 Agent 的第二套能力入口。
 
 ## 核心决策
 
@@ -566,7 +566,7 @@ Turn 相关能力已经沿用服务端资源模型推进：`turn create`、`turn
 
 当前交付以 `apemind` CLI 的可用性为判断标准。能力进入交付清单前，必须能由 CLI 通过 `/api/v2` 完成真实调用，并能用结构化输出、稳定错误码和权限负例证明成功与拒绝路径。命令名称、输出字段和等待行为直接对应服务端资源；没有服务端资源、状态或取消合同的能力暂不包装成 CLI 命令。
 
-Desktop 只跟随已经稳定的 CLI 合同做三类工作：分发经过校验的 CLI 制品、提供登录和工作空间的图形入口、展示 CLI 返回的结果与确认请求。Desktop 不新增与 CLI 平行的 API 客户端、认证状态机、异步状态机或业务权限判断。需要增加 Desktop 代码时，先确认 CLI 合同无法满足实际交互，再补最小的宿主集成。
+Desktop 只跟随已经稳定的 CLI 合同做三类工作：分发经过校验的 CLI 制品、提供登录和打开 ApeMind Web 的图形入口、展示 CLI 返回的结果与确认请求。Desktop 不新增与 CLI 平行的 API 客户端、认证状态机、异步状态机或业务权限判断。需要增加 Desktop 代码时，先确认 CLI 合同无法满足实际交互，再补最小的宿主集成。
 
 CLI 的路线不以“补齐一个统一任务系统”为目标。Agent 要观察或等待工作时，使用 `document`、`turn`、`import`、`export` 等实际资源命令；服务端没有公开资源时，CLI 返回当前请求的结果或明确的不可用错误。任何把一次命令执行保存为本地记录、再提供跨资源查询的实现都不属于本设计。
 
@@ -574,7 +574,7 @@ CLI 的路线不以“补齐一个统一任务系统”为目标。Agent 要观�
 
 ### 后续工作路线（2026-09-19）
 
-后续实现集中在 `apemind` CLI 及其服务端 `/api/v2` 合同。每项能力先在 CLI 中完成真实请求、结构化输出、错误码和权限负例，再由 Desktop 进行最小接入。Desktop 的新增工作仅限于随应用分发 CLI、触发已有 CLI 命令、展示 CLI 返回值和承载必要的用户确认；登录、空间选择、资源请求、异步等待和权限判断都继续由 CLI 与服务端负责。
+后续实现集中在 `apemind` CLI 及其服务端 `/api/v2` 合同。每项能力先在 CLI 中完成真实请求、结构化输出、错误码和权限负例，再由 Desktop 进行最小接入。Desktop 的新增工作仅限于随应用分发 CLI、提供登录与连接管理、打开 ApeMind Web、触发已有 CLI 命令和承载必要的用户确认；空间选择、资源请求、异步等待和权限判断都继续由 CLI 与服务端负责。
 
 CLI 的能力按真实资源推进：补齐 workspace、knowledge、document、agent、chat、turn、import、export 和 MCP 的可用命令，统一分页、筛选、JSON 输出、错误码、幂等确认和资源级等待。等待命令必须写明它作用的资源，例如 `document wait` 或 `turn wait`；没有对应服务端资源时，保持同步调用或返回明确的不支持错误，不生成本地记录、隐藏线程或跨资源执行编号。
 
@@ -585,10 +585,10 @@ CLI 的能力按真实资源推进：补齐 workspace、knowledge、document、a
 ### 用户体验
 
 1. 用户只在 Desktop 中点击一次登录，CLI 和 Agent 立即可用。
-2. Desktop 显示的账号、服务地址和当前 workspace 与 `apemind auth status --format json` 一致。
+2. Desktop 显示的账号、服务地址和连接状态与 `apemind auth status --format json` 一致。
 3. 浏览器无法回跳时自动提供设备码，不需要用户理解 OAuth 术语。
-4. 用户可以看到服务端返回的全部有效工作空间，并显式切换当前空间；没有空间时仍能看到清晰的 `workspace_required` 引导。
-5. Desktop 和 Agent 执行同一个 CLI 命令得到一致结果。
+4. Desktop 只提供登录、退出、连接管理和 ApeMind Web 入口；工作空间和业务数据由 CLI/服务端提供。
+5. Desktop 和 Agent 复用同一 CLI 连接，执行同一个 CLI 命令得到一致结果。
 
 ### Agent 使用
 

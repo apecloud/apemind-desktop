@@ -23,8 +23,7 @@ fs.appendFileSync(${JSON.stringify(callsFile)}, JSON.stringify(args)+'\\n');
 const status=JSON.parse(fs.readFileSync(${JSON.stringify(statusFile)},'utf8'));
 if (args[0]==='--version') { console.log(status.version??'v0.3.7'); process.exit(status.versionExit??0); }
 const option = name => args[args.indexOf(name)+1];
-const space = {id:'org-a',name:'A space',type:'organization',status:'active',role:'owner',permissions:[]};
-const a = {id:'account-a',kind:'oauth',server:'https://example.invalid',user_id:'a',username:'A',workspace_id:'org-a',workspaces:[space],verified_at:'2026-09-15T00:00:00Z',credential_storage:status.storage??'system'};
+const a = {id:'account-a',kind:'oauth',server:'https://example.invalid',user_id:'a',username:'A',verified_at:'2026-09-15T00:00:00Z',credential_storage:status.storage??'system'};
 const b = {...a,id:'account-b',user_id:'b',username:'B'};
 const key = {...a,id:'key-a',kind:'api-key'};
 let data;
@@ -34,13 +33,7 @@ else if (args[0]==='auth' && args[1]==='status') {
   const selected=args.includes('--connection')?option('--connection'):b.id;
   const connection=[a,b,key].find(item=>item.id===selected);
   data={logged_in:Boolean(connection)&&!status.error,connection:connection??null,credential_available:Boolean(connection)&&!status.error,credential_error:status.error};
-} else if (args[0]==='knowledge') {
-  if (option('--connection')!=='account-a' && option('--connection')!=='key-a') process.exit(8);
-  if (option('--workspace')!=='org-a') process.exit(8);
-  const second=args.includes('--cursor');
-  data={items:[{id:second?'kb-2':'kb-1',name:second?'Second':'First'}],next_cursor:second?null:'page-two'};
-} else if (args[0]==='workspace') data=args[1]==='list'?{items:[space],next_cursor:null}:a;
-else if (args[0]==='auth' && args[1]==='logout') data={logged_in:false};
+} else if (args[0]==='auth' && args[1]==='logout') data={logged_in:false};
 else if (args[0]==='auth' && args[1]==='login') {
   console.log(JSON.stringify({type:'device_code',data:{user_code:'TEST-CODE',verification_uri_complete:status.deviceUri??'https://example.invalid/api/v2/oauth/device/verify?user_code=TEST-CODE'}}));
   setInterval(()=>{},1000);
@@ -67,16 +60,7 @@ fs.appendFileSync(${JSON.stringify(openedFile)},JSON.stringify(process.argv.slic
   assert.deepEqual(state.credentialStatus, { connectionId: 'account-a', available: true, error: null, storage: 'system' })
   assert.equal(state.oauth.id, 'account-a')
   assert.deepEqual(state.oauthConnections.map(item => item.id), ['account-a', 'account-b'])
-  const page = await controller.oauthCollections('account-a', 'org-a')
-  assert.equal(page.nextCursor, 'page-two')
-  const next = await controller.oauthCollections('account-a', 'org-a', page.nextCursor)
-  assert.equal(next.nextCursor, null)
-  assert.deepEqual([...page.items, ...next.items].map(item => item.id), ['kb-1', 'kb-2'])
-  assert.equal((await controller.collections('key-a', 'page-two')).items[0].id, 'kb-2')
-  await controller.refreshWorkspaces('account-a')
-  await controller.selectWorkspace('account-a', 'org-a')
   await controller.oauthLogout('account-a')
-  await assert.rejects(controller.oauthCollections('missing', 'org-a'))
   await assert.rejects(controller.oauthLogout('key-a'))
   await writeFile(statusFile, JSON.stringify({ error: 'credential_unavailable' }))
   const unavailable = await controller.state()
@@ -98,7 +82,6 @@ fs.appendFileSync(${JSON.stringify(openedFile)},JSON.stringify(process.argv.slic
   assert.equal((await controller.state()).oauth.id, 'account-a')
   const calls = (await readFile(callsFile, 'utf8')).trim().split('\n').map(line => JSON.parse(line))
   assert.ok(calls.filter(args => args[0] === 'auth' && args[1] === 'status').every(args => args.includes('--connection')))
-  assert.ok(calls.filter(args => args[0] === 'knowledge').every(args => args.includes('--workspace') && args.includes('--connection')))
   const logout = calls.find(args => args[0] === 'auth' && args[1] === 'logout')
   assert.equal(logout[logout.indexOf('--connection') + 1], 'account-a')
   assert.equal(calls.filter(args => args[0] === '--version').length, 1)
@@ -138,7 +121,7 @@ fs.appendFileSync(${JSON.stringify(openedFile)},JSON.stringify(process.argv.slic
   await controller.cancelBrowserLogin()
   await unsafeLogin
   assert.equal((await readFile(openedFile, 'utf8')).trim().split('\n').length, 2)
-  console.log('PASS: compiled Host preserves account/workspace, pagination, logout, CLI version, and credential recovery status without exposing diagnostics.')
+  console.log('PASS: compiled Host preserves account authentication, logout, CLI version, and credential recovery status without exposing diagnostics.')
   console.log('PASS: device-page reopening uses the current CLI login, reports opener failure, permits retry, and rejects finished logins and unsafe URLs.')
 } finally {
   if (previousBinary === undefined) delete process.env.APEMIND_CLI_BIN

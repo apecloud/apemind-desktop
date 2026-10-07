@@ -78,13 +78,13 @@ ApeMind 线上已经默认关闭新账户的个人空间，也不保证新账户
 
 ## Desktop 行为
 
-Desktop 登录页显示“可用工作空间”，不再承诺一定有“个人空间”。登录完成但列表为空时，页面应说明账号已经登录、当前没有可用工作空间，并提供刷新、加入组织或打开帮助的入口。工作空间选择器为空时，知识库、模型、Agent、Chat 和 Turn 的入口显示明确的“先选择工作空间”状态，不发送猜测请求。
+Desktop 登录页只显示登录状态和 ApeMind Web 入口，不承诺一定有“个人空间”，也不展示工作空间、知识库或模型。工作空间为空、失效或组织切换由 CLI 和服务端返回结构化状态；Agent 根据 `workspace_required` 决定刷新、选择组织或停止重试。
 
 没有可用工作空间时，登录和账户页仍然可用，但不能创建或展示依赖个人命名空间的默认 Bot、默认 API Key 或个人配额；加入组织并选择服务端返回的工作空间后，才允许执行对应的初始化或创建流程。
 
-Desktop 继续作为 CLI 的图形化语法糖：工作空间发现、选择、API Key 连接、错误码和刷新都调用同一套 CLI 合同。Renderer 不能自己拼接个人空间 ID，也不能把登录快照当作服务端权限证明。
+Desktop 继续作为 CLI 的图形化语法糖：登录、连接管理、API Key 连接和打开 Web 使用同一套 CLI 合同；工作空间发现、选择、业务请求、错误码和刷新只在 CLI/服务端完成。Renderer 不能自己拼接个人空间 ID，也不能把登录快照当作服务端权限证明。
 
-当 Agent 通过 MCP 访问 ApeMind 时，Desktop 只负责传递当前 CLI 连接和已选择的工作空间。服务端返回 `workspace_required` 时，界面应把它解释为“先选择或加入工作空间”，停止自动重试，并保留原问题供用户在选择空间后继续；不能把网页工具的失败显示成网络故障，也不能让 Renderer 通过 Cookie、旧连接或本地用户 ID 猜测空间。MCP 的 `workspace_access`、`collection_access` 和 `web_access` 前置条件由服务端 `tools/list` 合同决定，Desktop 不复制这套权限判断。
+当 Agent 通过 MCP 访问 ApeMind 时，CLI 负责传递当前连接和已选择的工作空间。服务端返回 `workspace_required` 时，CLI/Agent 应停止自动重试并提示刷新或选择组织；Desktop 插件只提供登录和打开 Web，不承载 MCP 工作空间上下文，也不能让 Renderer 通过 Cookie、旧连接或本地用户 ID 猜测空间。MCP 的 `workspace_access`、`collection_access` 和 `web_access` 前置条件由服务端 `tools/list` 合同决定。
 
 ## 验收矩阵
 

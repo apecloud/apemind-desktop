@@ -6,7 +6,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-apemind-login/remote'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { AccountState, KnowledgeBaseView, LoginProgress, OAuthAccountView, WorkspaceView } from '@deepseek-ai/dsh-apemind-login/types'
+import type { AccountState, AccountView, LoginProgress, OAuthAccountView } from '@deepseek-ai/dsh-apemind-login/types'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import { zh, en, type LoginLocaleKey } from './locales.ts'
 import { APEMIND_MARK_DATA_URI } from './brand-mark.ts'
@@ -17,13 +17,18 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 const NS = 'settings.apemind'
+type ConnectedAccount = AccountView | OAuthAccountView
 
-/**
- * The Host keeps the CLI error code in the remote error details so the UI can
- * offer the right recovery without parsing a localized message.  The remote
- * protocol deliberately exposes details as an opaque JSON value here because
- * the CLI owns the error vocabulary.
- */
+/** Keep links inside the two web protocols supported by the external browser. */
+function webUrl(value: string | undefined): string {
+  try {
+    const parsed = new URL(value || 'https://apemind.ai')
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return parsed.origin
+  } catch { /* fall through to the public ApeMind site */ }
+  return 'https://apemind.ai'
+}
+
+/** The Host keeps the CLI error code in Remote details for localized recovery. */
 function cliErrorCode(error: unknown): string | undefined {
   if (!error || typeof error !== 'object') return undefined
   const details = (error as { details?: unknown }).details
@@ -49,53 +54,15 @@ function Mark({ className = '' }: { className?: string }): ReactNode {
   return <img className={`apemind-mark ${className}`} src={APEMIND_MARK_DATA_URI} alt="" aria-hidden="true" />
 }
 
-function KnowledgeList({ values, title, empty, hasMore, loadMoreLabel, disabled, onLoadMore }: {
-  values: KnowledgeBaseView[] | null
-  title: string
-  empty: string
-  hasMore: boolean
-  loadMoreLabel: string
-  disabled: boolean
-  onLoadMore: () => void
+function WebLink({ t, href, primary = false }: {
+  t: LoginSectionProps['t']
+  href: string
+  primary?: boolean
 }): ReactNode {
-  if (values === null) return null
-  return <div className="apemind-knowledge">
-    <h4>{title} <small>({values.length})</small></h4>
-    {values.length === 0 ? <p className="apemind-muted">{empty}</p>
-      : <ul>{values.map(item => <li key={item.id}>{item.name}</li>)}</ul>}
-    {hasMore && <button type="button" className="apemind-quiet-action" disabled={disabled} onClick={onLoadMore}>{loadMoreLabel}</button>}
-  </div>
-}
-
-function WorkspaceRow({ workspace, current, disabled, onSelect, roleLabel, currentLabel }: {
-  workspace: WorkspaceView
-  current: boolean
-  disabled: boolean
-  onSelect: () => void
-  roleLabel: string
-  currentLabel: string
-}): ReactNode {
-  const initials = workspace.name.trim().slice(0, 1).toUpperCase() || 'A'
-  const content = <>
-    <span className={`apemind-workspace-icon apemind-workspace-icon-${workspace.type}`} aria-hidden="true">{initials}</span>
-    <span className="apemind-workspace-copy">
-      <strong>{workspace.name}</strong>
-      <small>{roleLabel}</small>
-    </span>
-    {current && <span className="apemind-current-badge">{currentLabel}</span>}
-    {!current && <span className="apemind-chevron" aria-hidden="true">›</span>}
-  </>
-  if (current) return <div className="apemind-workspace-row is-current">{content}</div>
-  return <button
-    type="button"
-    className="apemind-workspace-row"
-    disabled={disabled || workspace.status !== 'active'}
-    onClick={onSelect}
-  >{content}</button>
-}
-
-function workspaceRoleLabel(t: LoginSectionProps['t'], workspace: WorkspaceView): string {
-  return workspace.type === 'organization' ? (workspace.role ?? t('member')) : t('personalSpace')
+  return <a
+    className={primary ? 'apemind-primary apemind-main-action apemind-web-action' : 'apemind-link-action'}
+    href={href} target="_blank" rel="noreferrer"
+  >{t('openApeMind')} <span aria-hidden="true">↗</span></a>
 }
 
 function WaitingPanel({ t, disabled, onCancel, onOpenDevicePage, progress }: {
@@ -138,9 +105,10 @@ function WaitingPanel({ t, disabled, onCancel, onOpenDevicePage, progress }: {
   </section>
 }
 
-function SignedOutPanel({ t, disabled, onBrowserLogin, onDeviceLogin }: {
+function SignedOutPanel({ t, disabled, webHref, onBrowserLogin, onDeviceLogin }: {
   t: LoginSectionProps['t']
   disabled: boolean
+  webHref: string
   onBrowserLogin: () => void
   onDeviceLogin: () => void
 }): ReactNode {
@@ -150,65 +118,34 @@ function SignedOutPanel({ t, disabled, onBrowserLogin, onDeviceLogin }: {
     <p>{t('connectDescription')}</p>
     <button type="button" className="apemind-primary apemind-main-action" disabled={disabled} onClick={onBrowserLogin}>{t('browserSignIn')} <span aria-hidden="true">↗</span></button>
     <button type="button" className="apemind-link-action" disabled={disabled} onClick={onDeviceLogin}>{t('deviceFallback')} <span aria-hidden="true">›</span></button>
+    <WebLink t={t} href={webHref} />
     <p className="apemind-security-note"><span aria-hidden="true">▣</span> {t('localOnly')}</p>
   </section>
 }
 
-function ConnectedPanel({ t, oauth, disabled, onSelectWorkspace, onRefresh, onLogout, onKnowledge, oauthItems, hasMore, onLoadMore }: {
+function ConnectedPanel({ t, account, disabled, webHref, onReauthenticate, onSignOut }: {
   t: LoginSectionProps['t']
-  oauth: OAuthAccountView
+  account: ConnectedAccount
   disabled: boolean
-  onSelectWorkspace: (id: string) => void
-  onRefresh: () => void
-  onLogout: () => void
-  onKnowledge: () => void
-  oauthItems: KnowledgeBaseView[] | null
-  hasMore: boolean
-  onLoadMore: () => void
+  webHref: string
+  onReauthenticate: (() => void) | undefined
+  onSignOut: () => void
 }): ReactNode {
-  const availableWorkspaces = oauth.workspaces.filter(item => item.status === 'active')
-  const active = availableWorkspaces.find(item => item.id === oauth.activeWorkspaceId)
-  const hasWorkspaces = availableWorkspaces.length > 0
+  const oauth = onReauthenticate !== undefined
   return <section className="apemind-connected-panel">
     <div className="apemind-connected-heading">
       <Mark className="apemind-connected-mark" />
-      <div><h3>{t('connected')}</h3><p>{oauth.username}</p><p>{oauth.origin}</p></div>
+      <div><h3>{t('connected')}</h3><p>{account.username}</p><p>{account.origin}</p></div>
       <span className="apemind-connected-status"><span aria-hidden="true">●</span> {t('connectedStatus')}</span>
     </div>
-    <section className="apemind-current-space">
-      <h4>{t('currentWorkspace')}</h4>
-      {active
-        ? <WorkspaceRow workspace={active} current disabled={disabled} onSelect={() => undefined} roleLabel={workspaceRoleLabel(t, active)} currentLabel={t('currentBadge')} />
-        : <p className="apemind-muted">{t('chooseWorkspace')}</p>}
-      <p className="apemind-workspace-hint">{t('workspaceHint')}</p>
-      <button type="button" className="apemind-quiet-action" disabled={disabled || !active} onClick={onKnowledge}>{t('viewKnowledge')}</button>
-    </section>
-    <section className="apemind-workspace-list">
-      <h4>{t('availableSpaces')}</h4>
-      {hasWorkspaces
-        ? availableWorkspaces.map(workspace => <WorkspaceRow
-          key={workspace.id}
-          workspace={workspace}
-          current={workspace.id === active?.id}
-          disabled={disabled}
-          onSelect={() => onSelectWorkspace(workspace.id)}
-          roleLabel={workspaceRoleLabel(t, workspace)}
-          currentLabel={t('currentBadge')}
-        />)
-        : <div className="apemind-empty-workspace" role="status">
-          <h5>{t('noWorkspacesTitle')}</h5>
-          <p className="apemind-muted">{t('noWorkspacesDescription')}</p>
-          <div className="apemind-empty-workspace-actions">
-            <button type="button" className="apemind-secondary" disabled={disabled} onClick={onRefresh}>{t('emptyRefreshWorkspaces')}</button>
-            <a className="apemind-link-action" href={oauth.origin} target="_blank" rel="noreferrer">{t('openApeMind')} <span aria-hidden="true">↗</span></a>
-          </div>
-        </div>}
-    </section>
-    <div className="apemind-connected-actions">
-      <button type="button" className="apemind-secondary" disabled={disabled} onClick={onRefresh}>{t('refreshWorkspaces')}</button>
-      <button type="button" className="apemind-danger-link" disabled={disabled} onClick={onLogout}>{t('signOut')}</button>
+    <div className="apemind-connected-body">
+      <p>{t('connectedDescription')}</p>
+      <WebLink t={t} href={webHref} primary />
     </div>
-    <KnowledgeList values={oauthItems} title={t('knowledge')} empty={t('knowledgeEmpty')} hasMore={hasMore} loadMoreLabel={t('loadMore')} disabled={disabled} onLoadMore={onLoadMore} />
+    <div className="apemind-connected-actions">
+      {oauth && <button type="button" className="apemind-secondary" disabled={disabled} onClick={onReauthenticate}>{t('signInAgain')}</button>}
+      <button type="button" className="apemind-danger-link" disabled={disabled} onClick={onSignOut}>{t(oauth ? 'signOut' : 'removeConnection')}</button>
+    </div>
   </section>
 }
 
@@ -222,21 +159,14 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const [keyItems, setKeyItems] = useState<KnowledgeBaseView[] | null>(null)
-  const [oauthItems, setOAuthItems] = useState<KnowledgeBaseView[] | null>(null)
-  const [keyCursor, setKeyCursor] = useState<string | null>(null)
-  const [oauthCursor, setOAuthCursor] = useState<string | null>(null)
   const [waiting, setWaiting] = useState(false)
   const [loginProgress, setLoginProgress] = useState<LoginProgress | null>(null)
   const [loginConflict, setLoginConflict] = useState(false)
   const alive = useRef(false)
   const pending = useRef(false)
   const active = state.connections.find(item => item.id === state.activeId)
-
-  useEffect(() => {
-    setKeyItems(null); setOAuthItems(null); setKeyCursor(null); setOAuthCursor(null)
-    setMessage('')
-  }, [state.activeId, state.oauth?.id, state.oauth?.activeWorkspaceId])
+  const oauth = state.oauth
+  const connectedAccount = oauth ?? active
 
   useEffect(() => {
     alive.current = true
@@ -245,8 +175,11 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     setBusy(true)
     void remote.state().then((result) => {
       if (cancelled) return
-      if (result.ok) { setState(current => ({ ...current, ...result.value })); setWaiting(result.value.browserLoginPending ?? false); setLoginProgress(result.value.loginProgress ?? null) }
-      else setError(result.error.message)
+      if (result.ok) {
+        setState(current => ({ ...current, ...result.value }))
+        setWaiting(result.value.browserLoginPending ?? false)
+        setLoginProgress(result.value.loginProgress ?? null)
+      } else setError(result.error.message)
     }).catch(() => { if (!cancelled) setError(t('readError')) }).finally(() => {
       if (!cancelled) { pending.current = false; setBusy(false) }
     })
@@ -265,16 +198,19 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     return () => window.clearInterval(timer)
   }, [remote, waiting])
 
-  async function run(operation: () => Promise<void>, append = false): Promise<void> {
+  async function run(operation: () => Promise<void>): Promise<void> {
     if (pending.current) return
     pending.current = true
     setBusy(true); setError(''); setMessage('')
-    if (!append) { setKeyItems(null); setOAuthItems(null); setKeyCursor(null); setOAuthCursor(null) }
     try { await operation() } catch { if (alive.current) setError(t('operationError')) }
     finally {
       if (alive.current) {
         const latest = await remote.state().catch(() => undefined)
-        if (latest?.ok) { setState(latest.value); setWaiting(latest.value.browserLoginPending ?? false); setLoginProgress(latest.value.loginProgress ?? null) }
+        if (latest?.ok) {
+          setState(latest.value)
+          setWaiting(latest.value.browserLoginPending ?? false)
+          setLoginProgress(latest.value.loginProgress ?? null)
+        }
         setBusy(false)
       }
       pending.current = false
@@ -305,46 +241,22 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     } else setError(result.error.message)
   }
 
-  async function deviceLogin(connectionId?: string): Promise<void> {
+  async function deviceLogin(): Promise<void> {
     setLoginConflict(false)
     setWaiting(true)
-    const result = connectionId
-      ? await remote.startDeviceLogin(origin, connectionId)
-      : await remote.startDeviceLogin(origin)
+    const result = await remote.startDeviceLogin(origin)
     setWaiting(false)
     if (!alive.current) return
     if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setLoginProgress(null); setMessage(t('loggedIn')) }
     else if (result.error.code === 'gateway/cancelled') { setError(''); setMessage(t('cancelled')) }
-    else if (connectionId && cliErrorCode(result.error) === 'identity_changed') {
-      setError(''); setLoginConflict(true)
-    } else setError(result.error.message)
-  }
-
-  async function selectWorkspace(id: string): Promise<void> {
-    if (!state.oauth) return
-    const result = await remote.selectWorkspace(state.oauth.id, id)
-    if (!alive.current) return
-    if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage(t('workspaceChanged')) }
-    else setError(result.error.message)
-  }
-
-  async function oauthCollections(cursor?: string): Promise<void> {
-    if (!state.oauth?.activeWorkspaceId) return
-    const result = await remote.oauthCollections(state.oauth.id, state.oauth.activeWorkspaceId, cursor)
-    if (!alive.current) return
-    if (result.ok) {
-      setOAuthItems(previous => cursor ? [...new Map([...(previous ?? []), ...result.value.items].map(item => [item.id, item])).values()] : result.value.items)
-      setOAuthCursor(result.value.nextCursor)
-      setMessage(t('knowledgeVerified', { name: result.value.workspace.name }))
-    }
     else setError(result.error.message)
   }
 
   async function oauthLogout(): Promise<void> {
-    if (!state.oauth) return
-    const result = await remote.oauthLogout(state.oauth.id)
+    if (!oauth) return
+    const result = await remote.oauthLogout(oauth.id)
     if (!alive.current) return
-    if (result.ok) { setLoginConflict(false); setState(current => ({ ...current, oauth: null })); setOAuthItems(null); setKeyItems(null); setMessage(t('loggedOut')) }
+    if (result.ok) { setLoginConflict(false); setState(current => ({ ...current, oauth: null })); setMessage(t('loggedOut')) }
     else setError(result.error.message)
   }
 
@@ -359,26 +271,6 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     const result = await remote.disconnect(id)
     if (!alive.current) return
     if (result.ok) { setState(current => ({ ...current, ...result.value })); setMessage(t('keyRemoved')) }
-    else setError(result.error.message)
-  }
-
-  async function loadKnowledge(cursor?: string): Promise<void> {
-    if (!state.activeId) return
-    const result = await remote.collections(state.activeId, cursor)
-    if (!alive.current) return
-    if (result.ok) {
-      setKeyItems(previous => cursor ? [...new Map([...(previous ?? []), ...result.value.items].map(item => [item.id, item])).values()] : result.value.items)
-      setKeyCursor(result.value.nextCursor)
-      setMessage(t('knowledgeVerified', { name: result.value.account.workspaceName }))
-    }
-    else setError(result.error.message)
-  }
-
-  async function refreshWorkspaces(): Promise<void> {
-    if (!state.oauth) return
-    const result = await remote.refreshWorkspaces(state.oauth.id)
-    if (!alive.current) return
-    if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setMessage(t('workspacesRefreshed')) }
     else setError(result.error.message)
   }
 
@@ -397,14 +289,13 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
   }
 
   const disabled = busy || waiting
-  const oauth = state.oauth
   const credential = state.credentialStatus
-  const models = state.modelConnections?.find(item => item.connectionId === (oauth?.id ?? state.activeId))
   const credentialAccount = [...(state.oauthConnections ?? []), ...state.connections]
     .find(item => item.id === credential?.connectionId)
   const needsSignIn = credential?.error === 'reauthentication_required'
   const connectionCount = (state.oauthConnections?.length ?? 0) + state.connections.length
-  const showConnectionSelector = connectionCount > 1 || (connectionCount > 0 && !oauth && !state.activeId)
+  const showConnectionSelector = connectionCount > 1 || (connectionCount > 0 && !connectedAccount)
+  const connectedWebHref = webUrl(connectedAccount?.origin ?? origin)
 
   return <section className="apemind-account" aria-busy={busy && !waiting}>
     <header className="apemind-header">
@@ -420,10 +311,10 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
       >
         <option value="" disabled>{t('chooseConnection')}</option>
         {state.oauthConnections?.map(item => <option key={item.id} value={item.id}>{item.username} · {item.origin}</option>)}
-        {state.connections.map(item => <option key={item.id} value={item.id}>{item.username} · {item.workspaceName || t('workspaceUnavailable')} · {t('apiKey')}</option>)}
+        {state.connections.map(item => <option key={item.id} value={item.id}>{item.username} · {item.origin} · {t('apiKey')}</option>)}
       </select>
     </label>}
-    {waiting && !oauth
+    {waiting && !connectedAccount
       ? <WaitingPanel t={t} disabled={false} progress={loginProgress} onCancel={() => { void cancelLogin() }}
         onOpenDevicePage={async () => (await remote.openDevicePage()).ok} />
       : credential && !credential.available
@@ -452,37 +343,18 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
               type="button" className="apemind-secondary" disabled={disabled}
               onClick={() => { void run(retryConnection) }}
             >{t('retryConnection')}</button>}
+          <WebLink t={t} href={webUrl(credentialAccount?.origin ?? origin)} />
         </section>
-        : oauth
+        : connectedAccount
           ? <ConnectedPanel
-            t={t} oauth={oauth} disabled={disabled}
-            onSelectWorkspace={(id) => { void run(() => selectWorkspace(id)) }}
-            onRefresh={() => { void run(refreshWorkspaces) }} onLogout={() => { void run(oauthLogout) }}
-            onKnowledge={() => { void run(oauthCollections) }} oauthItems={oauthItems} hasMore={Boolean(oauthCursor)}
-            onLoadMore={() => { void run(() => oauthCollections(oauthCursor ?? undefined), true) }}
+            t={t} account={connectedAccount} disabled={disabled} webHref={connectedWebHref}
+            onReauthenticate={oauth ? () => { void run(() => browserLogin(oauth.origin, oauth.id)) } : undefined}
+            onSignOut={oauth ? () => { void run(oauthLogout) } : () => { void run(() => disconnect(active!.id)) }}
           />
           : <SignedOutPanel
-            t={t} disabled={disabled} onBrowserLogin={() => { void run(browserLogin) }}
+            t={t} disabled={disabled} webHref={webUrl(origin)} onBrowserLogin={() => { void run(browserLogin) }}
             onDeviceLogin={() => { void run(deviceLogin) }}
           />}
-    {(oauth || active) && <section className="apemind-card">
-      <h3>{t('modelTitle')}</h3>
-      <p>{models?.error === 'model_authorization_required' ? t('modelReauthorize')
-        : models?.error ? t('modelUnavailable')
-          : !models ? t('modelLoading')
-            : models.count ? t('modelReady', { count: models.count }) : t('modelEmpty')}</p>
-      <p className="apemind-muted">{t('modelHint')}</p>
-      <div className="apemind-actions">
-        {models?.error === 'model_authorization_required' && oauth
-          ? <button type="button" className="apemind-primary" disabled={disabled}
-            onClick={() => { void run(() => browserLogin(oauth.origin)) }}>{t('modelAuthorize')}</button>
-          : <button type="button" disabled={disabled} onClick={() => { void run(async () => {
-            const result = await remote.refreshModels()
-            if (result.ok) setState(result.value)
-            else setError(result.error.message)
-          }) }}>{t('modelRefresh')}</button>}
-      </div>
-    </section>}
     <details className="apemind-advanced">
       <summary><span aria-hidden="true">⚙</span> {t('advanced')}</summary>
       <div className="apemind-advanced-content">
@@ -491,10 +363,10 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
           <label>{t('currentKey')}
             <select disabled={disabled} value={state.activeId ?? ''} onChange={(event) => { void run(() => select(event.target.value)) }}>
               <option value="" disabled>{t('chooseConnection')}</option>
-              {state.connections.map(item => <option key={item.id} value={item.id}>{item.workspaceName || t('workspaceUnavailable')} · {item.username}</option>)}
+              {state.connections.map(item => <option key={item.id} value={item.id}>{item.username} · {item.origin}</option>)}
             </select>
           </label>
-          {active && <><p>{active.origin}</p><div className="apemind-actions"><button disabled={disabled} onClick={() => { void run(loadKnowledge) }}>{t('viewKnowledge')}</button><button disabled={disabled} onClick={() => { void run(() => disconnect(active.id)) }}>{t('removeConnection')}</button></div><KnowledgeList values={keyItems} title={t('knowledge')} empty={t('knowledgeEmpty')} hasMore={Boolean(keyCursor)} loadMoreLabel={t('loadMore')} disabled={disabled} onLoadMore={() => { void run(() => loadKnowledge(keyCursor ?? undefined), true) }} /></>}
+          {active && !connectedAccount && <div className="apemind-actions"><button disabled={disabled} onClick={() => { void run(() => disconnect(active.id)) }}>{t('removeConnection')}</button></div>}
         </section>}
         <form className="apemind-card" onSubmit={(event) => { event.preventDefault(); void run(connect) }}>
           <h3>{t('addKey')}</h3>
@@ -510,6 +382,6 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
       {credential?.storage && <p>
         {t('credentialStorage')} <span>{credential.storage === 'system' ? t('systemStorage') : t('encryptedFileStorage')}</span>
       </p>}
-    </footer>
+  </footer>
   </section>
 }

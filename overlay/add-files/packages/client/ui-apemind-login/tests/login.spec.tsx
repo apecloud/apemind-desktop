@@ -11,67 +11,21 @@ afterEach(cleanup)
 function renderLogin(remote: unknown): void {
   const props = {
     login: { remote: { apemindAuth: remote } },
-    t: (key: keyof typeof en) => en[key],
+    t: (key: keyof typeof en, vars?: Record<string, string | number>) => {
+      let value = en[key] as string
+      for (const [name, replacement] of Object.entries(vars ?? {})) value = value.replace(`{${name}}`, String(replacement))
+      return value
+    },
   } as unknown as LoginSectionProps
   render(<LoginSection {...props} />)
 }
 
-it('lets the user select the remaining saved account after signing out', async () => {
-  const alice: OAuthAccountView = {
-    id: 'oauth-a',
-    origin: 'https://example.invalid',
-    username: 'Alice',
-    userId: 'a',
-    activeWorkspaceId: null,
-    verifiedAt: '2026-09-15T00:00:00Z',
-    workspaces: [],
-  }
-  const bob: OAuthAccountView = { ...alice, id: 'oauth-b', username: 'Bob', userId: 'b' }
-  let state: AccountState = {
-    activeId: null,
-    connections: [],
-    oauthConnections: [alice, bob],
-    oauth: alice,
-  }
-  const remote = {
-    state: vi.fn(async () => ({ ok: true as const, value: state })),
-    oauthLogout: vi.fn(async () => {
-      state = { activeId: null, connections: [], oauthConnections: [bob], oauth: null }
-      return { ok: true as const, value: undefined }
-    }),
-    select: vi.fn(async () => {
-      state = { ...state, oauth: bob }
-      return { ok: true as const, value: state }
-    }),
-  }
-  renderLogin(remote)
-  await waitFor(() => {
-    expect(screen.getByLabelText<HTMLSelectElement>(en.currentConnection).disabled).toBe(false)
-  })
-  fireEvent.click(screen.getByRole('button', { name: en.signOut }))
-  await waitFor(() => {
-    expect(remote.oauthLogout).toHaveBeenCalledWith('oauth-a')
-    const selector = screen.getByLabelText<HTMLSelectElement>(en.currentConnection)
-    expect(selector.disabled).toBe(false)
-    expect(selector.value).toBe('')
-    expect(screen.queryByRole('option', { name: /Alice/ })).toBeNull()
-  })
-  fireEvent.change(screen.getByLabelText(en.currentConnection), { target: { value: 'oauth-b' } })
-  await waitFor(() => {
-    expect(remote.select).toHaveBeenCalledWith('oauth-b')
-    expect(screen.getByText('Bob')).toBeTruthy()
-    expect(screen.queryByLabelText(en.currentConnection)).toBeNull()
-  })
-})
-
 const account: OAuthAccountView = {
-  id: 'private-account',
-  origin: 'https://private.example.invalid',
+  id: 'oauth-a',
+  origin: 'https://apemind.ai',
   username: 'Alice',
   userId: 'alice',
-  activeWorkspaceId: null,
   verifiedAt: '2026-09-15T00:00:00Z',
-  workspaces: [],
 }
 
 const connected: AccountState = {
@@ -79,100 +33,96 @@ const connected: AccountState = {
   connections: [],
   oauthConnections: [account],
   oauth: account,
-  cliVersion: 'v0.3.7',
+  cliVersion: 'v0.7.42',
   credentialStatus: { connectionId: account.id, available: true, error: null, storage: 'system' },
 }
 
-it('shows the bundled CLI version and the active connection storage', async () => {
-  renderLogin({ state: vi.fn(async () => ({ ok: true as const, value: connected })) })
-  expect(await screen.findByText('v0.3.7')).toBeTruthy()
-  expect(screen.getByText(en.systemStorage)).toBeTruthy()
-  expect(screen.getByRole('heading', { name: en.connected })).toBeTruthy()
+it('keeps the signed-out screen focused on login and opening ApeMind Web', async () => {
+  renderLogin({ state: vi.fn(async () => ({ ok: true as const, value: { activeId: null, connections: [] } })) })
+  expect(await screen.findByRole('heading', { name: en.connectTitle })).toBeTruthy()
+  expect(screen.getByRole('button', { name: en.browserSignIn })).toBeTruthy()
+  const web = screen.getByRole('link', { name: new RegExp(en.openApeMind) })
+  expect(web.getAttribute('href')).toBe('https://apemind.ai')
+  expect(web.getAttribute('target')).toBe('_blank')
+  expect(screen.queryByText(/knowledge|model|workspace/i)).toBeNull()
 })
 
-it('keeps an unreadable connection selected and retries without logging in', async () => {
-  let state: AccountState = {
-    ...connected,
-    oauth: null,
+it('shows the signed-in account, Web shortcut, reauthentication, and sign out', async () => {
+  const remote = {
+    state: vi.fn(async () => ({ ok: true as const, value: connected })),
+    startBrowserLogin: vi.fn(async () => ({ ok: true as const, value: account })),
+    oauthLogout: vi.fn(async () => ({ ok: true as const, value: undefined })),
+  }
+  renderLogin(remote)
+  expect(await screen.findByRole('heading', { name: en.connected })).toBeTruthy()
+  expect(screen.getByText('Alice')).toBeTruthy()
+  expect(screen.getByRole('link', { name: new RegExp(en.openApeMind) }).getAttribute('href')).toBe('https://apemind.ai')
+  expect(screen.queryByText(/knowledge|model|workspace/i)).toBeNull()
+
+  fireEvent.click(screen.getByRole('button', { name: en.signInAgain }))
+  await waitFor(() => { expect(remote.startBrowserLogin).toHaveBeenCalledWith(account.origin, account.id) })
+  fireEvent.click(screen.getByRole('button', { name: en.signOut }))
+  await waitFor(() => { expect(remote.oauthLogout).toHaveBeenCalledWith(account.id) })
+})
+
+it('presents an API key connection as a connected account without data controls', async () => {
+  const key = {
+    id: 'key-a', origin: 'https://apemind.ai', userId: 'alice', username: 'Alice', verifiedAt: account.verifiedAt,
+  }
+  const state: AccountState = {
+    activeId: key.id,
+    connections: [key],
+    credentialStatus: { connectionId: key.id, available: true, error: null, storage: 'encrypted-file' },
+  }
+  const remote = {
+    state: vi.fn(async () => ({ ok: true as const, value: state })),
+    disconnect: vi.fn(async () => ({ ok: true as const, value: { activeId: null, connections: [] } })),
+  }
+  renderLogin(remote)
+  expect(await screen.findByRole('heading', { name: en.connected })).toBeTruthy()
+  expect(screen.getByRole('link', { name: new RegExp(en.openApeMind) }).getAttribute('href')).toBe('https://apemind.ai')
+  expect(screen.getByRole('button', { name: en.removeConnection })).toBeTruthy()
+  expect(screen.queryByText(/knowledge|model|workspace/i)).toBeNull()
+})
+
+it('keeps an unreadable connection selected and offers recovery without exposing data controls', async () => {
+  const state: AccountState = {
+    activeId: null,
+    connections: [],
+    oauthConnections: [account],
     credentialStatus: { connectionId: account.id, available: false, error: 'credential_unavailable', storage: 'system' },
   }
   const remote = {
     state: vi.fn(async () => ({ ok: true as const, value: state })),
-    startBrowserLogin: vi.fn(),
   }
   renderLogin(remote)
-  await waitFor(() => {
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: en.retryConnection }).disabled).toBe(false)
-  })
-  expect(screen.getByRole('heading', { name: en.credentialUnavailableTitle })).toBeTruthy()
-  expect(screen.getByRole('alert').textContent).toBe(en.credentialUnavailableDescription)
-  expect(screen.getByLabelText<HTMLSelectElement>(en.currentConnection).value).toBe(account.id)
-  expect(screen.queryByRole('button', { name: en.browserSignIn })).toBeNull()
-  expect(screen.queryByRole('button', { name: en.signOut })).toBeNull()
-  expect(screen.queryByRole('button', { name: en.viewKnowledge })).toBeNull()
-
-  state = connected
-  fireEvent.click(screen.getByRole('button', { name: en.retryConnection }))
-  expect(await screen.findByRole('heading', { name: en.connected })).toBeTruthy()
-  expect(remote.startBrowserLogin).not.toHaveBeenCalled()
-  expect(screen.queryByRole('heading', { name: en.credentialUnavailableTitle })).toBeNull()
+  expect(await screen.findByRole('heading', { name: en.credentialUnavailableTitle })).toBeTruthy()
+  expect(screen.getByText(en.credentialUnavailableDescription)).toBeTruthy()
+  expect(screen.getByRole('link', { name: new RegExp(en.openApeMind) })).toBeTruthy()
+  expect(screen.queryByText(/knowledge|model|workspace/i)).toBeNull()
 })
 
-it('reauthenticates with the saved connection server rather than the default server', async () => {
+it('reauthenticates a saved connection and explains an account conflict', async () => {
   let state: AccountState = {
-    ...connected,
-    oauth: null,
-    credentialStatus: { connectionId: account.id, available: false, error: 'reauthentication_required', storage: 'system' },
-  }
-  const remote = {
-    state: vi.fn(async () => ({ ok: true as const, value: state })),
-    startBrowserLogin: vi.fn(async () => {
-      state = connected
-      return { ok: true as const, value: account }
-    }),
-  }
-  renderLogin(remote)
-  await waitFor(() => {
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: en.signInAgain }).disabled).toBe(false)
-  })
-  expect(screen.getByRole('heading', { name: en.reauthenticationTitle })).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: en.signInAgain }))
-  await waitFor(() => { expect(remote.startBrowserLogin).toHaveBeenCalledWith(account.origin, account.id) })
-  expect(await screen.findByRole('heading', { name: en.connected })).toBeTruthy()
-})
-
-it('explains a browser account conflict and offers a new connection path', async () => {
-  let state: AccountState = {
-    ...connected,
-    oauth: null,
+    activeId: null,
+    connections: [],
+    oauthConnections: [account],
     credentialStatus: { connectionId: account.id, available: false, error: 'reauthentication_required', storage: 'system' },
   }
   const remote = {
     state: vi.fn(async () => ({ ok: true as const, value: state })),
     startBrowserLogin: vi.fn(async (_origin: string, connectionId?: string) => {
-      if (connectionId) {
-        return {
-          ok: false as const,
-          error: {
-            code: 'gateway/bad-request',
-            message: '浏览器授权的账户与所选连接不一致。',
-            details: { cliCode: 'identity_changed' },
-          },
-        }
+      if (connectionId) return {
+        ok: false as const,
+        error: { code: 'gateway/bad-request', message: 'conflict', details: { cliCode: 'identity_changed' } },
       }
       state = connected
       return { ok: true as const, value: account }
     }),
   }
   renderLogin(remote)
-  await waitFor(() => {
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: en.signInAgain }).disabled).toBe(false)
-  })
-
-  fireEvent.click(screen.getByRole('button', { name: en.signInAgain }))
+  fireEvent.click(await screen.findByRole('button', { name: en.signInAgain }))
   await waitFor(() => { expect(screen.getByRole('heading', { name: en.accountConflictTitle })).toBeTruthy() })
-  expect(screen.getByText(en.accountConflictDescription)).toBeTruthy()
-
   fireEvent.click(screen.getByRole('button', { name: en.useCurrentAccount }))
   await waitFor(() => {
     expect(remote.startBrowserLogin).toHaveBeenLastCalledWith(account.origin)
@@ -180,130 +130,40 @@ it('explains a browser account conflict and offers a new connection path', async
   })
 })
 
-it('shows an unreadable API key connection and its encrypted fallback storage', async () => {
-  const state: AccountState = {
-    activeId: null,
-    connections: [{
-      id: 'key-account',
-      origin: account.origin,
-      userId: account.userId,
-      username: account.username,
-      workspaceName: 'Finance',
-      orgId: 'finance',
-      role: 'reader',
-      permissions: [],
-      verifiedAt: account.verifiedAt,
-    }],
-    cliVersion: 'v0.3.7',
-    credentialStatus: { connectionId: 'key-account', available: false, error: 'credential_unavailable', storage: 'encrypted-file' },
-  }
-  renderLogin({ state: vi.fn(async () => ({ ok: true as const, value: state })) })
-  expect(await screen.findByRole('heading', { name: en.credentialUnavailableTitle })).toBeTruthy()
-  expect(screen.getByText(en.encryptedFileStorage)).toBeTruthy()
-  expect(screen.getByLabelText<HTMLSelectElement>(en.currentConnection).value).toBe('key-account')
-  expect(screen.queryByRole('button', { name: en.signInAgain })).toBeNull()
-  expect(screen.queryByRole('button', { name: en.browserSignIn })).toBeNull()
-})
-
-it('opens the current device authorization through the Host while login is pending', async () => {
-  let state: AccountState = { activeId: null, connections: [] }
-  let finishLogin: (value: unknown) => void = () => {}
+it('opens the active device authorization through the Host', async () => {
+  let state: AccountState = { activeId: null, connections: [], browserLoginPending: true, loginProgress: {
+    type: 'device_code', userCode: 'TEST-CODE',
+    verificationUriComplete: 'https://apemind.ai/api/v2/oauth/device/verify?user_code=TEST-CODE',
+  } }
   const remote = {
     state: vi.fn(async () => ({ ok: true as const, value: state })),
-    startDeviceLogin: vi.fn(() => {
-      state = { ...state, browserLoginPending: true, loginProgress: {
-        type: 'device_code', userCode: 'TEST-CODE',
-        verificationUriComplete: 'https://example.invalid/api/v2/oauth/device/verify?user_code=TEST-CODE',
-      } }
-      return new Promise((resolve) => { finishLogin = resolve })
-    }),
-    openDevicePage: vi.fn(async () => ({ ok: true })),
+    openDevicePage: vi.fn(async () => ({ ok: true as const, value: undefined })),
     cancelBrowserLogin: vi.fn(async () => {
       state = { activeId: null, connections: [], browserLoginPending: false }
-      finishLogin({ ok: false, error: { code: 'gateway/cancelled' } })
-      return { ok: true }
+      return { ok: true as const, value: undefined }
     }),
   }
   renderLogin(remote)
-  await waitFor(() => { expect(screen.getByRole<HTMLButtonElement>('button', { name: en.deviceFallback }).disabled).toBe(false) })
-  fireEvent.click(screen.getByRole('button', { name: en.deviceFallback }))
-  const open = await screen.findByRole('button', { name: en.openDevicePage })
-  expect(screen.getByRole('heading', { name: en.deviceWaitingTitle })).toBeTruthy()
+  expect(await screen.findByRole('heading', { name: en.deviceWaitingTitle })).toBeTruthy()
   expect(screen.getByText('TEST-CODE').tagName).toBe('CODE')
-  expect(screen.queryByText(en.waitingDescription)).toBeNull()
-  expect(screen.queryByRole('link', { name: en.openDevicePage })).toBeNull()
-  fireEvent.click(open)
+  fireEvent.click(screen.getByRole('button', { name: en.openDevicePage }))
   await waitFor(() => { expect(remote.openDevicePage).toHaveBeenCalledWith() })
-  expect(remote.startDeviceLogin).toHaveBeenCalledTimes(1)
   fireEvent.click(screen.getByRole('button', { name: en.cancelSignIn }))
-  expect(await screen.findByRole('button', { name: en.browserSignIn })).toBeTruthy()
-  expect(screen.queryByText('TEST-CODE')).toBeNull()
+  await waitFor(() => { expect(remote.cancelBrowserLogin).toHaveBeenCalledWith() })
 })
 
-it('keeps the device code and offers a copyable address after opening fails', async () => {
-  const address = 'https://example.invalid/api/v2/oauth/device/verify'
+it('offers a copyable address when opening the device page fails', async () => {
+  const address = 'https://apemind.ai/api/v2/oauth/device/verify'
   const remote = {
     state: vi.fn(async () => ({ ok: true as const, value: {
       activeId: null, connections: [], browserLoginPending: true,
       loginProgress: { type: 'device_code', userCode: 'TEST-CODE', verificationUri: address },
     } })),
-    openDevicePage: vi.fn().mockRejectedValueOnce(new Error('private-process-diagnostic')).mockResolvedValue({ ok: true }),
+    openDevicePage: vi.fn().mockRejectedValueOnce(new Error('private-process-diagnostic')).mockResolvedValue({ ok: true, value: undefined }),
   }
   renderLogin(remote)
   fireEvent.click(await screen.findByRole('button', { name: en.openDevicePage }))
   expect(await screen.findByRole('alert')).toHaveProperty('textContent', en.openDevicePageError)
   expect(screen.getByLabelText<HTMLInputElement>(en.authorizationAddress).value).toBe(address)
-  expect(screen.getByLabelText<HTMLInputElement>(en.authorizationAddress).readOnly).toBe(true)
-  expect(screen.getByText('TEST-CODE')).toBeTruthy()
   expect(screen.queryByText('private-process-diagnostic')).toBeNull()
-  fireEvent.click(screen.getByRole('button', { name: en.openDevicePage }))
-  await waitFor(() => { expect(screen.queryByRole('alert')).toBeNull() })
-  expect(remote.openDevicePage).toHaveBeenCalledTimes(2)
-})
-
-it('explains an account with no workspace and offers recovery actions', async () => {
-  const emptyAccount: OAuthAccountView = { ...account, origin: 'https://apemind.example.com' }
-  let state: AccountState = { ...connected, oauth: emptyAccount, oauthConnections: [emptyAccount] }
-  const remote = {
-    state: vi.fn(async () => ({ ok: true as const, value: state })),
-    refreshWorkspaces: vi.fn(async () => emptyAccount),
-  }
-  renderLogin(remote)
-  expect(await screen.findByRole('heading', { name: en.noWorkspacesTitle })).toBeTruthy()
-  expect(screen.getByText(en.noWorkspacesDescription)).toBeTruthy()
-  const openApeMind = screen.getByRole('link', { name: new RegExp(en.openApeMind) })
-  expect(openApeMind.getAttribute('href')).toBe(emptyAccount.origin)
-  fireEvent.click(screen.getByRole('button', { name: en.emptyRefreshWorkspaces }))
-  await waitFor(() => { expect(remote.refreshWorkspaces).toHaveBeenCalledWith(emptyAccount.id) })
-})
-
-it('shows a retained personal workspace in the available workspace list', async () => {
-  const personalAccount: OAuthAccountView = {
-    ...account,
-    activeWorkspaceId: 'personal:alice',
-    workspaces: [{
-      id: 'personal:alice', type: 'personal', name: 'Alice space', status: 'active', role: null, permissions: [],
-    }],
-  }
-  const state: AccountState = { ...connected, oauth: personalAccount, oauthConnections: [personalAccount] }
-  renderLogin({ state: vi.fn(async () => ({ ok: true as const, value: state })) })
-  expect((await screen.findAllByText('Alice space')).length).toBeGreaterThan(0)
-  expect((await screen.findAllByText(en.personalSpace)).length).toBe(2)
-  // The selected workspace is shown in both the current-space summary and
-  // the available list, so the badge is intentionally rendered twice.
-  expect((await screen.findAllByText(en.currentBadge)).length).toBe(2)
-})
-
-it('uses the current organization role in the summary card', async () => {
-  const organizationAccount: OAuthAccountView = {
-    ...account,
-    activeWorkspaceId: 'org:owner',
-    workspaces: [{
-      id: 'org:owner', type: 'organization', name: 'ApeMind Finance', status: 'active', role: 'owner', permissions: [],
-    }],
-  }
-  const state: AccountState = { ...connected, oauth: organizationAccount, oauthConnections: [organizationAccount] }
-  renderLogin({ state: vi.fn(async () => ({ ok: true as const, value: state })) })
-  expect((await screen.findAllByText('owner')).length).toBe(2)
-  expect(screen.queryByText(en.member)).toBeNull()
 })
