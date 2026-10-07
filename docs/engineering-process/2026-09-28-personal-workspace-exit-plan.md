@@ -28,17 +28,17 @@
 
 ### Desktop
 
-- 登录成功不再承诺一定有个人空间。选择器、知识库、模型、Agent、Chat 和 Turn 页面都需要有空状态、刷新和加入组织的恢复动作。
-- Renderer 只展示 CLI 和服务端结果，不复制授权逻辑，不从本地用户信息拼接 workspace ID，不因为列表为空初始化个人资源。
-- 打包的 CLI 版本必须与 UI 合同一起验收；空空间、失效选择和组织切换都要在打包应用中验证。
+- 登录成功不再承诺一定有个人空间。ApeMind 插件只显示连接状态并提供打开 Web 的入口，不提供工作空间、知识库或模型浏览器。
+- Renderer 只负责登录 UI，不复制授权逻辑，不从本地用户信息拼接 workspace ID，也不因为列表为空初始化个人资源；Agent 的空间和数据操作走内置 CLI。
+- 打包验收只检查登录、退出、连接恢复、打开 Web 和内置 CLI 版本；空空间、失效选择和组织切换在 CLI/服务端验收。
 
 ## 当前执行状态
 
-服务端 v2.6.127、CLI v0.7.39 和 Desktop v0.1.7-rc.2+cli.0739 已发布；新加坡生产部署收据见 [v2.6.127 release receipt](https://github.com/apecloud/aperag-enterprise-deploy/blob/main/environments/singapore/releases/v2.6.127.json)。生产只读收据返回 48 个组织 workspace、0 个个人 workspace，当前组织 workspace 的知识库读取成功；Desktop 仍只消费 CLI/服务端返回的 canonical workspace，不会从用户 ID 或旧 flag 合成个人空间。文档和定向测试可以证明合同一致，不能代表打包应用已经完成六态验收或所有资源已经取得线上收据。
+服务端 v2.6.127、CLI v0.7.39 和 Desktop v0.1.7-rc.2+cli.0739 已发布；新加坡生产部署收据见 [v2.6.127 release receipt](https://github.com/apecloud/aperag-enterprise-deploy/blob/main/environments/singapore/releases/v2.6.127.json)。生产只读收据返回 48 个组织 workspace、0 个个人 workspace，当前组织 workspace 的知识库读取成功；工作空间由 CLI/服务端消费，Desktop 插件只保留登录和打开 Web，不会从用户 ID 或旧 flag 合成个人空间。文档和定向测试可以证明合同一致，不能代表打包应用已经完成六态验收或所有资源已经取得线上收据。
 
 服务端最近的权限审计还明确了“内容读取”和“上传管理”是两种权限：组织只读成员可以读取被授权的普通文档内容；暂存文档、站点抓取配置和任务状态仍要求所有者或组织知识库成员。Desktop 只展示服务端返回的结果，不应把订阅读取成功解释成拥有上传管理权限。该修复已进入服务端发布；仍需在真实六态环境中验收。
 
-后续 Desktop 工作只保留必要的图形化收口：在真实打包产物中验证 `workspace list/current/use`、历史选择失效、无空间登录、多组织选择、个人空间关闭后的恢复动作，以及内置 CLI 版本。服务端资源审计、个人数据迁移和 Widget 组织授权仍以服务端仓库的执行计划为准，不能在 Desktop 内复制第二套授权逻辑。
+后续 Desktop 工作只保留必要的图形化收口：在真实打包产物中验证登录、退出、连接恢复、打开 ApeMind Web 和内置 CLI 版本。`workspace list/current/use`、历史选择失效、无空间登录、多组织选择和个人空间关闭后的恢复动作由 CLI/服务端验收；服务端资源审计、个人数据迁移和 Widget 组织授权仍以服务端仓库的执行计划为准，不能在 Desktop 内复制第二套授权逻辑。
 
 ## 六种账户状态
 

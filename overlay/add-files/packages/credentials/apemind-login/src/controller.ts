@@ -3,9 +3,8 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { CliError, CliProcess } from './cli-process.ts'
-import type {} from './models.ts'
 import type {
-  AccountState, AccountView, CredentialStatus, KnowledgeBaseView, KnowledgePage, LoginProgress, OAuthAccountView, WorkspaceView,
+  AccountState, AccountView, CredentialStatus, LoginProgress, OAuthAccountView,
 } from './types.ts'
 
 declare module '@deepseek-ai/cordis' {
@@ -18,23 +17,16 @@ type CliConnection = {
   user_id: string
   username: string
   kind: 'oauth' | 'api-key'
-  workspace_id: string
-  workspaces: WorkspaceView[]
   verified_at: string
   credential_storage?: string
-  role?: string | null
-  permissions?: string[]
-  workspace_name?: string
 }
-type ConnectionList = { current: string; items: CliConnection[] }
+type ConnectionList = { current: string | null; items: CliConnection[] }
 type Status = {
   logged_in: boolean
   connection: CliConnection | null
   credential_available?: boolean
   credential_error?: string
 }
-type WorkspaceResult = { items: WorkspaceView[]; next_cursor: string | null }
-type KnowledgeResult = { items: KnowledgeBaseView[]; next_cursor: string | null }
 
 /** The Desktop UI is a presentation layer over the same CLI used by agents. */
 export class AuthorizationController extends TypertRemoteService {
@@ -56,20 +48,17 @@ export class AuthorizationController extends TypertRemoteService {
   }
 
   private view(connection: CliConnection): AccountView {
-    const active = connection.workspaces?.find(item => item.id === connection.workspace_id)
     return {
       id: connection.id, origin: connection.server, userId: connection.user_id, username: connection.username,
-      workspaceName: active?.name ?? connection.workspace_name ?? '',
-      orgId: active?.type === 'organization' ? active.id : null,
-      role: active?.role ?? connection.role ?? null, permissions: active?.permissions ?? connection.permissions ?? [],
       verifiedAt: connection.verified_at,
     }
   }
 
   private oauthView(connection: CliConnection): OAuthAccountView {
-    return { id: connection.id, origin: connection.server, userId: connection.user_id, username: connection.username,
-      verifiedAt: connection.verified_at, activeWorkspaceId: connection.workspace_id || null,
-      workspaces: connection.workspaces ?? [] }
+    return {
+      id: connection.id, origin: connection.server, userId: connection.user_id, username: connection.username,
+      verifiedAt: connection.verified_at,
+    }
   }
 
   private async version(): Promise<string | null> {
@@ -115,25 +104,22 @@ export class AuthorizationController extends TypertRemoteService {
     return status.connection
   }
 
-  private async knowledge(connectionId: string, workspaceId: string, cursor?: string): Promise<KnowledgePage> {
-    if (!workspaceId) throw new RemoteError('gateway/bad-request', '请选择工作空间。', {})
-    const args = ['knowledge', 'list', '--connection', connectionId, '--workspace', workspaceId, '--limit', '20']
-    if (cursor) args.push('--cursor', cursor)
-    const result = await this.run<KnowledgeResult>(args)
-    return { items: result.items, nextCursor: result.next_cursor }
-  }
-
   @Remote
   async state(): Promise<AccountState> {
     const { list, status } = await this.snapshot()
     const connections = list.items.filter(item => item.kind === 'api-key').map(item => this.view(item))
     const credentialStatus = this.credentialStatus(status)
     const active = status.logged_in && credentialStatus?.available ? status.connection : null
-    return { activeId: active?.kind === 'api-key' ? active.id : null, connections,
+    return {
+      activeId: active?.kind === 'api-key' ? active.id : null,
+      connections,
       oauthConnections: list.items.filter(item => item.kind === 'oauth').map(item => this.oauthView(item)),
       oauth: active?.kind === 'oauth' ? this.oauthView(active) : null,
-      cliVersion: await this.version(), credentialStatus, modelConnections: this.ctx.get('apemindModels')?.state() ?? [],
-      browserLoginPending: Boolean(this.loginAbort), loginProgress: this.loginProgress }
+      cliVersion: await this.version(),
+      credentialStatus,
+      browserLoginPending: Boolean(this.loginAbort),
+      loginProgress: this.loginProgress,
+    }
   }
 
   @Remote
@@ -164,7 +150,6 @@ export class AuthorizationController extends TypertRemoteService {
           this.loginProgress = progress
         },
       })
-      await this.ctx.get('apemindModels')?.refresh(true)
       return this.oauthView(connection)
     } finally {
       if (this.loginAbort === controller) this.loginAbort = undefined
@@ -175,8 +160,8 @@ export class AuthorizationController extends TypertRemoteService {
   @Remote async startBrowserLogin(origin: string, connectionId?: string): Promise<OAuthAccountView> {
     return this.login(false, origin, connectionId)
   }
-  @Remote async startDeviceLogin(origin: string, connectionId?: string): Promise<OAuthAccountView> {
-    return this.login(true, origin, connectionId)
+  @Remote async startDeviceLogin(origin: string): Promise<OAuthAccountView> {
+    return this.login(true, origin)
   }
   @Remote async cancelBrowserLogin(): Promise<void> { this.loginAbort?.abort() }
 
@@ -201,57 +186,26 @@ export class AuthorizationController extends TypertRemoteService {
     }
   }
 
-  @Remote
-  async refreshWorkspaces(connectionId: string): Promise<OAuthAccountView> {
-    await this.connection(connectionId, 'oauth')
-    await this.run<WorkspaceResult>(['workspace', 'list', '--connection', connectionId])
-    return this.oauthView(await this.connection(connectionId, 'oauth'))
-  }
-
-  @Remote
-  async selectWorkspace(connectionId: string, id: string): Promise<OAuthAccountView> {
-    await this.connection(connectionId, 'oauth')
-    const next = await this.run<CliConnection>(['workspace', 'use', id, '--connection', connectionId])
-    return this.oauthView(next)
-  }
-
-  @Remote
-  async oauthCollections(connectionId: string, workspaceId: string, cursor?: string): Promise<KnowledgePage & { workspace: WorkspaceView }> {
-    const current = await this.connection(connectionId, 'oauth')
-    const workspace = current.workspaces.find(item => item.id === workspaceId)
-    if (!workspace) throw new RemoteError('gateway/bad-request', '当前工作空间不可用。', {})
-    return { workspace, ...await this.knowledge(connectionId, workspaceId, cursor) }
-  }
-
   @Remote async oauthLogout(connectionId: string): Promise<void> {
     await this.connection(connectionId, 'oauth')
     await this.run(['auth', 'logout', '--connection', connectionId])
-    await this.ctx.get('apemindModels')?.refresh(true)
   }
 
   @Remote
   async connect(origin: string, apiKey: string): Promise<AccountState> {
     if (!apiKey.trim()) throw new RemoteError('gateway/bad-request', '请输入 API Key。', {})
     await this.run<CliConnection>(['auth', 'connect', '--server', origin, '--api-key-stdin'], { input: apiKey })
-    await this.ctx.get('apemindModels')?.refresh(true)
     return this.state()
   }
-  @Remote async select(id: string): Promise<AccountState> { await this.run(['connection', 'use', id]); return this.state() }
+
+  @Remote async select(id: string): Promise<AccountState> {
+    await this.run(['connection', 'use', id])
+    return this.state()
+  }
+
   @Remote async disconnect(id: string): Promise<AccountState> {
     await this.run(['connection', 'remove', id])
-    await this.ctx.get('apemindModels')?.refresh(true)
     return this.state()
-  }
-
-  @Remote async refreshModels(): Promise<AccountState> {
-    await this.ctx.get('apemindModels')?.refresh(true)
-    return this.state()
-  }
-
-  @Remote
-  async collections(connectionId: string, cursor?: string): Promise<KnowledgePage & { account: AccountView }> {
-    const connection = await this.connection(connectionId, 'api-key')
-    return { account: this.view(connection), ...await this.knowledge(connectionId, connection.workspace_id, cursor) }
   }
 }
 

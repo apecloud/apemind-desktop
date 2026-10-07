@@ -27,10 +27,6 @@ patches:
     targets:
       - target: apps/desktop/src/main.ts
     reason: 原生 About 面板的 applicationName 也属于用户可见品牌，必须与菜单文案和应用名保持一致。
-  - file: patches/19-pi-ai-export-test.patch
-    targets:
-      - target: packages/llm/llm-pi-ai/tests/adapter.spec.ts
-    reason: 登录插件复用上游模型 profile 解析器的公开导出；同步调整上游“包根不导出辅助函数”的测试断言，避免把必要的稳定 seam 当成回归。
   - file: patches/18-brand-test-expectations.patch
     targets:
       - target: apps/desktop/tests/main-startup.spec.ts
@@ -38,11 +34,6 @@ patches:
       - target: apps/desktop/tests/expected/application-menu-en-US.json
       - target: apps/desktop/tests/expected/application-menu-zh-CN.json
     reason: 品牌化会改变原生 About、菜单和 Windows 弹窗中的产品名；测试快照必须验证 ApeMind Desktop，避免旧品牌断言掩盖真实行为。
-  - file: patches/15-pi-ai-profile-resolver.patch
-    targets:
-      - target: packages/llm/llm-pi-ai/src/index.ts
-    reason: 导出已存在的 profile 解析器，让 ApeMind 插件复用原生模型适配器且不改写用户配置。
-    upstream_logic_changed: false
   - file: patches/11-apemind-macos-artifact-name.patch
     targets:
       - target: apps/desktop/scripts/package-macos.ts
@@ -240,7 +231,7 @@ patches:
 # 与 patches/ 的分界：patches 改上游已有文件；add-files 只放**我们新增**的文件。
 # 每个文件都必须在此登记（未登记则不拷且报错，见 scripts/sync-upstream.sh 3c 段）。
 #
-# 当前用途：ApeMind 账户连接插件。登录态使用短期 Access Token + 可轮换 Refresh Token；组织与可选的遗留个人空间只通过服务端工作空间接口发现。线上新账户默认没有个人空间，个人空间为空或不存在时插件仍必须保持登录并显示可操作的空状态，不得根据用户 ID 合成 `personal:<user_id>`。跨仓库行为以 `docs/engineering-process/2026-09-29-personal-workspace-optional-contract.md` 和服务端合同为准。
+# 当前用途：ApeMind 账户连接插件。登录态使用短期 Access Token + 可轮换 Refresh Token；设置页只展示登录状态并提供 ApeMind Web 快捷入口，不读取或展示工作空间、知识库和模型。Agent 的数据操作由随桌面提供的 `apemind` CLI 独立完成。线上新账户默认没有个人空间，个人空间存在性由 CLI 与服务端合同决定，插件不能根据用户 ID 合成 `personal:<user_id>`。
 # ── 派生文件：sync 时由脚本重新生成，不是我们手写的补丁 ────────────────
 # pnpm-lock.yaml 需随 add-files 的 workspace 包一起变化；
 # 我们存的是"派生规则"而不是 lock 内容本身（见 sync-upstream.sh 5 段）。
@@ -259,10 +250,9 @@ add-files:
   - target: packages/credentials/apemind-login/src/controller.ts
   - target: packages/credentials/apemind-login/src/cli-process.ts
   # Desktop 启动与 Agent 相同的 apemind CLI；不在插件内复制认证或业务 API。
-  # 设置页显示 CLI 版本与凭据存储状态，保留读取失败的连接并提供对应恢复入口。
+  # 设置页只提供登录状态、凭据恢复、退出/重连和 ApeMind Web 快捷入口，
+  # 不复制知识库、模型或 workspace 浏览能力；Host 也不注册模型桥接。
   - target: packages/credentials/apemind-login/src/types.ts
-  - target: packages/credentials/apemind-login/src/model-bridge.ts
-  - target: packages/credentials/apemind-login/src/models.ts
   # ApeMind 设置分区，通过 remote.apemindAuth 操作 Host。
   - target: packages/client/ui-apemind-login/package.json
   - target: packages/client/ui-apemind-login/tsconfig.json
@@ -275,7 +265,7 @@ add-files:
   - target: packages/client/ui-brand-official/src/client/locales.ts
   - target: packages/client/ui-apemind-login/src/client/style.css
   - target: packages/client/ui-apemind-login/tests/login.spec.tsx
-  # 真实组件覆盖账号选择、凭据读取失败恢复、重新登录和内置 CLI 状态展示。
+  # 真实组件覆盖账号选择、凭据读取失败恢复、重新登录、Web 快捷入口和内置 CLI 状态展示。
 
 resources:
   - source: apps/desktop/resources/apemind-cli.lock.json
