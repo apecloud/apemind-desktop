@@ -18,6 +18,20 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 const NS = 'settings.apemind'
 
+/**
+ * The Host keeps the CLI error code in the remote error details so the UI can
+ * offer the right recovery without parsing a localized message.  The remote
+ * protocol deliberately exposes details as an opaque JSON value here because
+ * the CLI owns the error vocabulary.
+ */
+function cliErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object') return undefined
+  const details = (error as { details?: unknown }).details
+  if (!details || typeof details !== 'object') return undefined
+  const code = (details as { cliCode?: unknown }).cliCode
+  return typeof code === 'string' ? code : undefined
+}
+
 export const inject = ['slots', 'locale', 'remote', 'remote.apemindAuth']
 export interface LoginSectionInjected { readonly login: ClientContext }
 export type LoginSectionProps = PropsRuntime<'settings.section'> & PropsLocale<'settings.apemind'> & InjectFace<LoginSectionInjected>
@@ -214,6 +228,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
   const [oauthCursor, setOAuthCursor] = useState<string | null>(null)
   const [waiting, setWaiting] = useState(false)
   const [loginProgress, setLoginProgress] = useState<LoginProgress | null>(null)
+  const [loginConflict, setLoginConflict] = useState(false)
   const alive = useRef(false)
   const pending = useRef(false)
   const active = state.connections.find(item => item.id === state.activeId)
@@ -276,23 +291,33 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
   }
 
   async function browserLogin(server = origin, connectionId?: string): Promise<void> {
+    setLoginConflict(false)
     setWaiting(true)
-    const result = await remote.startBrowserLogin(server, connectionId)
+    const result = connectionId
+      ? await remote.startBrowserLogin(server, connectionId)
+      : await remote.startBrowserLogin(server)
     setWaiting(false)
     if (!alive.current) return
     if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setLoginProgress(null); setMessage(t('loggedIn')) }
     else if (result.error.code === 'gateway/cancelled') { setError(''); setMessage(t('cancelled')) }
-    else setError(result.error.message)
+    else if (connectionId && cliErrorCode(result.error) === 'identity_changed') {
+      setError(''); setLoginConflict(true)
+    } else setError(result.error.message)
   }
 
   async function deviceLogin(connectionId?: string): Promise<void> {
+    setLoginConflict(false)
     setWaiting(true)
-    const result = await remote.startDeviceLogin(origin, connectionId)
+    const result = connectionId
+      ? await remote.startDeviceLogin(origin, connectionId)
+      : await remote.startDeviceLogin(origin)
     setWaiting(false)
     if (!alive.current) return
     if (result.ok) { setState(current => ({ ...current, oauth: result.value })); setLoginProgress(null); setMessage(t('loggedIn')) }
     else if (result.error.code === 'gateway/cancelled') { setError(''); setMessage(t('cancelled')) }
-    else setError(result.error.message)
+    else if (connectionId && cliErrorCode(result.error) === 'identity_changed') {
+      setError(''); setLoginConflict(true)
+    } else setError(result.error.message)
   }
 
   async function selectWorkspace(id: string): Promise<void> {
@@ -319,7 +344,7 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     if (!state.oauth) return
     const result = await remote.oauthLogout(state.oauth.id)
     if (!alive.current) return
-    if (result.ok) { setState(current => ({ ...current, oauth: null })); setOAuthItems(null); setKeyItems(null); setMessage(t('loggedOut')) }
+    if (result.ok) { setLoginConflict(false); setState(current => ({ ...current, oauth: null })); setOAuthItems(null); setKeyItems(null); setMessage(t('loggedOut')) }
     else setError(result.error.message)
   }
 
@@ -404,14 +429,25 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
       : credential && !credential.available
         ? <section className="apemind-state-panel">
           <Mark className="apemind-state-mark" />
-          <h3>{needsSignIn ? t('reauthenticationTitle') : t('credentialUnavailableTitle')}</h3>
+          <h3>{loginConflict ? t('accountConflictTitle') : needsSignIn ? t('reauthenticationTitle') : t('credentialUnavailableTitle')}</h3>
           {credentialAccount && <p>{credentialAccount.username}<br />{credentialAccount.origin}</p>}
-          <p role="alert">{needsSignIn ? t('reauthenticationDescription') : t('credentialUnavailableDescription')}</p>
-          {needsSignIn && credentialAccount
-            ? <button
-              type="button" className="apemind-primary apemind-main-action" disabled={disabled}
-              onClick={() => { void run(() => browserLogin(credentialAccount.origin, credentialAccount.id)) }}
-            >{t('signInAgain')}</button>
+          <p role="alert">{loginConflict ? t('accountConflictDescription') : needsSignIn ? t('reauthenticationDescription') : t('credentialUnavailableDescription')}</p>
+          {loginConflict && credentialAccount
+            ? <div className="apemind-conflict-actions">
+              <button
+                type="button" className="apemind-primary apemind-main-action" disabled={disabled}
+                onClick={() => { void run(() => browserLogin(credentialAccount.origin)) }}
+              >{t('useCurrentAccount')}</button>
+              <button
+                type="button" className="apemind-secondary" disabled={disabled}
+                onClick={() => { void run(() => browserLogin(credentialAccount.origin, credentialAccount.id)) }}
+              >{t('retrySavedConnection')}</button>
+            </div>
+            : needsSignIn && credentialAccount
+              ? <button
+                type="button" className="apemind-primary apemind-main-action" disabled={disabled}
+                onClick={() => { void run(() => browserLogin(credentialAccount.origin, credentialAccount.id)) }}
+              >{t('signInAgain')}</button>
             : <button
               type="button" className="apemind-secondary" disabled={disabled}
               onClick={() => { void run(retryConnection) }}
