@@ -128,6 +128,7 @@
 .apemind-runtime-info { display: grid; gap: 4px; color: var(--apemind-muted); font-size: .8rem; }
 .apemind-runtime-info span { margin-left: 6px; }
 .apemind-state-panel > p { overflow-wrap: anywhere; }
+.apemind-conflict-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
 
 @media (max-width: 560px) {
   .apemind-state-panel { padding: 32px 22px 28px; }

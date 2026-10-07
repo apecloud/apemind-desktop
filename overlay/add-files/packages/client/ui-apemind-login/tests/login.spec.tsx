@@ -141,6 +141,45 @@ it('reauthenticates with the saved connection server rather than the default ser
   expect(await screen.findByRole('heading', { name: en.connected })).toBeTruthy()
 })
 
+it('explains a browser account conflict and offers a new connection path', async () => {
+  let state: AccountState = {
+    ...connected,
+    oauth: null,
+    credentialStatus: { connectionId: account.id, available: false, error: 'reauthentication_required', storage: 'system' },
+  }
+  const remote = {
+    state: vi.fn(async () => ({ ok: true as const, value: state })),
+    startBrowserLogin: vi.fn(async (_origin: string, connectionId?: string) => {
+      if (connectionId) {
+        return {
+          ok: false as const,
+          error: {
+            code: 'gateway/bad-request',
+            message: '浏览器授权的账户与所选连接不一致。',
+            details: { cliCode: 'identity_changed' },
+          },
+        }
+      }
+      state = connected
+      return { ok: true as const, value: account }
+    }),
+  }
+  renderLogin(remote)
+  await waitFor(() => {
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: en.signInAgain }).disabled).toBe(false)
+  })
+
+  fireEvent.click(screen.getByRole('button', { name: en.signInAgain }))
+  await waitFor(() => { expect(screen.getByRole('heading', { name: en.accountConflictTitle })).toBeTruthy() })
+  expect(screen.getByText(en.accountConflictDescription)).toBeTruthy()
+
+  fireEvent.click(screen.getByRole('button', { name: en.useCurrentAccount }))
+  await waitFor(() => {
+    expect(remote.startBrowserLogin).toHaveBeenLastCalledWith(account.origin)
+    expect(screen.getByRole('heading', { name: en.connected })).toBeTruthy()
+  })
+})
+
 it('shows an unreadable API key connection and its encrypted fallback storage', async () => {
   const state: AccountState = {
     activeId: null,
