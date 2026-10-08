@@ -27,13 +27,15 @@ const a = {id:'account-a',kind:'oauth',server:'https://example.invalid',user_id:
 const b = {...a,id:'account-b',user_id:'b',username:'B'};
 const key = {...a,id:'key-a',kind:'api-key'};
 let data;
-if (args[0]==='connection' && args[1]==='list') data={current:status.current??a.id,items:[a,b,key]};
-else if (args[0]==='auth' && args[1]==='status') {
-  // The default switched to B after connection list returned A.
-  const selected=args.includes('--connection')?option('--connection'):b.id;
+if (args[0]==='auth' && args[1]==='status') {
+  // One call reports the current account together with every account, so
+  // there is no window in which the list and the status disagree.
+  const current=status.current??a.id;
+  const selected=args.includes('--connection')?option('--connection'):current;
   const connection=[a,b,key].find(item=>item.id===selected);
-  data={logged_in:Boolean(connection)&&!status.error,connection:connection??null,credential_available:Boolean(connection)&&!status.error,credential_error:status.error};
-} else if (args[0]==='auth' && args[1]==='logout') data={logged_in:false};
+  data={logged_in:Boolean(connection)&&!status.error,connection:connection??null,credential_available:Boolean(connection)&&!status.error,credential_error:status.error,current,accounts:[a,b,key]};
+} else if (args[0]==='auth' && args[1]==='switch') data={...[a,b,key].find(item=>item.id===args[2])};
+else if (args[0]==='auth' && args[1]==='logout') data={logged_in:false};
 else if (args[0]==='auth' && args[1]==='login') {
   console.log(JSON.stringify({type:'device_code',data:{user_code:'TEST-CODE',verification_uri_complete:status.deviceUri??'https://example.invalid/api/v2/oauth/device/verify?user_code=TEST-CODE'}}));
   setInterval(()=>{},1000);
@@ -81,7 +83,11 @@ fs.appendFileSync(${JSON.stringify(openedFile)},JSON.stringify(process.argv.slic
   await writeFile(statusFile, '{}')
   assert.equal((await controller.state()).oauth.id, 'account-a')
   const calls = (await readFile(callsFile, 'utf8')).trim().split('\n').map(line => JSON.parse(line))
-  assert.ok(calls.filter(args => args[0] === 'auth' && args[1] === 'status').every(args => args.includes('--connection')))
+  assert.ok(!calls.some(args => args[0] === 'connection'), 'the removed connection commands must not be called')
+  await controller.select('account-b')
+  const switched = (await readFile(callsFile, 'utf8')).trim().split('\n').map(line => JSON.parse(line))
+    .find(args => args[0] === 'auth' && args[1] === 'switch')
+  assert.deepEqual(switched, ['auth', 'switch', 'account-b'])
   const logout = calls.find(args => args[0] === 'auth' && args[1] === 'logout')
   assert.equal(logout[logout.indexOf('--connection') + 1], 'account-a')
   assert.equal(calls.filter(args => args[0] === '--version').length, 1)
