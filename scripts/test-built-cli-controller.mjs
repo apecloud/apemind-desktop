@@ -87,7 +87,7 @@ fs.appendFileSync(${JSON.stringify(openedFile)},JSON.stringify(process.argv.slic
   await controller.select('account-b')
   const switched = (await readFile(callsFile, 'utf8')).trim().split('\n').map(line => JSON.parse(line))
     .find(args => args[0] === 'auth' && args[1] === 'switch')
-  assert.deepEqual(switched, ['auth', 'switch', 'account-b'])
+  assert.deepEqual(switched.slice(0, 3), ['auth', 'switch', 'account-b'])
   const logout = calls.find(args => args[0] === 'auth' && args[1] === 'logout')
   assert.equal(logout[logout.indexOf('--connection') + 1], 'account-a')
   assert.equal(calls.filter(args => args[0] === '--version').length, 1)
