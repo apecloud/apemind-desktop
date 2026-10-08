@@ -105,33 +105,67 @@ function WaitingPanel({ t, disabled, onCancel, onOpenDevicePage, progress }: {
   </section>
 }
 
-function SignedOutPanel({ t, disabled, webHref, onBrowserLogin, onDeviceLogin }: {
+function ApiKeyPanel({ t, disabled, origin, apiKey, showKey, onApiKeyChange, onShowKeyChange, onConnect }: {
+  t: LoginSectionProps['t']
+  disabled: boolean
+  origin: string
+  apiKey: string
+  showKey: boolean
+  onApiKeyChange: (value: string) => void
+  onShowKeyChange: (value: boolean) => void
+  onConnect: () => void
+}): ReactNode {
+  return <form className="apemind-method-panel apemind-api-key-panel" onSubmit={(event) => {
+    event.preventDefault()
+    onConnect()
+  }}>
+    <div className="apemind-method-heading">
+      <span className="apemind-method-badge" aria-hidden="true">{t('apiKeyBadge')}</span>
+      <div><h3>{t('apiKeyTitle')}</h3><p className="apemind-muted">{t('apiKeyDescription')}</p></div>
+    </div>
+    <label>{t('apiKey')}<input required type={showKey ? 'text' : 'password'} autoComplete="off" spellCheck={false}
+      disabled={disabled} value={apiKey} onChange={(event) => { onApiKeyChange(event.target.value) }} placeholder={t('keyPlaceholder')} /></label>
+    <label className="apemind-checkbox"><input type="checkbox" checked={showKey} disabled={disabled}
+      onChange={(event) => { onShowKeyChange(event.target.checked) }} />{t('showKey')}</label>
+    <div className="apemind-actions"><button type="submit" disabled={disabled || !apiKey.trim() || !origin.trim()}>{t('verifySignIn')}</button></div>
+  </form>
+}
+
+function SignedOutPanel({ t, disabled, webHref, origin, apiKey, showKey, onApiKeyChange, onShowKeyChange, onConnect, onBrowserLogin, onDeviceLogin }: {
   t: LoginSectionProps['t']
   disabled: boolean
   webHref: string
+  origin: string
+  apiKey: string
+  showKey: boolean
+  onApiKeyChange: (value: string) => void
+  onShowKeyChange: (value: boolean) => void
+  onConnect: () => void
   onBrowserLogin: () => void
   onDeviceLogin: () => void
 }): ReactNode {
-  return <section className="apemind-state-panel apemind-connect-panel">
-    <Mark className="apemind-state-mark" />
-    <h3>{t('connectTitle')}</h3>
-    <p>{t('connectDescription')}</p>
-    <button type="button" className="apemind-primary apemind-main-action" disabled={disabled} onClick={onBrowserLogin}>{t('browserSignIn')} <span aria-hidden="true">↗</span></button>
-    <button type="button" className="apemind-link-action" disabled={disabled} onClick={onDeviceLogin}>{t('deviceFallback')} <span aria-hidden="true">›</span></button>
-    <WebLink t={t} href={webHref} />
-    <p className="apemind-security-note"><span aria-hidden="true">▣</span> {t('localOnly')}</p>
-  </section>
+  return <div className="apemind-signin-methods">
+    <section className="apemind-state-panel apemind-connect-panel">
+      <Mark className="apemind-state-mark" />
+      <h3>{t('connectTitle')}</h3>
+      <p>{t('connectDescription')}</p>
+      <button type="button" className="apemind-primary apemind-main-action" disabled={disabled} onClick={onBrowserLogin}>{t('browserSignIn')} <span aria-hidden="true">↗</span></button>
+      <button type="button" className="apemind-link-action" disabled={disabled} onClick={onDeviceLogin}>{t('deviceFallback')} <span aria-hidden="true">›</span></button>
+      <WebLink t={t} href={webHref} />
+      <p className="apemind-security-note"><span aria-hidden="true">▣</span> {t('localOnly')}</p>
+    </section>
+    <ApiKeyPanel t={t} disabled={disabled} origin={origin} apiKey={apiKey} showKey={showKey}
+      onApiKeyChange={onApiKeyChange} onShowKeyChange={onShowKeyChange} onConnect={onConnect} />
+  </div>
 }
 
-function ConnectedPanel({ t, account, disabled, webHref, onReauthenticate, onSignOut }: {
+function ConnectedPanel({ t, account, disabled, webHref, onSignOut }: {
   t: LoginSectionProps['t']
   account: ConnectedAccount
   disabled: boolean
   webHref: string
-  onReauthenticate: (() => void) | undefined
   onSignOut: () => void
 }): ReactNode {
-  const oauth = onReauthenticate !== undefined
   return <section className="apemind-connected-panel">
     <div className="apemind-connected-heading">
       <Mark className="apemind-connected-mark" />
@@ -143,8 +177,7 @@ function ConnectedPanel({ t, account, disabled, webHref, onReauthenticate, onSig
       <WebLink t={t} href={webHref} primary />
     </div>
     <div className="apemind-connected-actions">
-      {oauth && <button type="button" className="apemind-secondary" disabled={disabled} onClick={onReauthenticate}>{t('signInAgain')}</button>}
-      <button type="button" className="apemind-danger-link" disabled={disabled} onClick={onSignOut}>{t(oauth ? 'signOut' : 'removeConnection')}</button>
+      <button type="button" className="apemind-danger-link" disabled={disabled} onClick={onSignOut}>{t('signOut')}</button>
     </div>
   </section>
 }
@@ -252,25 +285,22 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     else setError(result.error.message)
   }
 
-  async function oauthLogout(): Promise<void> {
-    if (!oauth) return
-    const result = await remote.oauthLogout(oauth.id)
+  async function oauthLogout(connectionId = oauth?.id): Promise<void> {
+    if (!connectionId) return
+    const result = await remote.oauthLogout(connectionId)
     if (!alive.current) return
-    if (result.ok) { setLoginConflict(false); setState(current => ({ ...current, oauth: null })); setMessage(t('loggedOut')) }
-    else setError(result.error.message)
-  }
-
-  async function select(id: string): Promise<void> {
-    const result = await remote.select(id)
-    if (!alive.current) return
-    if (result.ok) { setState(result.value); setMessage(t('connectionSelected')) }
+    if (result.ok) {
+      setLoginConflict(false)
+      setState(current => ({ ...current, activeId: null, connections: [], oauth: null, oauthConnections: [] }))
+      setMessage(t('loggedOut'))
+    }
     else setError(result.error.message)
   }
 
   async function disconnect(id: string): Promise<void> {
     const result = await remote.disconnect(id)
     if (!alive.current) return
-    if (result.ok) { setState(current => ({ ...current, ...result.value })); setMessage(t('keyRemoved')) }
+    if (result.ok) { setState(current => ({ ...current, ...result.value })); setMessage(t('loggedOut')) }
     else setError(result.error.message)
   }
 
@@ -292,10 +322,20 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
   const credential = state.credentialStatus
   const credentialAccount = [...(state.oauthConnections ?? []), ...state.connections]
     .find(item => item.id === credential?.connectionId)
+  const credentialIsOauth = Boolean(state.oauthConnections?.some(item => item.id === credential?.connectionId))
   const needsSignIn = credential?.error === 'reauthentication_required'
-  const connectionCount = (state.oauthConnections?.length ?? 0) + state.connections.length
-  const showConnectionSelector = connectionCount > 1 || (connectionCount > 0 && !connectedAccount)
   const connectedWebHref = webUrl(connectedAccount?.origin ?? origin)
+  const accountOrigin = connectedAccount?.origin ?? credentialAccount?.origin
+
+  useEffect(() => {
+    if (accountOrigin && accountOrigin !== origin) setOrigin(accountOrigin)
+  }, [accountOrigin, origin])
+
+  async function signOutSavedConnection(): Promise<void> {
+    if (!credentialAccount) return
+    if (credentialIsOauth) await oauthLogout(credentialAccount.id)
+    else await disconnect(credentialAccount.id)
+  }
 
   return <section className="apemind-account" aria-busy={busy && !waiting}>
     <header className="apemind-header">
@@ -303,17 +343,13 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
     </header>
     {error && <div className="apemind-error" role="alert">{error}</div>}
     {!error && !waiting && (message || busy) && <div className="apemind-message" role="status" aria-live="polite">{busy ? t('busy') : message}</div>}
-    {showConnectionSelector && <label>{t('currentConnection')}
-      <select
-        disabled={disabled}
-        value={state.oauth?.id ?? state.activeId ?? credential?.connectionId ?? ''}
-        onChange={(event) => { void run(() => select(event.target.value)) }}
-      >
-        <option value="" disabled>{t('chooseConnection')}</option>
-        {state.oauthConnections?.map(item => <option key={item.id} value={item.id}>{item.username} · {item.origin}</option>)}
-        {state.connections.map(item => <option key={item.id} value={item.id}>{item.username} · {item.origin} · {t('apiKey')}</option>)}
-      </select>
-    </label>}
+    <details className="apemind-service-address">
+      <summary><span aria-hidden="true">⚙</span> {t('serverAddress')}</summary>
+      <p className="apemind-muted">{t('serviceAddressHint')}</p>
+      <label>{t('server')}<input required type="url" disabled={disabled || Boolean(connectedAccount)} value={origin}
+        onChange={(event) => { setOrigin(event.target.value) }} /></label>
+      {connectedAccount && <p className="apemind-muted">{t('serviceAddressConnectedHint')}</p>}
+    </details>
     {waiting && !connectedAccount
       ? <WaitingPanel t={t} disabled={false} progress={loginProgress} onCancel={() => { void cancelLogin() }}
         onOpenDevicePage={async () => (await remote.openDevicePage()).ok} />
@@ -324,59 +360,35 @@ export function LoginSection(props: LoginSectionProps): ReactNode {
           {credentialAccount && <p>{credentialAccount.username}<br />{credentialAccount.origin}</p>}
           <p role="alert">{loginConflict ? t('accountConflictDescription') : needsSignIn ? t('reauthenticationDescription') : t('credentialUnavailableDescription')}</p>
           {loginConflict && credentialAccount
-            ? <div className="apemind-conflict-actions">
-              <button
-                type="button" className="apemind-primary apemind-main-action" disabled={disabled}
-                onClick={() => { void run(() => browserLogin(credentialAccount.origin)) }}
-              >{t('useCurrentAccount')}</button>
-              <button
-                type="button" className="apemind-secondary" disabled={disabled}
-                onClick={() => { void run(() => browserLogin(credentialAccount.origin, credentialAccount.id)) }}
-              >{t('retrySavedConnection')}</button>
-            </div>
+            ? <button
+              type="button" className="apemind-primary apemind-main-action" disabled={disabled}
+              onClick={() => { void run(() => browserLogin(credentialAccount.origin, credentialAccount.id)) }}
+            >{t('signInAgain')}</button>
             : needsSignIn && credentialAccount
               ? <button
                 type="button" className="apemind-primary apemind-main-action" disabled={disabled}
                 onClick={() => { void run(() => browserLogin(credentialAccount.origin, credentialAccount.id)) }}
               >{t('signInAgain')}</button>
-            : <button
-              type="button" className="apemind-secondary" disabled={disabled}
-              onClick={() => { void run(retryConnection) }}
-            >{t('retryConnection')}</button>}
+            : <div className="apemind-recovery-actions">
+              <button type="button" className="apemind-secondary" disabled={disabled}
+                onClick={() => { void run(retryConnection) }}
+              >{t('retryConnection')}</button>
+              {credentialAccount && <button type="button" className="apemind-danger-link" disabled={disabled}
+                onClick={() => { void run(signOutSavedConnection) }}
+              >{t('signOut')}</button>}
+            </div>}
           <WebLink t={t} href={webUrl(credentialAccount?.origin ?? origin)} />
         </section>
         : connectedAccount
           ? <ConnectedPanel
             t={t} account={connectedAccount} disabled={disabled} webHref={connectedWebHref}
-            onReauthenticate={oauth ? () => { void run(() => browserLogin(oauth.origin, oauth.id)) } : undefined}
             onSignOut={oauth ? () => { void run(oauthLogout) } : () => { void run(() => disconnect(active!.id)) }}
           />
           : <SignedOutPanel
-            t={t} disabled={disabled} webHref={webUrl(origin)} onBrowserLogin={() => { void run(browserLogin) }}
-            onDeviceLogin={() => { void run(deviceLogin) }}
+            t={t} disabled={disabled} webHref={webUrl(origin)} origin={origin} apiKey={apiKey} showKey={showKey}
+            onApiKeyChange={setApiKey} onShowKeyChange={setShowKey} onConnect={() => { void run(connect) }}
+            onBrowserLogin={() => { void run(browserLogin) }} onDeviceLogin={() => { void run(deviceLogin) }}
           />}
-    <details className="apemind-advanced">
-      <summary><span aria-hidden="true">⚙</span> {t('advanced')}</summary>
-      <div className="apemind-advanced-content">
-        <details className="apemind-service-address"><summary>{t('serverAddress')}</summary><label>{t('server')}<input required type="url" disabled={disabled} value={origin} onChange={(event) => { setOrigin(event.target.value) }} /></label></details>
-        {state.connections.length > 0 && <section className="apemind-card apemind-key-connection">
-          <label>{t('currentKey')}
-            <select disabled={disabled} value={state.activeId ?? ''} onChange={(event) => { void run(() => select(event.target.value)) }}>
-              <option value="" disabled>{t('chooseConnection')}</option>
-              {state.connections.map(item => <option key={item.id} value={item.id}>{item.username} · {item.origin}</option>)}
-            </select>
-          </label>
-          {active && !connectedAccount && <div className="apemind-actions"><button disabled={disabled} onClick={() => { void run(() => disconnect(active.id)) }}>{t('removeConnection')}</button></div>}
-        </section>}
-        <form className="apemind-card" onSubmit={(event) => { event.preventDefault(); void run(connect) }}>
-          <h3>{t('addKey')}</h3>
-          <p className="apemind-muted">{t('advancedHint')}</p>
-          <label>{t('apiKey')}<input required type={showKey ? 'text' : 'password'} autoComplete="off" spellCheck={false} disabled={disabled} value={apiKey} onChange={(event) => { setApiKey(event.target.value) }} placeholder={t('keyPlaceholder')} /></label>
-          <label className="apemind-checkbox"><input type="checkbox" checked={showKey} disabled={disabled} onChange={(event) => { setShowKey(event.target.checked) }} />{t('showKey')}</label>
-          <div className="apemind-actions"><button type="submit" disabled={disabled || !apiKey.trim() || !origin.trim()}>{t('verifyConnect')}</button></div>
-        </form>
-      </div>
-    </details>
     <footer className="apemind-runtime-info">
       <p>{t('cliVersion')} <span>{state.cliVersion ?? t('versionUnavailable')}</span></p>
       {credential?.storage && <p>
