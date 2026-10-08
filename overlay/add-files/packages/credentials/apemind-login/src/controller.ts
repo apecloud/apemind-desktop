@@ -204,7 +204,8 @@ export class AuthorizationController extends TypertRemoteService {
   }
 
   @Remote async disconnect(id: string): Promise<AccountState> {
-    await this.run(['connection', 'remove', id])
+    // `auth logout --connection` exists in every bundled CLI; `connection remove` is being retired.
+    await this.run(['auth', 'logout', '--connection', id])
     return this.state()
   }
 }
