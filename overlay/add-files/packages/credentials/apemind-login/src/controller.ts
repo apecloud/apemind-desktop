@@ -26,6 +26,9 @@ type Status = {
   connection: CliConnection | null
   credential_available?: boolean
   credential_error?: string
+  /** Every local account and the current one, as reported by `auth status`. */
+  accounts?: CliConnection[]
+  current?: string | null
 }
 
 /** The Desktop UI is a presentation layer over the same CLI used by agents. */
@@ -88,11 +91,9 @@ export class AuthorizationController extends TypertRemoteService {
   }
 
   private async snapshot(): Promise<{ list: ConnectionList; status: Status }> {
-    const list = await this.run<ConnectionList>(['connection', 'list'])
-    const status = list.current
-      ? await this.run<Status>(['auth', 'status', '--connection', list.current])
-      : { logged_in: false, connection: null }
-    return { list, status }
+    // One `auth status` reports the current account and lists every account.
+    const status = await this.run<Status>(['auth', 'status'])
+    return { list: { current: status.current || null, items: status.accounts ?? [] }, status }
   }
 
   private async connection(id: string, kind: CliConnection['kind']): Promise<CliConnection> {
@@ -199,13 +200,12 @@ export class AuthorizationController extends TypertRemoteService {
   }
 
   @Remote async select(id: string): Promise<AccountState> {
-    await this.run(['connection', 'use', id])
+    await this.run(['auth', 'switch', id])
     return this.state()
   }
 
   @Remote async disconnect(id: string): Promise<AccountState> {
-    // `auth logout --connection` exists in every bundled CLI; `connection remove` is being retired.
-    await this.run(['auth', 'logout', '--connection', id])
+    await this.run(['auth', 'logout', id])
     return this.state()
   }
 }
