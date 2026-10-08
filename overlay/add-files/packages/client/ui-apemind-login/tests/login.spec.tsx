@@ -41,16 +41,21 @@ it('keeps the signed-out screen focused on login and opening ApeMind Web', async
   renderLogin({ state: vi.fn(async () => ({ ok: true as const, value: { activeId: null, connections: [] } })) })
   expect(await screen.findByRole('heading', { name: en.connectTitle })).toBeTruthy()
   expect(screen.getByRole('button', { name: en.browserSignIn })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: en.apiKeyTitle })).toBeTruthy()
+  expect(screen.getByRole('button', { name: en.verifySignIn })).toBeTruthy()
+  expect(screen.getByText(en.serverAddress)).toBeTruthy()
+  expect(document.querySelectorAll('details')).toHaveLength(1)
+  expect(screen.queryByText(/Advanced|高级连接/)).toBeNull()
+  expect(screen.queryByRole('combobox')).toBeNull()
   const web = screen.getByRole('link', { name: new RegExp(en.openApeMind) })
   expect(web.getAttribute('href')).toBe('https://apemind.ai')
   expect(web.getAttribute('target')).toBe('_blank')
   expect(screen.queryByText(/knowledge|model|workspace/i)).toBeNull()
 })
 
-it('shows the signed-in account, Web shortcut, reauthentication, and sign out', async () => {
+it('shows the signed-in account, Web shortcut, and sign out without account switching', async () => {
   const remote = {
     state: vi.fn(async () => ({ ok: true as const, value: connected })),
-    startBrowserLogin: vi.fn(async () => ({ ok: true as const, value: account })),
     oauthLogout: vi.fn(async () => ({ ok: true as const, value: undefined })),
   }
   renderLogin(remote)
@@ -59,13 +64,13 @@ it('shows the signed-in account, Web shortcut, reauthentication, and sign out', 
   expect(screen.getByRole('link', { name: new RegExp(en.openApeMind) }).getAttribute('href')).toBe('https://apemind.ai')
   expect(screen.queryByText(/knowledge|model|workspace/i)).toBeNull()
 
-  fireEvent.click(screen.getByRole('button', { name: en.signInAgain }))
-  await waitFor(() => { expect(remote.startBrowserLogin).toHaveBeenCalledWith(account.origin, account.id) })
+  expect(screen.queryByRole('button', { name: en.signInAgain })).toBeNull()
+  expect(screen.queryByRole('combobox')).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: en.signOut }))
   await waitFor(() => { expect(remote.oauthLogout).toHaveBeenCalledWith(account.id) })
 })
 
-it('presents an API key connection as a connected account without data controls', async () => {
+it('presents an API key connection as a connected account without account switching', async () => {
   const key = {
     id: 'key-a', origin: 'https://apemind.ai', userId: 'alice', username: 'Alice', verifiedAt: account.verifiedAt,
   }
@@ -81,7 +86,8 @@ it('presents an API key connection as a connected account without data controls'
   renderLogin(remote)
   expect(await screen.findByRole('heading', { name: en.connected })).toBeTruthy()
   expect(screen.getByRole('link', { name: new RegExp(en.openApeMind) }).getAttribute('href')).toBe('https://apemind.ai')
-  expect(screen.getByRole('button', { name: en.removeConnection })).toBeTruthy()
+  expect(screen.getByRole('button', { name: en.signOut })).toBeTruthy()
+  expect(screen.queryByRole('combobox')).toBeNull()
   expect(screen.queryByText(/knowledge|model|workspace/i)).toBeNull()
 })
 
@@ -99,6 +105,7 @@ it('keeps an unreadable connection selected and offers recovery without exposing
   expect(await screen.findByRole('heading', { name: en.credentialUnavailableTitle })).toBeTruthy()
   expect(screen.getByText(en.credentialUnavailableDescription)).toBeTruthy()
   expect(screen.getByRole('link', { name: new RegExp(en.openApeMind) })).toBeTruthy()
+  expect(screen.getByRole('button', { name: en.signOut })).toBeTruthy()
   expect(screen.queryByText(/knowledge|model|workspace/i)).toBeNull()
 })
 
@@ -109,10 +116,12 @@ it('reauthenticates a saved connection and explains an account conflict', async 
     oauthConnections: [account],
     credentialStatus: { connectionId: account.id, available: false, error: 'reauthentication_required', storage: 'system' },
   }
+  let attempts = 0
   const remote = {
     state: vi.fn(async () => ({ ok: true as const, value: state })),
     startBrowserLogin: vi.fn(async (_origin: string, connectionId?: string) => {
-      if (connectionId) return {
+      attempts += 1
+      if (connectionId && attempts === 1) return {
         ok: false as const,
         error: { code: 'gateway/bad-request', message: 'conflict', details: { cliCode: 'identity_changed' } },
       }
@@ -123,9 +132,11 @@ it('reauthenticates a saved connection and explains an account conflict', async 
   renderLogin(remote)
   fireEvent.click(await screen.findByRole('button', { name: en.signInAgain }))
   await waitFor(() => { expect(screen.getByRole('heading', { name: en.accountConflictTitle })).toBeTruthy() })
-  fireEvent.click(screen.getByRole('button', { name: en.useCurrentAccount }))
+  expect(screen.getAllByRole('button', { name: en.signInAgain })).toHaveLength(1)
+  expect(screen.queryByRole('button', { name: /switch account/i })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: en.signInAgain }))
   await waitFor(() => {
-    expect(remote.startBrowserLogin).toHaveBeenLastCalledWith(account.origin)
+    expect(remote.startBrowserLogin).toHaveBeenLastCalledWith(account.origin, account.id)
     expect(screen.getByRole('heading', { name: en.connected })).toBeTruthy()
   })
 })

@@ -73,6 +73,14 @@
 .apemind-security-note { color: var(--apemind-muted); font-size: .82rem !important; }
 .apemind-security-note span { color: var(--apemind-accent); margin-right: 4px; }
 
+.apemind-signin-methods { display: grid; gap: 14px; }
+.apemind-method-panel { display: grid; gap: 13px; padding: 22px 24px; border: 1px solid var(--apemind-border); border-radius: 16px; background: color-mix(in srgb, Canvas 96%, currentColor 4%); }
+.apemind-method-heading { display: flex; align-items: flex-start; gap: 12px; }
+.apemind-method-heading h3 { margin-top: 1px; }
+.apemind-method-heading p { margin-top: 4px; }
+.apemind-method-badge { display: inline-grid; place-items: center; flex: 0 0 auto; width: 34px; height: 34px; color: var(--apemind-accent); background: var(--apemind-accent-soft); border-radius: 10px; font: 700 .63rem ui-monospace, monospace; letter-spacing: .03em; }
+.apemind-api-key-panel .apemind-actions { justify-content: flex-start; }
+
 .apemind-connected-panel { justify-items: stretch; padding: 26px 28px 24px; text-align: left; gap: 0; }
 .apemind-connected-heading { display: flex; align-items: center; gap: 12px; padding-bottom: 22px; border-bottom: 1px solid var(--apemind-border); }
 .apemind-connected-heading p { color: var(--apemind-muted); font-size: .9rem; margin-top: 3px; overflow-wrap: anywhere; }
@@ -84,29 +92,24 @@
 .apemind-connected-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; padding-top: 18px; }
 .apemind-danger-link { padding: 9px 0; color: #b33b34; background: transparent; }
 
-.apemind-advanced { border-top: 1px solid var(--apemind-border); }
-.apemind-advanced > summary,
-.apemind-service-address > summary { cursor: pointer; list-style: none; color: var(--apemind-muted); }
-.apemind-advanced > summary::-webkit-details-marker,
+.apemind-service-address { display: grid; gap: 11px; padding: 12px 0 15px; border-top: 1px solid var(--apemind-border); border-bottom: 1px solid var(--apemind-border); }
+.apemind-service-address > summary { cursor: pointer; list-style: none; color: var(--apemind-muted); font-size: .88rem; }
 .apemind-service-address > summary::-webkit-details-marker { display: none; }
-.apemind-advanced > summary { padding: 14px 0 4px; font-size: .88rem; }
-.apemind-advanced-content { display: grid; gap: 14px; padding-top: 12px; }
-.apemind-service-address { padding: 0 0 12px; border-bottom: 1px solid var(--apemind-border); }
-.apemind-service-address > summary { padding: 5px 0 10px; color: inherit; font-size: .88rem; }
+.apemind-service-address > summary::before { display: inline-block; width: 1.1em; color: var(--apemind-accent); content: '▸'; transition: transform .15s ease; }
+.apemind-service-address[open] > summary::before { transform: rotate(90deg); }
+.apemind-service-address > p { font-size: .84rem; }
 .apemind-account label { display: grid; gap: 7px; font-size: .86rem; font-weight: 550; }
 .apemind-account input:not([type=checkbox]),
 .apemind-account select { box-sizing: border-box; width: 100%; min-width: 0; padding: 10px 11px; color: inherit; background: transparent; border: 1px solid color-mix(in srgb, currentColor 25%, transparent); border-radius: 8px; }
 .apemind-account select { appearance: auto; }
 .apemind-account option { color: CanvasText; background: Canvas; }
-.apemind-card { display: grid; gap: 13px; padding: 16px; border: 1px solid var(--apemind-border); border-radius: 12px; }
-.apemind-key-connection > label { gap: 9px; }
 .apemind-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .apemind-actions button { padding: 8px 11px; color: inherit; background: transparent; border: 1px solid var(--apemind-border); border-radius: 8px; }
 .apemind-checkbox { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 8px !important; }
 .apemind-checkbox input { margin: 0; }
 .apemind-runtime-info { display: grid; gap: 4px; color: var(--apemind-muted); font-size: .8rem; }
 .apemind-runtime-info span { margin-left: 6px; }
-.apemind-conflict-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+.apemind-recovery-actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; }
 
 @media (max-width: 560px) {
   .apemind-state-panel { padding: 32px 22px 28px; }

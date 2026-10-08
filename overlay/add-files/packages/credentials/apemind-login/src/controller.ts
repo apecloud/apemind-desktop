@@ -20,7 +20,6 @@ type CliConnection = {
   verified_at: string
   credential_storage?: string
 }
-type ConnectionList = { current: string | null; items: CliConnection[] }
 type Status = {
   logged_in: boolean
   connection: CliConnection | null
@@ -90,31 +89,33 @@ export class AuthorizationController extends TypertRemoteService {
     }
   }
 
-  private async snapshot(): Promise<{ list: ConnectionList; status: Status }> {
-    // One `auth status` reports the current account and lists every account.
-    const status = await this.run<Status>(['auth', 'status'])
-    return { list: { current: status.current || null, items: status.accounts ?? [] }, status }
+  private async snapshot(): Promise<Status> {
+    // Desktop presents the current CLI connection. The CLI itself may keep
+    // multiple accounts for agent workflows, but the Desktop UI uses logout
+    // followed by login instead of exposing account switching.
+    return this.run<Status>(['auth', 'status'])
   }
 
   private async connection(id: string, kind: CliConnection['kind']): Promise<CliConnection> {
     if (!id) throw new RemoteError('gateway/bad-request', '请选择 ApeMind 连接。', {})
     const status = await this.run<Status>(['auth', 'status', '--connection', id])
-    if (!status.logged_in || !status.connection || status.connection.id !== id || status.connection.kind !== kind) {
-      throw new RemoteError('gateway/bad-request', '此连接已不可用，请重新登录或选择连接。', {})
+    if (!status.connection || status.connection.id !== id || status.connection.kind !== kind
+      || (!status.logged_in && !status.credential_error)) {
+      throw new RemoteError('gateway/bad-request', '此连接已不可用，请退出后重新登录。', {})
     }
     return status.connection
   }
 
   @Remote
   async state(): Promise<AccountState> {
-    const { list, status } = await this.snapshot()
-    const connections = list.items.filter(item => item.kind === 'api-key').map(item => this.view(item))
+    const status = await this.snapshot()
+    const stored = status.connection
     const credentialStatus = this.credentialStatus(status)
-    const active = status.logged_in && credentialStatus?.available ? status.connection : null
+    const active = status.logged_in && credentialStatus?.available ? stored : null
     return {
       activeId: active?.kind === 'api-key' ? active.id : null,
-      connections,
-      oauthConnections: list.items.filter(item => item.kind === 'oauth').map(item => this.oauthView(item)),
+      connections: stored?.kind === 'api-key' ? [this.view(stored)] : [],
+      oauthConnections: stored?.kind === 'oauth' ? [this.oauthView(stored)] : [],
       oauth: active?.kind === 'oauth' ? this.oauthView(active) : null,
       cliVersion: await this.version(),
       credentialStatus,
@@ -125,7 +126,7 @@ export class AuthorizationController extends TypertRemoteService {
 
   @Remote
   async oauthState(): Promise<OAuthAccountView | null> {
-    const { status } = await this.snapshot()
+    const status = await this.snapshot()
     return status.logged_in && status.connection?.kind === 'oauth' ? this.oauthView(status.connection) : null
   }
 
@@ -196,11 +197,6 @@ export class AuthorizationController extends TypertRemoteService {
   async connect(origin: string, apiKey: string): Promise<AccountState> {
     if (!apiKey.trim()) throw new RemoteError('gateway/bad-request', '请输入 API Key。', {})
     await this.run<CliConnection>(['auth', 'connect', '--server', origin, '--api-key-stdin'], { input: apiKey })
-    return this.state()
-  }
-
-  @Remote async select(id: string): Promise<AccountState> {
-    await this.run(['auth', 'switch', id])
     return this.state()
   }
 
