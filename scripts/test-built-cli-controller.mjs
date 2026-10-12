@@ -22,6 +22,7 @@ const args = process.argv.slice(2);
 fs.appendFileSync(${JSON.stringify(callsFile)}, JSON.stringify(args)+'\\n');
 const status=JSON.parse(fs.readFileSync(${JSON.stringify(statusFile)},'utf8'));
 if (args[0]==='--version') { console.log(status.version??'v0.3.7'); process.exit(status.versionExit??0); }
+if (args.includes('--connection')) { console.error(JSON.stringify({type:'error',error:{code:'usage',message:'unknown flag: --connection',exit_code:2}})); process.exit(2); }
 const option = name => args[args.indexOf(name)+1];
 const a = {id:'account-a',kind:'oauth',server:'https://example.invalid',user_id:'a',username:'A',verified_at:'2026-09-15T00:00:00Z',credential_storage:status.storage??'system'};
 const b = {...a,id:'account-b',user_id:'b',username:'B'};
@@ -31,9 +32,9 @@ if (args[0]==='auth' && args[1]==='status') {
   // One call reports the current account together with every account, so
   // there is no window in which the list and the status disagree.
   const current=status.current??a.id;
-  const selected=args.includes('--connection')?option('--connection'):current;
-  const connection=[a,b,key].find(item=>item.id===selected);
-  data={logged_in:Boolean(connection)&&!status.error,connection:connection??null,credential_available:Boolean(connection)&&!status.error,credential_error:status.error,current,accounts:[a,b,key]};
+  const selected=args.includes('--account')?option('--account'):current;
+  const account=[a,b,key].find(item=>item.id===selected);
+  data={logged_in:Boolean(account)&&!status.error,account:account??null,credential_available:Boolean(account)&&!status.error,credential_error:status.error,current,accounts:[a,b,key]};
 } else if (args[0]==='auth' && args[1]==='switch') data={...[a,b,key].find(item=>item.id===args[2])};
 else if (args[0]==='auth' && args[1]==='logout') data={logged_in:false};
 else if (args[0]==='auth' && args[1]==='login') {
@@ -87,8 +88,9 @@ fs.appendFileSync(${JSON.stringify(openedFile)},JSON.stringify(process.argv.slic
   const calls = (await readFile(callsFile, 'utf8')).trim().split('\n').map(line => JSON.parse(line))
   assert.ok(!calls.some(args => args[0] === 'connection'), 'the removed connection commands must not be called')
   assert.ok(!calls.some(args => args[0] === 'auth' && args[1] === 'switch'), 'Desktop must not expose account switching')
+  assert.ok(!calls.some(args => args.includes('--connection')), 'the retired --connection flag must not be sent')
   const logout = calls.find(args => args[0] === 'auth' && args[1] === 'logout')
-  assert.equal(logout[logout.indexOf('--connection') + 1], 'account-a')
+  assert.equal(logout[logout.indexOf('--account') + 1], 'account-a')
   assert.equal(calls.filter(args => args[0] === '--version').length, 1)
   await writeFile(statusFile, JSON.stringify({ version: 'private-version-diagnostic' }))
   const invalidVersion = await new AuthorizationController(new Context()).state()

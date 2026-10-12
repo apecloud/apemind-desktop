@@ -22,7 +22,7 @@ type CliConnection = {
 }
 type Status = {
   logged_in: boolean
-  connection: CliConnection | null
+  account: CliConnection | null
   credential_available?: boolean
   credential_error?: string
   /** Every local account and the current one, as reported by `auth status`. */
@@ -75,14 +75,14 @@ export class AuthorizationController extends TypertRemoteService {
   }
 
   private credentialStatus(status: Status): CredentialStatus | null {
-    if (!status.connection) return null
+    if (!status.account) return null
     const available = status.credential_available ?? status.logged_in
     const error = status.credential_error === 'reauthentication_required'
       ? 'reauthentication_required'
       : !available || status.credential_error ? 'credential_unavailable' : null
-    const storage = status.connection.credential_storage
+    const storage = status.account.credential_storage
     return {
-      connectionId: status.connection.id,
+      connectionId: status.account.id,
       available: available && !error,
       error,
       storage: storage === 'system' || storage === 'encrypted-file' ? storage : null,
@@ -90,7 +90,7 @@ export class AuthorizationController extends TypertRemoteService {
   }
 
   private async snapshot(): Promise<Status> {
-    // Desktop presents the current CLI connection. The CLI itself may keep
+    // Desktop presents the current CLI account. The CLI itself may keep
     // multiple accounts for agent workflows, but the Desktop UI uses logout
     // followed by login instead of exposing account switching.
     return this.run<Status>(['auth', 'status'])
@@ -98,18 +98,18 @@ export class AuthorizationController extends TypertRemoteService {
 
   private async connection(id: string, kind: CliConnection['kind']): Promise<CliConnection> {
     if (!id) throw new RemoteError('gateway/bad-request', '请选择 ApeMind 连接。', {})
-    const status = await this.run<Status>(['auth', 'status', '--connection', id])
-    if (!status.connection || status.connection.id !== id || status.connection.kind !== kind
+    const status = await this.run<Status>(['auth', 'status', '--account', id])
+    if (!status.account || status.account.id !== id || status.account.kind !== kind
       || (!status.logged_in && !status.credential_error)) {
       throw new RemoteError('gateway/bad-request', '此连接已不可用，请退出后重新登录。', {})
     }
-    return status.connection
+    return status.account
   }
 
   @Remote
   async state(): Promise<AccountState> {
     const status = await this.snapshot()
-    const stored = status.connection
+    const stored = status.account
     const credentialStatus = this.credentialStatus(status)
     const active = status.logged_in && credentialStatus?.available ? stored : null
     return {
@@ -127,7 +127,7 @@ export class AuthorizationController extends TypertRemoteService {
   @Remote
   async oauthState(): Promise<OAuthAccountView | null> {
     const status = await this.snapshot()
-    return status.logged_in && status.connection?.kind === 'oauth' ? this.oauthView(status.connection) : null
+    return status.logged_in && status.account?.kind === 'oauth' ? this.oauthView(status.account) : null
   }
 
   private async login(device: boolean, origin: string, connectionId?: string): Promise<OAuthAccountView> {
@@ -135,7 +135,7 @@ export class AuthorizationController extends TypertRemoteService {
     const controller = new AbortController(); this.loginAbort = controller
     try {
       const args = ['auth', 'login', '--server', origin]
-      if (connectionId) args.push('--connection', connectionId)
+      if (connectionId) args.push('--account', connectionId)
       if (device) args.push('--device')
       this.loginProgress = null
       const connection = await this.run<CliConnection>(args, {
@@ -190,7 +190,7 @@ export class AuthorizationController extends TypertRemoteService {
 
   @Remote async oauthLogout(connectionId: string): Promise<void> {
     await this.connection(connectionId, 'oauth')
-    await this.run(['auth', 'logout', '--connection', connectionId])
+    await this.run(['auth', 'logout', '--account', connectionId])
   }
 
   @Remote
