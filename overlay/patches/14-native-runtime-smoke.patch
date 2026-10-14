@@ -1,9 +1,9 @@
 diff --git a/apps/desktop/tests/fixtures/runtime-payload-smoke.mjs b/apps/desktop/tests/fixtures/runtime-payload-smoke.mjs
+index 3cda38c620..b5e7108164 100644
 --- a/apps/desktop/tests/fixtures/runtime-payload-smoke.mjs
 +++ b/apps/desktop/tests/fixtures/runtime-payload-smoke.mjs
-@@ -1,10 +1,10 @@
- /** Exercise filtered Desktop native and HTML dependencies under its Electron Node runtime. */
-
+@@ -2,7 +2,7 @@
+ 
  import assert from 'node:assert/strict'
  import { execFileSync } from 'node:child_process'
 -import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
@@ -11,14 +11,10 @@ diff --git a/apps/desktop/tests/fixtures/runtime-payload-smoke.mjs b/apps/deskto
  import { rm } from 'node:fs/promises'
  import { createRequire } from 'node:module'
  import { tmpdir } from 'node:os'
- import { delimiter, dirname, join, resolve } from 'node:path'
- import { pathToFileURL } from 'node:url'
-@@ -112,10 +112,31 @@
-   }).trim().replaceAll('\\', '/')
-   assert.equal(run(['--no-heading', '--no-filename', '--line-number', '--fixed-strings', '--', marker, name]), `1:${marker}`)
+@@ -92,6 +92,27 @@ async function checkSearch() {
    assert.equal(run(['--files', '--glob', name, '.']), `./${name}`)
  }
-
+ 
 +/** Exercise the native POSIX lease primitive used by session persistence. */
 +async function checkSystemFlock() {
 +  if (process.platform === 'win32') return
@@ -43,23 +39,16 @@ diff --git a/apps/desktop/tests/fixtures/runtime-payload-smoke.mjs b/apps/deskto
  /** Resolve one system function through Koffi's packaged native module. */
  function checkKoffi() {
    const koffi = requireRuntime('koffi')
-   const library = koffi.load(process.platform === 'win32' ? 'kernel32.dll' : null)
-   try {
-@@ -156,10 +177,11 @@
-
- try {
-   const builtin = requireRuntime('node-addon-require-builtin')
+@@ -137,6 +158,8 @@ try {
    assert.equal(typeof builtin.requireBuiltin('internal/modules/esm/loader').getOrInitializeCascadedLoader, 'function')
-   checkPnpm()
+   console.error('runtime payload: pnpm')
+   await checkPnpm(resourcesRuntime)
++  console.error('runtime payload: system-flock')
 +  await checkSystemFlock()
+   console.error('runtime payload: koffi')
    checkKoffi()
-   await checkSharp()
-   checkHtml()
-   await checkPty()
-   await checkSearch()
-@@ -169,7 +191,7 @@
- }
-
+   console.error('runtime payload: sharp')
+@@ -156,5 +179,5 @@ try {
  // Natural event-loop drain includes node-pty's worker and console-list helper teardown.
  process.once('beforeExit', () => {
    console.log(JSON.stringify({ node: process.versions.node, platform: process.platform, arch: process.arch,
