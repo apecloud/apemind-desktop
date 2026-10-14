@@ -164,15 +164,17 @@ patches:
     kind: branding
     # 本补丁会改动的上游路径（授权清单的**单一事实源**，脚本从这里读）
     targets:
-      - target: apps/desktop/electron-builder.config.mjs
+      - target: apps/desktop/scripts/electron-builder-config.mjs
       - target: apps/desktop/src/locale.ts
     touches:
-      - "apps/desktop/electron-builder.config.mjs：productName + artifactName"
-      - "apps/desktop/src/locale.ts：4 个 key × en/zh = 8 处品牌文案"
+      - "apps/desktop/scripts/electron-builder-config.mjs：productName"
+      - "apps/desktop/src/locale.ts：品牌文案 key × en/zh"
     upstream_logic_changed: false
     note: >
-      artifactName 决定安装包文件名，与 electron-updater channel 元数据、上传校验耦合；
-      改名必须同步改它，否则更新链断。
+      上游 0.2.1-alpha.2 把 electron-builder.config.mjs 重构为薄入口，
+      配置工厂移到 scripts/electron-builder-config.mjs，productName 随之落在此补丁。
+      artifactName 保留上游中间名（package-macos.ts 在验收后统一改成 apemind-desktop-*，
+      见 11-apemind-macos-artifact-name.patch）。
       locale.ts 是**唯一**需要改文案的文件：renderer（plugin-manager.js）全部走
       api.locale() 取 messages，HTML/JS 里 0 处品牌字面量，故不用碰 renderer。
 
@@ -181,17 +183,15 @@ patches:
   - file: patches/02-desktop-unsigned.patch
     kind: build-switch
     targets:
-      - target: apps/desktop/electron-builder.config.mjs
-      - target: apps/desktop/electron-builder.config.d.mts
-      - target: apps/desktop/tests/package-target.spec.ts
-      - target: apps/desktop/tests/package-target-stages.spec.ts
-      - target: apps/desktop/scripts/prepare-dsh.ts
       - target: apps/desktop/scripts/package-target.ts
+      - target: apps/desktop/tests/package-target-stages.spec.ts
     upstream_logic_changed: true
     reason: >
-      将上游 Windows 免签名构建扩展到 macOS，并保留 ApeMind 安装包名称和图标。
-      DSH_DESKTOP_UNSIGNED=1 或 --unsigned 跳过证书签名、公证和正式发布收据，
-      安装包和 --dir 目录模式均使用 unsigned-artifacts 并验证同一目录，关闭自动更新元数据；
+      上游 0.2.1-alpha.2 已自带 --unsigned（Windows+macOS）：跳过证书签名、公证和
+      发布收据，产物走 unsigned-artifacts。本补丁只保留两点 overlay 差异：
+      发布 workflow 用 DSH_DESKTOP_UNSIGNED=1 环境变量（而非 --unsigned 脚本变体）
+      驱动 Windows 免签名构建，因此 unsigned 参数默认读取该环境变量；
+      package-target-stages 测试需 mock overlay 新增的 apemind-cli-runtime。
       正式签名路径保持上游行为。
     guardrail: 默认关闭；未签名包仅供内部试用，不视为签名、公证完成的正式分发包。
 
@@ -220,10 +220,10 @@ patches:
     - target: apps/desktop/scripts/smoke-packaged-runtime.ts
   upstream_logic_changed: true
   reason: >
-    本地 unsigned macOS 构建由 ApeMind overlay 明确支持；上游 smoke 仍拒绝
-    macOS unsigned 产物，并把应用目录硬编码为 DeepSeek Harness.app，导致实际
-    已生成的 ApeMind Desktop.app 无法验收。按产物目录发现唯一 .app，保留同一套
-    runtime smoke，避免把“包已生成”误报为失败。
+    上游 smoke 把应用目录与可执行文件名硬编码为 DeepSeek Harness.app /
+    DeepSeek Harness(.exe)，品牌化后产物是 ApeMind Desktop.app /
+    ApeMind Desktop.exe，原路径无法验收。改为按产物目录发现唯一 .app 并
+    从其名称推导可执行文件，Windows 侧固定为 ApeMind Desktop.exe。
 
 # ── 非补丁类资源（新增文件，非上游逻辑）──────────────────────────────
 # 注意：即使是资源也**逐文件**列出（不用目录），与脚本 ALLOWED 一致。

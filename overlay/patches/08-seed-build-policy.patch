@@ -1,16 +1,13 @@
 diff --git a/apps/desktop/src/project-manager.ts b/apps/desktop/src/project-manager.ts
+index 270d87d6b2..464de0887b 100644
 --- a/apps/desktop/src/project-manager.ts
 +++ b/apps/desktop/src/project-manager.ts
-@@ -43,11 +43,11 @@
-   if (entries.length === 0) return `packages:\n  - .\n\n${WORKSPACE_SETTINGS}`
-   const coreBuildSpec = overrides[CORE_BUILD_PACKAGE]
+@@ -45,7 +45,7 @@ function workspaceFile(overrides: Readonly<Record<string, string>> = {}): string
    const coreBuildKey = coreBuildSpec === undefined
      ? CORE_BUILD_PACKAGE
      : `${CORE_BUILD_PACKAGE}@${coreBuildSpec.replace('file:./', 'file:')}`
 -  return `packages:\n  - .\n\n${overrideSection}${WORKSPACE_SETTINGS}allowBuilds:\n  node-pty: true\n  koffi: true\n  fs-ext: true\n  ${JSON.stringify(coreBuildKey)}: true\n  '@google/genai': false\n  protobufjs: false\n  node-addon-require-builtin: false\n`
 +  return `packages:\n  - .\n\n${overrideSection}${WORKSPACE_SETTINGS}allowBuilds:\n  esbuild: true\n  node-pty: true\n  koffi: true\n  fs-ext: true\n  ${JSON.stringify(coreBuildKey)}: true\n  '@google/genai': false\n  protobufjs: false\n  node-addon-require-builtin: false\n`
  }
-
+ 
  function migrateProfileSettings(projectDir: string): void {
-   const path = join(projectDir, 'pnpm-workspace.yaml')
-   if (!existsSync(path)) return

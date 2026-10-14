@@ -1,17 +1,14 @@
 diff --git a/packages/client/ui-brand-official/src/client/Brand.tsx b/packages/client/ui-brand-official/src/client/Brand.tsx
+index 9ac6dd7ce2..42c7794a7e 100644
 --- a/packages/client/ui-brand-official/src/client/Brand.tsx
 +++ b/packages/client/ui-brand-official/src/client/Brand.tsx
-@@ -1,6 +1,6 @@
+@@ -1,4 +1,4 @@
 -import { BrandWordmark, FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
 +import { FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
  import type { SidebarBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
-
+ 
  /**
-  * Render the official mark with the presentation requested by its host surface.
-  * @param props - Host-supplied mark presentation.
-@@ -13,7 +13,11 @@
- /**
-  * Render the official name artwork without its independently slotted mark.
+@@ -15,5 +15,9 @@ export function OfficialBrandMark({ size }: SidebarBrandMarkOwnerProps) {
   * @returns the official name wordmark.
   */
  export function OfficialBrandName() {
@@ -23,11 +20,10 @@ diff --git a/packages/client/ui-brand-official/src/client/Brand.tsx b/packages/c
 +  )
  }
 diff --git a/packages/client/ui-brand-official/src/client/index.ts b/packages/client/ui-brand-official/src/client/index.ts
+index 332a5f6007..fd3446b049 100644
 --- a/packages/client/ui-brand-official/src/client/index.ts
 +++ b/packages/client/ui-brand-official/src/client/index.ts
-@@ -12,11 +12,14 @@
-  * conversation hero stays on its declaring package's animated fish fallback,
-  * so the official build registers nothing there.
+@@ -14,7 +14,10 @@ export const inject = ['slots']
   * @param ctx - Client root context.
   */
  export function apply(ctx: ClientContext): void {
@@ -39,5 +35,3 @@ diff --git a/packages/client/ui-brand-official/src/client/index.ts b/packages/cl
    ctx.slots.inject('sidebar.brand.mark', () =>
      ctx.slots.inject('sidebar.brand.name', function* () {
        yield ctx.slots.register({ name: 'sidebar.brand.mark' }, OfficialBrandMark)
-       yield ctx.slots.register({ name: 'sidebar.brand.name' }, OfficialBrandName)
-     }))

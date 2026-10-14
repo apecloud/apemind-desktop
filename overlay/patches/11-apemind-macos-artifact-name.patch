@@ -1,9 +1,8 @@
 diff --git a/apps/desktop/scripts/package-macos.ts b/apps/desktop/scripts/package-macos.ts
+index c1a2cb5c71..64a9421d3d 100644
 --- a/apps/desktop/scripts/package-macos.ts
 +++ b/apps/desktop/scripts/package-macos.ts
-@@ -76,11 +76,11 @@
-   const { arch, version, artifactsRoot, environment } = request
-   const secrets = Object.entries(environment).filter(([name]) => /KEY|SECRET|TOKEN|PASSWORD|APPLE_ID/iu.test(name)).map(([, value]) => value ?? '')
+@@ -78,7 +78,7 @@ export async function packageMacOSArtifacts(
    const expected = resolveMacOSSigningEnvironment(environment)
    const credentials = resolveMacOSNotarizationEnvironment(environment)
    const update = resolveDesktopAutoUpdateConfig(environment, 'darwin', arch)
@@ -12,11 +11,7 @@ diff --git a/apps/desktop/scripts/package-macos.ts b/apps/desktop/scripts/packag
    const root = await mkdtemp(join(dirname(artifactsRoot), 'notarization-'))
    const zipApp = join(root, 'zip', basename(appPath))
    const dmgApp = join(root, 'dmg', basename(appPath))
-   const zipOutput = join(root, 'zip-artifacts')
-   const dmgOutput = join(root, 'dmg-artifacts')
-@@ -108,26 +108,27 @@
-     }
-     await verifyMacOSAppUpdateConfig(zipApp, update)
+@@ -110,22 +110,23 @@ export async function packageMacOSArtifacts(
      await verifyMacOSAppUpdateConfig(dmgApp, update)
      apple.verifySignature(zipApp, expected)
      apple.verifySignature(dmgApp, expected)
@@ -49,5 +44,3 @@ diff --git a/apps/desktop/scripts/package-macos.ts b/apps/desktop/scripts/packag
      }
      await rm(appPath, { recursive: true })
      await rename(zipApp, appPath)
-   } finally {
-     await rm(root, { recursive: true, force: true })
