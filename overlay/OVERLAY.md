@@ -231,6 +231,10 @@ patches:
 # 与 patches/ 的分界：patches 改上游已有文件；add-files 只放**我们新增**的文件。
 # 每个文件都必须在此登记（未登记则不拷且报错，见 scripts/sync-upstream.sh 3c 段）。
 #
+# ⚠️ 同步上游时的固定动作：add-files 里的 workspace 包 version 必须改成与上游
+#    一致——上游 release 的 DshFamily.verifyVersions 要求全部成员同版本，
+#    version 落后会在打包阶段直接失败（已在 alpha.2 同步时实际遇到）。
+#
 # 当前用途：ApeMind 账户连接插件。登录态使用短期 Access Token + 可轮换 Refresh Token；设置页只展示登录状态并提供 ApeMind Web 快捷入口，不读取或展示工作空间、知识库和模型。Agent 的数据操作由随桌面提供的 `apemind` CLI 独立完成。线上新账户默认没有个人空间，个人空间存在性由 CLI 与服务端合同决定，插件不能根据用户 ID 合成 `personal:<user_id>`。
 # ── 派生文件：sync 时由脚本重新生成，不是我们手写的补丁 ────────────────
 # pnpm-lock.yaml 需随 add-files 的 workspace 包一起变化；

@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-apemind-login",
   "description": "ApeMind sign-in settings with a shortcut to the ApeMind Web console.",
-  "version": "0.2.1-alpha.1",
+  "version": "0.2.1-alpha.2",
   "publishConfig": {
     "access": "public"
   },
