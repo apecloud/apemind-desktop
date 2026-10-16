@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/scripts/package-macos.ts b/apps/desktop/scripts/package-macos.ts
-index c1a2cb5c71..64a9421d3d 100644
+index 4ba0fd12ca..aa83c967d5 100644
 --- a/apps/desktop/scripts/package-macos.ts
 +++ b/apps/desktop/scripts/package-macos.ts
 @@ -78,7 +78,7 @@ export async function packageMacOSArtifacts(
@@ -22,11 +22,11 @@ index c1a2cb5c71..64a9421d3d 100644
 -      [dmgOutput, `${base}.dmg`],
 -      [zipOutput, `${base}.zip`],
 -      [zipOutput, `${base}.zip.blockmap`],
--      [zipOutput, desktopUpdateMetadataFilename(version, 'darwin')],
+-      [zipOutput, desktopUpdateMetadataFilename(version, 'darwin', update.channel)],
 +      [dmgOutput, `${sourceBase}.dmg`, `${releaseBase}.dmg`],
 +      [zipOutput, `${sourceBase}.zip`, `${releaseBase}.zip`],
 +      [zipOutput, `${sourceBase}.zip.blockmap`, `${releaseBase}.zip.blockmap`],
-+      [zipOutput, desktopUpdateMetadataFilename(version, 'darwin'), desktopUpdateMetadataFilename(version, 'darwin')],
++      [zipOutput, desktopUpdateMetadataFilename(version, 'darwin', update.channel), desktopUpdateMetadataFilename(version, 'darwin', update.channel)],
      ] as const
 -    for (const [output, filename] of artifacts) {
 -      const file = join(output, filename)

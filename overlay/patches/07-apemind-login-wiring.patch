@@ -1,8 +1,8 @@
 diff --git a/packages/api/remotes/package.json b/packages/api/remotes/package.json
-index 674f55a9c1..596a997426 100644
+index 0807d01fc1..e075457ace 100644
 --- a/packages/api/remotes/package.json
 +++ b/packages/api/remotes/package.json
-@@ -51,7 +51,8 @@
+@@ -53,7 +53,8 @@
    ],
    "dependencies": {
      "@deepseek-ai/dsh-deque": "workspace:*",
@@ -13,7 +13,7 @@ index 674f55a9c1..596a997426 100644
    "peerDependencies": {
      "@deepseek-ai/cordis": "workspace:~",
 diff --git a/packages/api/remotes/src/client/index.ts b/packages/api/remotes/src/client/index.ts
-index 49ed1e5392..b9aff0d642 100644
+index 90fc6b7fde..5836ffe4a1 100644
 --- a/packages/api/remotes/src/client/index.ts
 +++ b/packages/api/remotes/src/client/index.ts
 @@ -4,6 +4,7 @@ import type { Context } from '@deepseek-ai/cordis'
@@ -24,28 +24,28 @@ index 49ed1e5392..b9aff0d642 100644
  import userQuestionsRemote from '@deepseek-ai/dsh-user-questions/remote'
  import commandsRemote from '@deepseek-ai/dsh-commands/remote'
  import accountRemote from '@deepseek-ai/dsh-api-account-controller/remote'
-@@ -40,6 +41,7 @@ export type {} from '@deepseek-ai/dsh-plugin-manager/remote'
- export type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/remote'
+@@ -47,6 +48,7 @@ export type {
+ } from '@deepseek-ai/dsh-plugin-market/types'
  export type { PluginInventorySnapshot } from '@deepseek-ai/dsh-host-plugin-inventory/types'
  export type {} from '@deepseek-ai/dsh-agent-preset-registry/remote'
 +export type {} from '@deepseek-ai/dsh-apemind-login/remote'
  export type {} from '@deepseek-ai/dsh-user-questions/remote'
  export type {} from '@deepseek-ai/dsh-commands/remote'
  export type {} from '@deepseek-ai/dsh-api-settings-controller/remote'
-@@ -179,7 +181,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
+@@ -186,7 +188,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
    const disposers: Array<() => Promise<void>> = []
    try {
      for (const contribution of [
 -      productAnalyticsRemote, agentPresetsRemote, commandsRemote, settingsControllerRemote, accountRemote,
 +      productAnalyticsRemote, authorizationRemote, agentPresetsRemote, commandsRemote, settingsControllerRemote, accountRemote,
        goalsRemote, llmRemote, dynamicRemote, scheduleRemote,
-       pluginInventoryRemote, pluginManagerRemote, pluginRegistryProbeRemote, messageFeedbackRemote, sessionFeedbackRemote,
-       fileUploadsRemote, sessionReferencesRemote,
+       pluginInventoryRemote, pluginManagerRemote, pluginMarketRemote, pluginRegistryProbeRemote,
+       messageFeedbackRemote, sessionFeedbackRemote,
 diff --git a/packages/bundle/web-app/cordis.patch.yml b/packages/bundle/web-app/cordis.patch.yml
-index 987df7c3f7..d1b2a4606f 100644
+index a1ca0b5483..0dacdc1dc2 100644
 --- a/packages/bundle/web-app/cordis.patch.yml
 +++ b/packages/bundle/web-app/cordis.patch.yml
-@@ -307,6 +307,10 @@
+@@ -312,6 +312,10 @@
      - id: ui-settings-models
        name: '@deepseek-ai/dsh-client-ui-settings-models'
  
@@ -57,10 +57,10 @@ index 987df7c3f7..d1b2a4606f 100644
      # and removes the profile's bundles through the `pluginManager` Remote.
      # Without a profile-backed Host it reports itself unavailable.
 diff --git a/packages/bundle/web-app/package.json b/packages/bundle/web-app/package.json
-index deb1a2ac05..6a76107472 100644
+index 3a56135545..bf4e92d8ba 100644
 --- a/packages/bundle/web-app/package.json
 +++ b/packages/bundle/web-app/package.json
-@@ -51,6 +51,7 @@
+@@ -55,6 +55,7 @@
      }
    },
    "dependencies": {
@@ -69,10 +69,10 @@ index deb1a2ac05..6a76107472 100644
      "@deepseek-ai/dsh-agent-preset": "workspace:*",
      "@deepseek-ai/dsh-agent-preset-registry": "workspace:*",
 diff --git a/tsconfig.client.json b/tsconfig.client.json
-index a8f0a9ed96..672249385e 100644
+index 053d90af78..3f052a89f6 100644
 --- a/tsconfig.client.json
 +++ b/tsconfig.client.json
-@@ -95,6 +95,7 @@
+@@ -98,6 +98,7 @@
      { "path": "./packages/client/ui-layout" },
      { "path": "./packages/client/ui-sidebar" },
      { "path": "./packages/client/ui-brand-official" },
