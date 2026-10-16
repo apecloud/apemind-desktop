@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/scripts/smoke-packaged-runtime.ts b/apps/desktop/scripts/smoke-packaged-runtime.ts
-index b91030008b..533b1557ac 100644
+index 6c3c12c857..3ea34debb2 100644
 --- a/apps/desktop/scripts/smoke-packaged-runtime.ts
 +++ b/apps/desktop/scripts/smoke-packaged-runtime.ts
 @@ -1,4 +1,5 @@
@@ -7,11 +7,11 @@ index b91030008b..533b1557ac 100644
 +import { readdirSync } from 'node:fs'
  import { join } from 'node:path'
  import { parseArgs } from 'node:util'
- import { resolveDesktopBuildTarget, resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
+ import { desktopArtifactOutput, resolveDesktopBuildTarget, resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
 @@ -12,10 +13,17 @@ const { values } = parseArgs({ options: { unsigned: { type: 'boolean', default:
  const target = resolveDesktopBuildTarget()
  const windows = target === 'win-x64'
- const artifacts = values.unsigned ? paths.unsignedArtifacts : paths.artifacts
+ const artifacts = desktopArtifactOutput(paths, { unsigned: values.unsigned, skipNotarization: values['skip-notarization'] }).directory
 -const application = windows ? join(artifacts, 'win-unpacked')
 -  : join(artifacts, target === 'mac-arm64' ? 'mac-arm64' : 'mac', 'DeepSeek Harness.app', 'Contents')
 +const macApplication = windows ? undefined : (() => {
