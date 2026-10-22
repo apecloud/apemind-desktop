@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/src/main.ts b/apps/desktop/src/main.ts
-index 69bd9bf052..45683e5e79 100644
+index 69bd9bf0..45683e5e 100644
 --- a/apps/desktop/src/main.ts
 +++ b/apps/desktop/src/main.ts
 @@ -937,7 +937,7 @@ async function main(): Promise<void> {

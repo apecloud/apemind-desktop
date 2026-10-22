@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/scripts/prepare-package-set.ts b/apps/desktop/scripts/prepare-package-set.ts
-index 7e7d62eea2..f7b995e7e5 100644
+index 7e7d62ee..f7b995e7 100644
 --- a/apps/desktop/scripts/prepare-package-set.ts
 +++ b/apps/desktop/scripts/prepare-package-set.ts
 @@ -23,7 +23,7 @@ import {
@@ -21,7 +21,7 @@ index 7e7d62eea2..f7b995e7e5 100644
      throw new Error(`desktop package set: ${tarball} has no package manifest`)
    }
 diff --git a/scripts/release/process.ts b/scripts/release/process.ts
-index b25fa8c116..76efbff1eb 100644
+index b25fa8c1..76efbff1 100644
 --- a/scripts/release/process.ts
 +++ b/scripts/release/process.ts
 @@ -22,6 +22,11 @@ export interface CommandResult {
@@ -37,7 +37,7 @@ index b25fa8c116..76efbff1eb 100644
   * Run a command and capture its output without judging the exit status.
   * @param command - executable name.
 diff --git a/scripts/release/tarball.ts b/scripts/release/tarball.ts
-index 0e34d29bd4..3128879598 100644
+index 0e34d29b..31288795 100644
 --- a/scripts/release/tarball.ts
 +++ b/scripts/release/tarball.ts
 @@ -8,7 +8,7 @@

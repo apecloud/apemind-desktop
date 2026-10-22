@@ -1,5 +1,5 @@
 diff --git a/scripts/client-build-environment.ts b/scripts/client-build-environment.ts
-index 6c616cff5b..af943f23bb 100644
+index 6c616cff..af943f23 100644
 --- a/scripts/client-build-environment.ts
 +++ b/scripts/client-build-environment.ts
 @@ -19,7 +19,7 @@ export const CLIENT_BUILD_PROFILE_SELECTOR = 'DSH_BUILD_CLIENT_PROFILE'

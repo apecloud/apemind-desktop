@@ -1,5 +1,5 @@
 diff --git a/packages/api/remotes/package.json b/packages/api/remotes/package.json
-index 0807d01fc1..e075457ace 100644
+index c0ae5bdf..95ee37c4 100644
 --- a/packages/api/remotes/package.json
 +++ b/packages/api/remotes/package.json
 @@ -53,7 +53,8 @@
@@ -13,7 +13,7 @@ index 0807d01fc1..e075457ace 100644
    "peerDependencies": {
      "@deepseek-ai/cordis": "workspace:~",
 diff --git a/packages/api/remotes/src/client/index.ts b/packages/api/remotes/src/client/index.ts
-index 90fc6b7fde..5836ffe4a1 100644
+index 90fc6b7f..5836ffe4 100644
 --- a/packages/api/remotes/src/client/index.ts
 +++ b/packages/api/remotes/src/client/index.ts
 @@ -4,6 +4,7 @@ import type { Context } from '@deepseek-ai/cordis'
@@ -42,7 +42,7 @@ index 90fc6b7fde..5836ffe4a1 100644
        pluginInventoryRemote, pluginManagerRemote, pluginMarketRemote, pluginRegistryProbeRemote,
        messageFeedbackRemote, sessionFeedbackRemote,
 diff --git a/packages/bundle/web-app/cordis.patch.yml b/packages/bundle/web-app/cordis.patch.yml
-index a1ca0b5483..0dacdc1dc2 100644
+index a56cda5e..ce200a7d 100644
 --- a/packages/bundle/web-app/cordis.patch.yml
 +++ b/packages/bundle/web-app/cordis.patch.yml
 @@ -312,6 +312,10 @@
@@ -57,7 +57,7 @@ index a1ca0b5483..0dacdc1dc2 100644
      # and removes the profile's bundles through the `pluginManager` Remote.
      # Without a profile-backed Host it reports itself unavailable.
 diff --git a/packages/bundle/web-app/package.json b/packages/bundle/web-app/package.json
-index 3a56135545..bf4e92d8ba 100644
+index b466b32f..653d8ae4 100644
 --- a/packages/bundle/web-app/package.json
 +++ b/packages/bundle/web-app/package.json
 @@ -55,6 +55,7 @@
@@ -69,7 +69,7 @@ index 3a56135545..bf4e92d8ba 100644
      "@deepseek-ai/dsh-agent-preset": "workspace:*",
      "@deepseek-ai/dsh-agent-preset-registry": "workspace:*",
 diff --git a/tsconfig.client.json b/tsconfig.client.json
-index 053d90af78..3f052a89f6 100644
+index b2f0423c..f5b4c151 100644
 --- a/tsconfig.client.json
 +++ b/tsconfig.client.json
 @@ -98,6 +98,7 @@

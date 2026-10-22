@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/cli/dsh b/apps/desktop/cli/dsh
-index ee657a3d0b..c003477151 100644
+index ee657a3d..c0034771 100644
 --- a/apps/desktop/cli/dsh
 +++ b/apps/desktop/cli/dsh
 @@ -11,4 +11,4 @@ while [ -L "$launcher" ]; do
@@ -9,7 +9,7 @@ index ee657a3d0b..c003477151 100644
 -ELECTRON_RUN_AS_NODE=1 exec "$resources/../MacOS/DeepSeek Harness" --expose-internals "$resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-desktop-host/lib/cli.js" "$@"
 +ELECTRON_RUN_AS_NODE=1 exec "$resources/../MacOS/ApeMind Desktop" --expose-internals "$resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-desktop-host/lib/cli.js" "$@"
 diff --git a/apps/desktop/cli/dsh.cmd b/apps/desktop/cli/dsh.cmd
-index 73af33537a..a9a0d8f8eb 100644
+index 73af3353..a9a0d8f8 100644
 --- a/apps/desktop/cli/dsh.cmd
 +++ b/apps/desktop/cli/dsh.cmd
 @@ -1,5 +1,5 @@
@@ -20,7 +20,7 @@ index 73af33537a..a9a0d8f8eb 100644
 +"%~dp0..\..\..\..\ApeMind Desktop.exe" --expose-internals "%~dp0..\..\..\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js" %*
  exit /b %errorlevel%
 diff --git a/apps/desktop/tests/cli-launcher.spec.ts b/apps/desktop/tests/cli-launcher.spec.ts
-index 67e38da256..ce7350ca25 100644
+index 67e38da2..ce7350ca 100644
 --- a/apps/desktop/tests/cli-launcher.spec.ts
 +++ b/apps/desktop/tests/cli-launcher.spec.ts
 @@ -24,7 +24,7 @@ function fixture() {

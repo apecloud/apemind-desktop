@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/scripts/electron-builder-config.mjs b/apps/desktop/scripts/electron-builder-config.mjs
-index 4b9cd27a8d..20f25a635d 100644
+index 4b9cd27a..20f25a63 100644
 --- a/apps/desktop/scripts/electron-builder-config.mjs
 +++ b/apps/desktop/scripts/electron-builder-config.mjs
 @@ -113,7 +113,7 @@ export function createElectronBuilderConfig(
@@ -12,7 +12,7 @@ index 4b9cd27a8d..20f25a635d 100644
      artifactName: `deepseek-harness-\${version}-\${os}-\${arch}${output.suffix}.\${ext}`,
      directories: { output: output.directory },
 diff --git a/apps/desktop/src/locale.ts b/apps/desktop/src/locale.ts
-index 5d9d4607c7..ac19b8381b 100644
+index 5d9d4607..ac19b838 100644
 --- a/apps/desktop/src/locale.ts
 +++ b/apps/desktop/src/locale.ts
 @@ -31,17 +31,17 @@ export const en = {

@@ -1,5 +1,5 @@
 diff --git a/packages/client/ui-brand-official/src/client/Brand.tsx b/packages/client/ui-brand-official/src/client/Brand.tsx
-index 42c7794a7e..5b80043bab 100644
+index 42c7794a..5b80043b 100644
 --- a/packages/client/ui-brand-official/src/client/Brand.tsx
 +++ b/packages/client/ui-brand-official/src/client/Brand.tsx
 @@ -1,5 +1,9 @@
@@ -27,7 +27,7 @@ index 42c7794a7e..5b80043bab 100644
  
  /**
 diff --git a/packages/client/ui-conversation/src/client/skeleton/EmptyHero.tsx b/packages/client/ui-conversation/src/client/skeleton/EmptyHero.tsx
-index 40df87269b..0fcf3482d2 100644
+index 40df8726..0fcf3482 100644
 --- a/packages/client/ui-conversation/src/client/skeleton/EmptyHero.tsx
 +++ b/packages/client/ui-conversation/src/client/skeleton/EmptyHero.tsx
 @@ -1,10 +1,9 @@

@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/electron-builder.config.d.mts b/apps/desktop/electron-builder.config.d.mts
-index 0682e6e9ad..6140a858a6 100644
+index 0682e6e9..6140a858 100644
 --- a/apps/desktop/electron-builder.config.d.mts
 +++ b/apps/desktop/electron-builder.config.d.mts
 @@ -19,6 +19,8 @@ export interface DesktopElectronBuilderConfig {
@@ -12,7 +12,7 @@ index 0682e6e9ad..6140a858a6 100644
    readonly mac: {
      readonly extendInfo: { readonly NSMicrophoneUsageDescription: string }
 diff --git a/apps/desktop/scripts/electron-builder-config.mjs b/apps/desktop/scripts/electron-builder-config.mjs
-index 20f25a635d..98953e39c7 100644
+index 20f25a63..98953e39 100644
 --- a/apps/desktop/scripts/electron-builder-config.mjs
 +++ b/apps/desktop/scripts/electron-builder-config.mjs
 @@ -25,6 +25,7 @@ import { resolveDesktopBuildVersion } from './desktop-build-version.mjs'
@@ -32,7 +32,7 @@ index 20f25a635d..98953e39c7 100644
        ...(packagesWindows ? [{ from: fileURLToPath(new URL('../resources/tray-windows.ico', import.meta.url)), to: 'tray.ico' }] : []),
      ],
 diff --git a/apps/desktop/scripts/package-target.ts b/apps/desktop/scripts/package-target.ts
-index d100b98b15..7f447a8044 100644
+index d100b98b..7f447a80 100644
 --- a/apps/desktop/scripts/package-target.ts
 +++ b/apps/desktop/scripts/package-target.ts
 @@ -9,6 +9,7 @@ import {
@@ -52,7 +52,7 @@ index d100b98b15..7f447a8044 100644
    await execute(['run', 'release:pack', '--family', 'dsh', '--out', buildPaths.packedDsh, ...packArguments], buildEnv, REPOSITORY_ROOT)
    await execute([
 diff --git a/apps/desktop/src/main.ts b/apps/desktop/src/main.ts
-index 2afdfd7194..69bd9bf052 100644
+index 2afdfd71..69bd9bf0 100644
 --- a/apps/desktop/src/main.ts
 +++ b/apps/desktop/src/main.ts
 @@ -3,7 +3,7 @@ import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
@@ -93,7 +93,7 @@ index 2afdfd7194..69bd9bf052 100644
    const development = !app.isPackaged
    const primaryRuntime = development
 diff --git a/apps/desktop/tests/macos-signature.spec.ts b/apps/desktop/tests/macos-signature.spec.ts
-index 0d9f486bdd..18df06e94e 100644
+index 0d9f486b..18df06e9 100644
 --- a/apps/desktop/tests/macos-signature.spec.ts
 +++ b/apps/desktop/tests/macos-signature.spec.ts
 @@ -1,4 +1,10 @@

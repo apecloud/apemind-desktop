@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/scripts/package-macos.ts b/apps/desktop/scripts/package-macos.ts
-index 4ba0fd12ca..aa83c967d5 100644
+index 4ba0fd12..aa83c967 100644
 --- a/apps/desktop/scripts/package-macos.ts
 +++ b/apps/desktop/scripts/package-macos.ts
 @@ -78,7 +78,7 @@ export async function packageMacOSArtifacts(

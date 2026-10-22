@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/scripts/package-target.ts b/apps/desktop/scripts/package-target.ts
-index be2f577e1b..d100b98b15 100644
+index be2f577e..d100b98b 100644
 --- a/apps/desktop/scripts/package-target.ts
 +++ b/apps/desktop/scripts/package-target.ts
 @@ -229,7 +229,7 @@ export function parseDesktopPackageInvocation(
@@ -12,7 +12,7 @@ index be2f577e1b..d100b98b15 100644
        check: { type: 'boolean', default: false },
        'build-version': { type: 'string' },
 diff --git a/apps/desktop/tests/package-target-stages.spec.ts b/apps/desktop/tests/package-target-stages.spec.ts
-index 1d8b067390..06761ca9cc 100644
+index 1d8b0673..06761ca9 100644
 --- a/apps/desktop/tests/package-target-stages.spec.ts
 +++ b/apps/desktop/tests/package-target-stages.spec.ts
 @@ -11,6 +11,7 @@ vi.mock('../scripts/macos-notarization-proxy.ts', () => ({

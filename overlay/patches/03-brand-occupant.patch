@@ -1,5 +1,5 @@
 diff --git a/packages/client/ui-brand-official/src/client/Brand.tsx b/packages/client/ui-brand-official/src/client/Brand.tsx
-index 9ac6dd7ce2..42c7794a7e 100644
+index 9ac6dd7c..42c7794a 100644
 --- a/packages/client/ui-brand-official/src/client/Brand.tsx
 +++ b/packages/client/ui-brand-official/src/client/Brand.tsx
 @@ -1,4 +1,4 @@
@@ -20,7 +20,7 @@ index 9ac6dd7ce2..42c7794a7e 100644
 +  )
  }
 diff --git a/packages/client/ui-brand-official/src/client/index.ts b/packages/client/ui-brand-official/src/client/index.ts
-index 332a5f6007..fd3446b049 100644
+index 332a5f60..fd3446b0 100644
 --- a/packages/client/ui-brand-official/src/client/index.ts
 +++ b/packages/client/ui-brand-official/src/client/index.ts
 @@ -14,7 +14,10 @@ export const inject = ['slots']

@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/scripts/smoke-packaged-runtime.ts b/apps/desktop/scripts/smoke-packaged-runtime.ts
-index 6c3c12c857..3ea34debb2 100644
+index 6c3c12c8..3ea34deb 100644
 --- a/apps/desktop/scripts/smoke-packaged-runtime.ts
 +++ b/apps/desktop/scripts/smoke-packaged-runtime.ts
 @@ -1,4 +1,5 @@
