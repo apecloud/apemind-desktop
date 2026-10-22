@@ -113,10 +113,18 @@ jobs:
         working-directory: ${{ runner.temp }}/dsh-desktop
         run: |
           set -euo pipefail
-          builder_config="$(find apps/desktop -type f | grep -E '/electron-builder(\.config|-config)\.mjs$' | head -n1)"
-          test -n "${builder_config}"
-          grep -Eq "productName: ['\"]ApeMind Desktop['\"]" "${builder_config}"
-          echo "✓ productName 已品牌化：${builder_config}"
+          # 上游同时存在薄入口 electron-builder.config.mjs（不含 productName）
+          # 与工厂 scripts/electron-builder-config.mjs；find 顺序不确定，
+          # 不能 head -n1 —— 检查全部候选文件。
+          builder_configs="$(find apps/desktop -type f | grep -E '/electron-builder(\.config|-config)\.mjs$' | sort || true)"
+          test -n "${builder_configs}"
+          hits="$(echo "${builder_configs}" | xargs grep -lE "productName: ['\"]ApeMind Desktop['\"]" || true)"
+          test -n "${hits}"
+          echo "✓ productName 已品牌化：${hits}"
+          if echo "${builder_configs}" | xargs grep -lE "productName: ['\"]DeepSeek Harness['\"]" | grep -q .; then
+            echo "✗ 上游品牌 productName 残留" >&2
+            exit 1
+          fi
           # verify-client-ui-i18n above validates locale ownership and build
           # output; avoid coupling this smoke assertion to an upstream source
           # file path that may move between DSH releases.

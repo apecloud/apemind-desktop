@@ -1,5 +1,18 @@
+diff --git a/apps/desktop/scripts/electron-builder-config.mjs b/apps/desktop/scripts/electron-builder-config.mjs
+index 4b9cd27a..20f25a63 100644
+--- a/apps/desktop/scripts/electron-builder-config.mjs
++++ b/apps/desktop/scripts/electron-builder-config.mjs
+@@ -113,7 +113,7 @@ export function createElectronBuilderConfig(
+       ...buildVersion === productVersion ? {} : { version: buildVersion },
+       ...packaged === undefined ? {} : { dshBuildCommit: packaged.commit, dshBuildDirty: packaged.dirty },
+     },
+-    productName: 'DeepSeek Harness',
++    productName: 'ApeMind Desktop',
+     // Unsigned builds carry their own suffix so a shared file can never pass for a release artifact.
+     artifactName: `deepseek-harness-\${version}-\${os}-\${arch}${output.suffix}.\${ext}`,
+     directories: { output: output.directory },
 diff --git a/apps/desktop/src/locale.ts b/apps/desktop/src/locale.ts
-index 5d9d4607c7..ac19b8381b 100644
+index 5d9d4607..ac19b838 100644
 --- a/apps/desktop/src/locale.ts
 +++ b/apps/desktop/src/locale.ts
 @@ -31,17 +31,17 @@ export const en = {
@@ -114,16 +127,3 @@ index 5d9d4607c7..ac19b8381b 100644
    updateAvailable: '发现新版本 {version}',
    updateDetail: '下载完成后，可安装并重启应用。',
    installAndRestart: '安装并重启',
-diff --git a/apps/desktop/scripts/electron-builder-config.mjs b/apps/desktop/scripts/electron-builder-config.mjs
-index f08b783865..88e8f731ef 100644
---- a/apps/desktop/scripts/electron-builder-config.mjs
-+++ b/apps/desktop/scripts/electron-builder-config.mjs
-@@ -105,7 +105,7 @@ export function createElectronBuilderConfig(
-       ...buildVersion === productVersion ? {} : { version: buildVersion },
-       ...packaged === undefined ? {} : { dshBuildCommit: packaged.commit, dshBuildDirty: packaged.dirty },
-     },
--    productName: 'DeepSeek Harness',
-+    productName: 'ApeMind Desktop',
-     // Unsigned builds carry their own suffix so a shared file can never pass for a release artifact.
-     artifactName: `deepseek-harness-\${version}-\${os}-\${arch}${unsigned ? '-unsigned' : ''}.\${ext}`,
-     directories: { output: unsigned ? buildPaths.unsignedArtifacts : buildPaths.artifacts },

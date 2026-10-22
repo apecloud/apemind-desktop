@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/tests/packaged-runtime-verification.spec.ts b/apps/desktop/tests/packaged-runtime-verification.spec.ts
-index 9e697e9348..add29b9a66 100644
+index 9e697e93..add29b9a 100644
 --- a/apps/desktop/tests/packaged-runtime-verification.spec.ts
 +++ b/apps/desktop/tests/packaged-runtime-verification.spec.ts
 @@ -1,5 +1,12 @@

@@ -1,8 +1,8 @@
 diff --git a/apps/desktop/electron-builder.config.d.mts b/apps/desktop/electron-builder.config.d.mts
-index 4e978ec00f..3f8e512cf2 100644
+index 0682e6e9..6140a858 100644
 --- a/apps/desktop/electron-builder.config.d.mts
 +++ b/apps/desktop/electron-builder.config.d.mts
-@@ -22,6 +22,8 @@ export interface DesktopElectronBuilderConfig {
+@@ -19,6 +19,8 @@ export interface DesktopElectronBuilderConfig {
      { readonly from: string, readonly to: 'runtime' },
      { readonly from: string, readonly to: 'icon.png' },
      ...{ readonly from: string, readonly to: 'tray.ico' }[],
@@ -12,18 +12,18 @@ index 4e978ec00f..3f8e512cf2 100644
    readonly mac: {
      readonly extendInfo: { readonly NSMicrophoneUsageDescription: string }
 diff --git a/apps/desktop/scripts/electron-builder-config.mjs b/apps/desktop/scripts/electron-builder-config.mjs
-index 88e8f731ef..169f156dc7 100644
+index 20f25a63..98953e39 100644
 --- a/apps/desktop/scripts/electron-builder-config.mjs
 +++ b/apps/desktop/scripts/electron-builder-config.mjs
 @@ -25,6 +25,7 @@ import { resolveDesktopBuildVersion } from './desktop-build-version.mjs'
  import { resolveDesktopPolicyEnvironment } from './desktop-policy-environment.mjs'
- import { desktopTargetBuildPaths, resolveDesktopBuildTarget } from './desktop-build-paths.mjs'
+ import { desktopArtifactOutput, desktopTargetBuildPaths, resolveDesktopBuildTarget } from './desktop-build-paths.mjs'
  import { installWindowsDirectoryInstaller } from './windows-directory-installer.mjs'
 +import { resolveApeMindCliResources } from './apemind-cli-runtime.mjs'
  import { preserveWindowsRuntimeSignature, signWindowsCode } from './windows-runtime-signature.mjs'
  import { prepareWindowsAsarUnpack, verifyWindowsAsarUnpack } from './windows-asar-unpack.mjs'
  import { recordPackagingEvent } from './packaging-run.mjs'
-@@ -143,6 +144,7 @@ export function createElectronBuilderConfig(
+@@ -153,6 +154,7 @@ export function createElectronBuilderConfig(
      extraResources: [
        { from: buildPaths.runtime, to: 'runtime' },
        { from: fileURLToPath(new URL('../resources/icon-windows.png', import.meta.url)), to: 'icon.png' },
@@ -32,18 +32,18 @@ index 88e8f731ef..169f156dc7 100644
        ...(packagesWindows ? [{ from: fileURLToPath(new URL('../resources/tray-windows.ico', import.meta.url)), to: 'tray.ico' }] : []),
      ],
 diff --git a/apps/desktop/scripts/package-target.ts b/apps/desktop/scripts/package-target.ts
-index a133ccdcf8..66e8b964fb 100644
+index d100b98b..7f447a80 100644
 --- a/apps/desktop/scripts/package-target.ts
 +++ b/apps/desktop/scripts/package-target.ts
 @@ -9,6 +9,7 @@ import {
    resolveDesktopAutoUpdateConfig,
  } from './desktop-auto-update-environment.mjs'
- import { desktopTargetBuildPaths } from './desktop-build-paths.mjs'
+ import { desktopArtifactOutput, desktopTargetBuildPaths } from './desktop-build-paths.mjs'
 +import { prepareApeMindCli } from './apemind-cli-runtime.mjs'
  import { packageMacOSArtifacts, type DesktopPrepackagedArtifact } from './package-macos.ts'
  import { loadDesktopPackageEnvironment, localMacOSPackageEnvironment, validateDesktopPackageEnvironment } from './desktop-package-environment.mjs'
  import { createPackagingRun, recordPackagingEvent } from './packaging-run.mjs'
-@@ -455,6 +456,7 @@ export async function packageTarget(
+@@ -473,6 +474,7 @@ export async function packageTarget(
          { cwd: APP_ROOT, env: electronBuilderEnv, timeoutMs: 60_000 })
      })
    }
@@ -52,7 +52,7 @@ index a133ccdcf8..66e8b964fb 100644
    await execute(['run', 'release:pack', '--family', 'dsh', '--out', buildPaths.packedDsh, ...packArguments], buildEnv, REPOSITORY_ROOT)
    await execute([
 diff --git a/apps/desktop/src/main.ts b/apps/desktop/src/main.ts
-index 1202670a3e..501fdebe7b 100644
+index 2afdfd71..69bd9bf0 100644
 --- a/apps/desktop/src/main.ts
 +++ b/apps/desktop/src/main.ts
 @@ -3,7 +3,7 @@ import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
@@ -64,7 +64,7 @@ index 1202670a3e..501fdebe7b 100644
  import { fileURLToPath } from 'node:url'
  import {
    app,
-@@ -146,6 +146,7 @@ interface RuntimeResources {
+@@ -147,6 +147,7 @@ interface RuntimeResources {
    readonly nodeBin: string
    readonly node: string
    readonly pnpm: string
@@ -72,7 +72,7 @@ index 1202670a3e..501fdebe7b 100644
    readonly dsh: string
  }
  
-@@ -158,7 +159,9 @@ function runtimeResources(): RuntimeResources {
+@@ -159,7 +160,9 @@ function runtimeResources(): RuntimeResources {
        : join(process.resourcesPath, 'runtime', 'primary-runtime', 'dependencies', 'pnpm', 'bin', 'pnpm.mjs'))
    const dsh = (development ? process.env.DSH_DESKTOP_DSH_DIR : undefined)
      ?? (development ? join(app.getAppPath(), '.desktop-build', 'development', 'project') : join(app.getAppPath(), 'dsh'))
@@ -83,7 +83,7 @@ index 1202670a3e..501fdebe7b 100644
  }
  
  function developmentPrimaryRuntime(): string {
-@@ -319,6 +322,8 @@ async function main(): Promise<void> {
+@@ -320,6 +323,8 @@ async function main(): Promise<void> {
    const journalDirectory = process.env.DSH_DESKTOP_UPDATE_JOURNAL_DIR
    const updateJournal = journalDirectory === undefined ? undefined : new DesktopUpdateJournal(journalDirectory, app.getVersion())
    const resources = runtimeResources()
@@ -93,7 +93,7 @@ index 1202670a3e..501fdebe7b 100644
    const development = !app.isPackaged
    const primaryRuntime = development
 diff --git a/apps/desktop/tests/macos-signature.spec.ts b/apps/desktop/tests/macos-signature.spec.ts
-index 186b597b07..6cd2378bc2 100644
+index 0d9f486b..18df06e9 100644
 --- a/apps/desktop/tests/macos-signature.spec.ts
 +++ b/apps/desktop/tests/macos-signature.spec.ts
 @@ -1,4 +1,10 @@
@@ -105,9 +105,9 @@ index 186b597b07..6cd2378bc2 100644
 +  ],
 +}))
  import { readFileSync } from 'node:fs'
+ import { createRequire } from 'node:module'
  import type { NotarizeOptions } from '@electron/notarize'
- import {
-@@ -51,8 +57,10 @@ describe('desktop macOS release signature', () => {
+@@ -57,8 +63,10 @@ describe('desktop macOS release signature', () => {
        'com.apple.security.cs.disable-library-validation', 'com.apple.security.device.audio-input']) {
        expect(entitlements).toContain(`<key>${key}</key>\n    <true/>`)
      }

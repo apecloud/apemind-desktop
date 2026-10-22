@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/tests/expected/about-panel.json b/apps/desktop/tests/expected/about-panel.json
-index 8dc6ee9063..887b65284a 100644
+index 8dc6ee90..887b6528 100644
 --- a/apps/desktop/tests/expected/about-panel.json
 +++ b/apps/desktop/tests/expected/about-panel.json
 @@ -1,11 +1,11 @@
@@ -59,7 +59,7 @@ index 8dc6ee9063..887b65284a 100644
        "version": "",
        "copyright": "",
 diff --git a/apps/desktop/tests/expected/application-menu-en-US.json b/apps/desktop/tests/expected/application-menu-en-US.json
-index 4e3c981919..383b25f3d0 100644
+index 4e3c9819..383b25f3 100644
 --- a/apps/desktop/tests/expected/application-menu-en-US.json
 +++ b/apps/desktop/tests/expected/application-menu-en-US.json
 @@ -7,7 +7,7 @@
@@ -80,7 +80,7 @@ index 4e3c981919..383b25f3d0 100644
    }
  ]
 diff --git a/apps/desktop/tests/expected/application-menu-zh-CN.json b/apps/desktop/tests/expected/application-menu-zh-CN.json
-index f39b2d88ae..84501608e6 100644
+index f39b2d88..84501608 100644
 --- a/apps/desktop/tests/expected/application-menu-zh-CN.json
 +++ b/apps/desktop/tests/expected/application-menu-zh-CN.json
 @@ -7,7 +7,7 @@
@@ -101,7 +101,7 @@ index f39b2d88ae..84501608e6 100644
    }
  ]
 diff --git a/apps/desktop/tests/main-startup.spec.ts b/apps/desktop/tests/main-startup.spec.ts
-index d9a8f3103b..981de805ec 100644
+index d9a8f310..981de805 100644
 --- a/apps/desktop/tests/main-startup.spec.ts
 +++ b/apps/desktop/tests/main-startup.spec.ts
 @@ -544,7 +544,8 @@ describe('desktop main startup', () => {
