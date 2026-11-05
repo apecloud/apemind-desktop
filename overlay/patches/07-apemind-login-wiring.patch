@@ -1,5 +1,5 @@
 diff --git a/packages/api/remotes/package.json b/packages/api/remotes/package.json
-index c0ae5bdf..95ee37c4 100644
+index 8150e81383..0ad38a5c80 100644
 --- a/packages/api/remotes/package.json
 +++ b/packages/api/remotes/package.json
 @@ -53,7 +53,8 @@
@@ -13,7 +13,7 @@ index c0ae5bdf..95ee37c4 100644
    "peerDependencies": {
      "@deepseek-ai/cordis": "workspace:~",
 diff --git a/packages/api/remotes/src/client/index.ts b/packages/api/remotes/src/client/index.ts
-index 90fc6b7f..5836ffe4 100644
+index 8a4b7dea8a..6e82e078f5 100644
 --- a/packages/api/remotes/src/client/index.ts
 +++ b/packages/api/remotes/src/client/index.ts
 @@ -4,6 +4,7 @@ import type { Context } from '@deepseek-ai/cordis'
@@ -24,7 +24,7 @@ index 90fc6b7f..5836ffe4 100644
  import userQuestionsRemote from '@deepseek-ai/dsh-user-questions/remote'
  import commandsRemote from '@deepseek-ai/dsh-commands/remote'
  import accountRemote from '@deepseek-ai/dsh-api-account-controller/remote'
-@@ -47,6 +48,7 @@ export type {
+@@ -50,6 +51,7 @@ export type {
  } from '@deepseek-ai/dsh-plugin-market/types'
  export type { PluginInventorySnapshot } from '@deepseek-ai/dsh-host-plugin-inventory/types'
  export type {} from '@deepseek-ai/dsh-agent-preset-registry/remote'
@@ -32,20 +32,20 @@ index 90fc6b7f..5836ffe4 100644
  export type {} from '@deepseek-ai/dsh-user-questions/remote'
  export type {} from '@deepseek-ai/dsh-commands/remote'
  export type {} from '@deepseek-ai/dsh-api-settings-controller/remote'
-@@ -186,7 +188,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
+@@ -189,7 +191,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
    const disposers: Array<() => Promise<void>> = []
    try {
      for (const contribution of [
 -      productAnalyticsRemote, agentPresetsRemote, commandsRemote, settingsControllerRemote, accountRemote,
 +      productAnalyticsRemote, authorizationRemote, agentPresetsRemote, commandsRemote, settingsControllerRemote, accountRemote,
        goalsRemote, llmRemote, dynamicRemote, scheduleRemote,
-       pluginInventoryRemote, pluginManagerRemote, pluginMarketRemote, pluginRegistryProbeRemote,
+       pluginInventoryRemote, pluginManagerRemote, pluginMarketRemote, pluginRegistryProbeRemote, toolResultsRemote,
        messageFeedbackRemote, sessionFeedbackRemote,
 diff --git a/packages/bundle/web-app/cordis.patch.yml b/packages/bundle/web-app/cordis.patch.yml
-index a56cda5e..ce200a7d 100644
+index d751fcc462..3014847dd2 100644
 --- a/packages/bundle/web-app/cordis.patch.yml
 +++ b/packages/bundle/web-app/cordis.patch.yml
-@@ -312,6 +312,10 @@
+@@ -308,6 +308,10 @@
      - id: ui-settings-models
        name: '@deepseek-ai/dsh-client-ui-settings-models'
  
@@ -57,7 +57,7 @@ index a56cda5e..ce200a7d 100644
      # and removes the profile's bundles through the `pluginManager` Remote.
      # Without a profile-backed Host it reports itself unavailable.
 diff --git a/packages/bundle/web-app/package.json b/packages/bundle/web-app/package.json
-index b466b32f..653d8ae4 100644
+index 303a57137c..fc54051f29 100644
 --- a/packages/bundle/web-app/package.json
 +++ b/packages/bundle/web-app/package.json
 @@ -55,6 +55,7 @@
@@ -68,11 +68,31 @@ index b466b32f..653d8ae4 100644
      "@deepseek-ai/dsh-agent-instructions": "workspace:*",
      "@deepseek-ai/dsh-agent-preset": "workspace:*",
      "@deepseek-ai/dsh-agent-preset-registry": "workspace:*",
+diff --git a/packages/experimental/liveshare/src/endpoint-classification.ts b/packages/experimental/liveshare/src/endpoint-classification.ts
+index 07fcb66556..f46adbbb49 100644
+--- a/packages/experimental/liveshare/src/endpoint-classification.ts
++++ b/packages/experimental/liveshare/src/endpoint-classification.ts
+@@ -82,6 +82,15 @@ export const VIEWER_ENDPOINT_CLASSES = {
+   // No reader role names these and no plugin offers them today, so the conservative class is
+   // owner-only. A plugin that intends to expose one reclassifies it as 'plugin-offered', which still
+   // only makes it eligible for the declaration path; the owner's per-share selection is the grant.
++  'apemindAuth/cancelBrowserLogin': 'owner-only', // ApeMind account session; the served page never reads it
++  'apemindAuth/connect': 'owner-only', // ApeMind account session; the served page never reads it
++  'apemindAuth/disconnect': 'owner-only', // ApeMind account session; the served page never reads it
++  'apemindAuth/oauthLogout': 'owner-only', // ApeMind account session; the served page never reads it
++  'apemindAuth/oauthState': 'owner-only', // ApeMind account session; the served page never reads it
++  'apemindAuth/openDevicePage': 'owner-only', // ApeMind account session; the served page never reads it
++  'apemindAuth/startBrowserLogin': 'owner-only', // ApeMind account session; the served page never reads it
++  'apemindAuth/startDeviceLogin': 'owner-only', // ApeMind account session; the served page never reads it
++  'apemindAuth/state': 'owner-only', // ApeMind account session; the served page never reads it
+   'account/ackBonusNotified': 'owner-only', // owner account and sign-in; the served page never reads it
+   'account/cancelSignIn': 'owner-only', // owner account and sign-in; the served page never reads it
+   'account/getBalance': 'owner-only', // owner account and sign-in; the served page never reads it
 diff --git a/tsconfig.client.json b/tsconfig.client.json
-index b2f0423c..f5b4c151 100644
+index 8ef965c8ba..d83f48613e 100644
 --- a/tsconfig.client.json
 +++ b/tsconfig.client.json
-@@ -98,6 +98,7 @@
+@@ -114,6 +114,7 @@
      { "path": "./packages/client/ui-layout" },
      { "path": "./packages/client/ui-sidebar" },
      { "path": "./packages/client/ui-brand-official" },
