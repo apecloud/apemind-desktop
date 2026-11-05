@@ -106,12 +106,15 @@ patches:
       - target: packages/api/remotes/src/client/index.ts
       - target: packages/bundle/web-app/cordis.patch.yml
       - target: packages/bundle/web-app/package.json
+      - target: packages/experimental/liveshare/src/endpoint-classification.ts
       - target: tsconfig.client.json
     upstream_logic_changed: false   # 只新增依赖、roster 行、挂载项与 tsconfig 引用
     reason: >
       host 侧 typert 已自动生成 `ctx.remote.apemindAuth`，但浏览器侧要显式
       `$mount` 该 remote contribution（`api/remotes/src/client/index.ts` 的清单），
-      否则前端拿不到 `remote.apemindAuth`；同理 web-app roster 要注册设置分区，
+      否则前端拿不到 `remote.apemindAuth`；同理 web-app roster 要注册设置分区。
+      上游 liveshare 对全部 RemoteEndpoint 做穷举分级，apemindAuth/* 为账号会话
+      操作一律 `owner-only`（与 account/* 同级，分享页永不可见），
       tsconfig.client 要引用新前端包。三条缺一即白屏/卡 pending。
     note: 全部是"新增行"，未修改任何上游既有行。
 

@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/tests/expected/about-panel.json b/apps/desktop/tests/expected/about-panel.json
-index 8dc6ee90..887b6528 100644
+index 8dc6ee9063..887b65284a 100644
 --- a/apps/desktop/tests/expected/about-panel.json
 +++ b/apps/desktop/tests/expected/about-panel.json
 @@ -1,11 +1,11 @@
@@ -59,10 +59,18 @@ index 8dc6ee90..887b6528 100644
        "version": "",
        "copyright": "",
 diff --git a/apps/desktop/tests/expected/application-menu-en-US.json b/apps/desktop/tests/expected/application-menu-en-US.json
-index 4e3c9819..383b25f3 100644
+index 71b281c6b2..50337a297e 100644
 --- a/apps/desktop/tests/expected/application-menu-en-US.json
 +++ b/apps/desktop/tests/expected/application-menu-en-US.json
-@@ -7,7 +7,7 @@
+@@ -1,6 +1,6 @@
+ [
+   {
+-    "label": "About DeepSeek Harness",
++    "label": "About ApeMind Desktop",
+     "role": "about"
+   },
+   {
+@@ -24,7 +24,7 @@
    },
    {
      "role": "hide",
@@ -71,7 +79,7 @@ index 4e3c9819..383b25f3 100644
    },
    {
      "role": "hideOthers",
-@@ -19,6 +19,6 @@
+@@ -39,6 +39,6 @@
    },
    {
      "role": "quit",
@@ -80,10 +88,18 @@ index 4e3c9819..383b25f3 100644
    }
  ]
 diff --git a/apps/desktop/tests/expected/application-menu-zh-CN.json b/apps/desktop/tests/expected/application-menu-zh-CN.json
-index f39b2d88..84501608 100644
+index 472aa48a8e..50188fade4 100644
 --- a/apps/desktop/tests/expected/application-menu-zh-CN.json
 +++ b/apps/desktop/tests/expected/application-menu-zh-CN.json
-@@ -7,7 +7,7 @@
+@@ -1,6 +1,6 @@
+ [
+   {
+-    "label": "关于 DeepSeek Harness",
++    "label": "关于 ApeMind Desktop",
+     "role": "about"
+   },
+   {
+@@ -24,7 +24,7 @@
    },
    {
      "role": "hide",
@@ -92,7 +108,7 @@ index f39b2d88..84501608 100644
    },
    {
      "role": "hideOthers",
-@@ -19,6 +19,6 @@
+@@ -39,6 +39,6 @@
    },
    {
      "role": "quit",
@@ -101,10 +117,10 @@ index f39b2d88..84501608 100644
    }
  ]
 diff --git a/apps/desktop/tests/main-startup.spec.ts b/apps/desktop/tests/main-startup.spec.ts
-index d9a8f310..981de805 100644
+index 3b1e63e00c..3a7043b849 100644
 --- a/apps/desktop/tests/main-startup.spec.ts
 +++ b/apps/desktop/tests/main-startup.spec.ts
-@@ -544,7 +544,8 @@ describe('desktop main startup', () => {
+@@ -613,7 +613,8 @@ describe('desktop main startup', () => {
      const options = harness.app.setAboutPanelOptions.mock.calls[0]![0]
      const expected = JSON.parse(readFileSync(new URL('./expected/about-panel.json', import.meta.url), 'utf8')) as Record<string, unknown>
      const [about, separator] = submenu
@@ -114,7 +130,7 @@ index d9a8f310..981de805 100644
        .toEqual(expected[`${platform}:${locale}`])
      expect(options.iconPath).toBe(packaged ? join('desktop-test-resources', 'icon.png')
        : join('desktop-test-app', 'resources', 'icon-windows.png'))
-@@ -555,7 +556,7 @@ describe('desktop main startup', () => {
+@@ -624,7 +625,7 @@ describe('desktop main startup', () => {
      await vi.advanceTimersByTimeAsync(0)
      const zh = locale === 'zh-CN'
      expect(harness.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
@@ -123,12 +139,12 @@ index d9a8f310..981de805 100644
        detail: zh ? '版本 V1.0.0' : 'Version V1.0.0', buttons: [zh ? '确定' : 'OK'], cancelId: 0,
      }))
      // A dialog that cannot open is logged, not surfaced as an unhandled rejection.
-@@ -973,7 +974,7 @@ describe('desktop main startup', () => {
+@@ -1068,7 +1069,7 @@ describe('desktop main startup', () => {
      expect(() => handler(event, 'application', NaN, 34)).toThrow('invalid popup request')
      const application = handler(event, 'application', 48, 34)
      expect(harness.menu.buildFromTemplate.mock.lastCall![0].map(item => item.label ?? item.type)).toEqual([
--      '关于 DeepSeek Harness', 'separator', '检查更新…', '管理 dsh 命令…', 'separator', '退出',
-+      '关于 ApeMind Desktop', 'separator', '检查更新…', '管理 dsh 命令…', 'separator', '退出',
+-      '关于 DeepSeek Harness', 'separator', '检查更新…', '管理 dsh 命令…', 'separator', zh.toggleDevToolsMenu, 'separator', '退出',
++      '关于 ApeMind Desktop', 'separator', '检查更新…', '管理 dsh 命令…', 'separator', zh.toggleDevToolsMenu, 'separator', '退出',
      ])
      expect(harness.popup.mock.lastCall![0]).toMatchObject({ window, x: 48, y: 34 })
      expect(harness.popup.mock.lastCall![0].callback).toBeTypeOf('function')

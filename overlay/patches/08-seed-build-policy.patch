@@ -1,8 +1,8 @@
 diff --git a/apps/desktop/src/project-manager.ts b/apps/desktop/src/project-manager.ts
-index 270d87d6..464de088 100644
+index 9e96b91237..6200dad00f 100644
 --- a/apps/desktop/src/project-manager.ts
 +++ b/apps/desktop/src/project-manager.ts
-@@ -45,7 +45,7 @@ function workspaceFile(overrides: Readonly<Record<string, string>> = {}): string
+@@ -44,7 +44,7 @@ function workspaceFile(overrides: Readonly<Record<string, string>> = {}): string
    const coreBuildKey = coreBuildSpec === undefined
      ? CORE_BUILD_PACKAGE
      : `${CORE_BUILD_PACKAGE}@${coreBuildSpec.replace('file:./', 'file:')}`

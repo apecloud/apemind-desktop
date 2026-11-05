@@ -1,8 +1,8 @@
 diff --git a/apps/desktop/electron-builder.config.d.mts b/apps/desktop/electron-builder.config.d.mts
-index 0682e6e9..6140a858 100644
+index 2973a6eacc..a524eb8d00 100644
 --- a/apps/desktop/electron-builder.config.d.mts
 +++ b/apps/desktop/electron-builder.config.d.mts
-@@ -19,6 +19,8 @@ export interface DesktopElectronBuilderConfig {
+@@ -20,6 +20,8 @@ export interface DesktopElectronBuilderConfig {
      { readonly from: string, readonly to: 'runtime' },
      { readonly from: string, readonly to: 'icon.png' },
      ...{ readonly from: string, readonly to: 'tray.ico' }[],
@@ -10,12 +10,12 @@ index 0682e6e9..6140a858 100644
 +    { readonly from: string, readonly to: 'apemind/release.json' },
    ]
    readonly mac: {
-     readonly extendInfo: { readonly NSMicrophoneUsageDescription: string }
+     readonly extendInfo: {
 diff --git a/apps/desktop/scripts/electron-builder-config.mjs b/apps/desktop/scripts/electron-builder-config.mjs
-index 20f25a63..98953e39 100644
+index 1b294f3fe3..0bb197918b 100644
 --- a/apps/desktop/scripts/electron-builder-config.mjs
 +++ b/apps/desktop/scripts/electron-builder-config.mjs
-@@ -25,6 +25,7 @@ import { resolveDesktopBuildVersion } from './desktop-build-version.mjs'
+@@ -26,6 +26,7 @@ import { resolveDesktopBuildVersion } from './desktop-build-version.mjs'
  import { resolveDesktopPolicyEnvironment } from './desktop-policy-environment.mjs'
  import { desktopArtifactOutput, desktopTargetBuildPaths, resolveDesktopBuildTarget } from './desktop-build-paths.mjs'
  import { installWindowsDirectoryInstaller } from './windows-directory-installer.mjs'
@@ -23,7 +23,7 @@ index 20f25a63..98953e39 100644
  import { preserveWindowsRuntimeSignature, signWindowsCode } from './windows-runtime-signature.mjs'
  import { prepareWindowsAsarUnpack, verifyWindowsAsarUnpack } from './windows-asar-unpack.mjs'
  import { recordPackagingEvent } from './packaging-run.mjs'
-@@ -153,6 +154,7 @@ export function createElectronBuilderConfig(
+@@ -158,6 +159,7 @@ export function createElectronBuilderConfig(
      extraResources: [
        { from: buildPaths.runtime, to: 'runtime' },
        { from: fileURLToPath(new URL('../resources/icon-windows.png', import.meta.url)), to: 'icon.png' },
@@ -32,7 +32,7 @@ index 20f25a63..98953e39 100644
        ...(packagesWindows ? [{ from: fileURLToPath(new URL('../resources/tray-windows.ico', import.meta.url)), to: 'tray.ico' }] : []),
      ],
 diff --git a/apps/desktop/scripts/package-target.ts b/apps/desktop/scripts/package-target.ts
-index d100b98b..7f447a80 100644
+index f90fdb7f8f..47f81de18e 100644
 --- a/apps/desktop/scripts/package-target.ts
 +++ b/apps/desktop/scripts/package-target.ts
 @@ -9,6 +9,7 @@ import {
@@ -43,28 +43,28 @@ index d100b98b..7f447a80 100644
  import { packageMacOSArtifacts, type DesktopPrepackagedArtifact } from './package-macos.ts'
  import { loadDesktopPackageEnvironment, localMacOSPackageEnvironment, validateDesktopPackageEnvironment } from './desktop-package-environment.mjs'
  import { createPackagingRun, recordPackagingEvent } from './packaging-run.mjs'
-@@ -473,6 +474,7 @@ export async function packageTarget(
+@@ -478,6 +479,7 @@ export async function packageTarget(
          { cwd: APP_ROOT, env: electronBuilderEnv, timeoutMs: 60_000 })
      })
    }
 +  await prepareApeMindCli(targetEnv, target.platform, target.arch)
-   await execute(['run', 'build:official'], buildEnv, REPOSITORY_ROOT)
-   await execute(['run', 'release:pack', '--family', 'dsh', '--out', buildPaths.packedDsh, ...packArguments], buildEnv, REPOSITORY_ROOT)
-   await execute([
+   await execute(invocation.unsigned ? ['run', 'build', '--profile', 'local'] : ['run', 'build:official'], buildEnv, REPOSITORY_ROOT)
+   let preparationFailure: { error: unknown } | undefined
+   const executePreparation = async (args: readonly string[], env: NodeJS.ProcessEnv, cwd?: string): Promise<void> => {
 diff --git a/apps/desktop/src/main.ts b/apps/desktop/src/main.ts
-index 2afdfd71..69bd9bf0 100644
+index d8d0e30c4c..60afc6e609 100644
 --- a/apps/desktop/src/main.ts
 +++ b/apps/desktop/src/main.ts
-@@ -3,7 +3,7 @@ import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
+@@ -4,7 +4,7 @@ import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
  /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
  
- import { readFile, writeFile } from 'node:fs/promises'
+ import { access, readFile, writeFile } from 'node:fs/promises'
 -import { join } from 'node:path'
 +import { delimiter, dirname, join } from 'node:path'
  import { fileURLToPath } from 'node:url'
  import {
    app,
-@@ -147,6 +147,7 @@ interface RuntimeResources {
+@@ -198,6 +198,7 @@ interface RuntimeResources {
    readonly nodeBin: string
    readonly node: string
    readonly pnpm: string
@@ -72,7 +72,7 @@ index 2afdfd71..69bd9bf0 100644
    readonly dsh: string
  }
  
-@@ -159,7 +160,9 @@ function runtimeResources(): RuntimeResources {
+@@ -210,7 +211,9 @@ function runtimeResources(): RuntimeResources {
        : join(process.resourcesPath, 'runtime', 'primary-runtime', 'dependencies', 'pnpm', 'bin', 'pnpm.mjs'))
    const dsh = (development ? process.env.DSH_DESKTOP_DSH_DIR : undefined)
      ?? (development ? join(app.getAppPath(), '.desktop-build', 'development', 'project') : join(app.getAppPath(), 'dsh'))
@@ -83,7 +83,7 @@ index 2afdfd71..69bd9bf0 100644
  }
  
  function developmentPrimaryRuntime(): string {
-@@ -320,6 +323,8 @@ async function main(): Promise<void> {
+@@ -371,6 +374,8 @@ async function main(): Promise<void> {
    const journalDirectory = process.env.DSH_DESKTOP_UPDATE_JOURNAL_DIR
    const updateJournal = journalDirectory === undefined ? undefined : new DesktopUpdateJournal(journalDirectory, app.getVersion())
    const resources = runtimeResources()
@@ -93,10 +93,11 @@ index 2afdfd71..69bd9bf0 100644
    const development = !app.isPackaged
    const primaryRuntime = development
 diff --git a/apps/desktop/tests/macos-signature.spec.ts b/apps/desktop/tests/macos-signature.spec.ts
-index 0d9f486b..18df06e9 100644
+index 2e6a2bd48e..487e9f5e91 100644
 --- a/apps/desktop/tests/macos-signature.spec.ts
 +++ b/apps/desktop/tests/macos-signature.spec.ts
-@@ -1,4 +1,10 @@
+@@ -1,5 +1,11 @@
+ import { SHIPPED_LOCALE_IDS } from '../../../scripts/shipped-locales.ts'
  import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 +vi.mock('../scripts/apemind-cli-runtime.mjs', () => ({
 +  resolveApeMindCliResources: () => [
@@ -107,7 +108,7 @@ index 0d9f486b..18df06e9 100644
  import { readFileSync } from 'node:fs'
  import { createRequire } from 'node:module'
  import type { NotarizeOptions } from '@electron/notarize'
-@@ -57,8 +63,10 @@ describe('desktop macOS release signature', () => {
+@@ -59,8 +65,10 @@ describe('desktop macOS release signature', () => {
        'com.apple.security.cs.disable-library-validation', 'com.apple.security.device.audio-input']) {
        expect(entitlements).toContain(`<key>${key}</key>\n    <true/>`)
      }

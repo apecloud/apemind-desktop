@@ -1,18 +1,18 @@
 diff --git a/apps/desktop/scripts/electron-builder-config.mjs b/apps/desktop/scripts/electron-builder-config.mjs
-index 4b9cd27a..20f25a63 100644
+index cf0c19e895..1b294f3fe3 100644
 --- a/apps/desktop/scripts/electron-builder-config.mjs
 +++ b/apps/desktop/scripts/electron-builder-config.mjs
-@@ -113,7 +113,7 @@ export function createElectronBuilderConfig(
+@@ -114,7 +114,7 @@ export function createElectronBuilderConfig(
        ...buildVersion === productVersion ? {} : { version: buildVersion },
        ...packaged === undefined ? {} : { dshBuildCommit: packaged.commit, dshBuildDirty: packaged.dirty },
      },
 -    productName: 'DeepSeek Harness',
 +    productName: 'ApeMind Desktop',
+     // The default copyright uses author.name; this line names the product instead.
+     copyright: `Copyright © ${new Date().getFullYear()} \${productName}`,
      // Unsigned builds carry their own suffix so a shared file can never pass for a release artifact.
-     artifactName: `deepseek-harness-\${version}-\${os}-\${arch}${output.suffix}.\${ext}`,
-     directories: { output: output.directory },
 diff --git a/apps/desktop/src/locale.ts b/apps/desktop/src/locale.ts
-index 5d9d4607..ac19b838 100644
+index f5d30b82ba..802a4a2f54 100644
 --- a/apps/desktop/src/locale.ts
 +++ b/apps/desktop/src/locale.ts
 @@ -31,17 +31,17 @@ export const en = {
@@ -48,7 +48,7 @@ index 5d9d4607..ac19b838 100644
    fatalSummary: 'The application could not start or stopped unexpectedly.',
    startupAddressInUse: 'Another DSH instance (such as dsh web or the desktop app) is running. They cannot start at the same time. Quit the other running DSH instance, then restart.',
    diagnosticTruncated: '… Error details shortened.',
-@@ -66,10 +66,10 @@ export const en = {
+@@ -71,10 +71,10 @@ export const en = {
    restartApplication: 'Restart',
    recoveryOperationFailed: 'The recovery operation failed',
    disableThirdPartyPlugins: 'Disable third-party plugins, back up profile patch, and restart',
@@ -62,8 +62,8 @@ index 5d9d4607..ac19b838 100644
    welcomeTaglineAfter: '',
    welcomeDescription: 'Build potential. Explore intelligence.',
    welcomeAuthStarting: 'Opening sign in…',
-@@ -130,7 +130,7 @@ export const en = {
-   updateTasksUnavailable: 'Task status is unavailable. Try updating again when the workspace is ready.',
+@@ -137,7 +137,7 @@ export const en = {
+   updateFullscreenTimeout: 'Could not exit fullscreen. Exit fullscreen, then retry the update.',
    updateStopFailed: 'Could not safely stop the tasks. The update has not been installed. Please try again later.',
    updateTechnicalDetails: 'View technical details',
 -  updateTitle: 'DeepSeek Harness Update',
@@ -71,7 +71,7 @@ index 5d9d4607..ac19b838 100644
    updateAvailable: 'New version available: {version}',
    updateDetail: 'Once the download is complete, you can install the update and restart the app.',
    installAndRestart: 'Install and Restart',
-@@ -202,17 +202,17 @@ export const zh = {
+@@ -211,17 +211,17 @@ export const zh = {
    application: '应用',
    fileMenu: '文件',
    closePage: '关闭页面或窗口',
@@ -95,7 +95,7 @@ index 5d9d4607..ac19b838 100644
    quitActiveTasks: '当前正在运行的任务将会中断',
    quitScheduledTasks: '应用关闭期间，定时任务不会运行',
    quitActiveAndScheduledTasks: '当前正在运行的任务将会中断，且应用关闭期间，定时任务不会运行',
-@@ -227,7 +227,7 @@ export const zh = {
+@@ -236,7 +236,7 @@ export const zh = {
    copy: '复制',
    paste: '粘贴',
    selectAll: '全选',
@@ -104,7 +104,7 @@ index 5d9d4607..ac19b838 100644
    fatalSummary: '应用无法启动或已意外停止。',
    startupAddressInUse: '有其他正在运行的 DSH（如其他 dsh web、桌面端），无法同时启动，请退出其他正在运行的 DSH 后重启。',
    diagnosticTruncated: '… 错误详情已截短。',
-@@ -237,10 +237,10 @@ export const zh = {
+@@ -251,10 +251,10 @@ export const zh = {
    restartApplication: '重启',
    recoveryOperationFailed: '恢复操作失败',
    disableThirdPartyPlugins: '禁用第三方插件、备份 profile patch 并重启',
@@ -118,8 +118,8 @@ index 5d9d4607..ac19b838 100644
    welcomeTaglineAfter: '',
    welcomeDescription: '组装无限可能，共探智能上限',
    welcomeAuthStarting: '正在打开登录…',
-@@ -301,7 +301,7 @@ export const zh = {
-   updateTasksUnavailable: '无法确认任务状态，请在工作区就绪后重试更新。',
+@@ -317,7 +317,7 @@ export const zh = {
+   updateFullscreenTimeout: '无法退出全屏，请退出全屏后重试更新',
    updateStopFailed: '未能安全停止任务，更新尚未安装，请稍后重试。',
    updateTechnicalDetails: '查看技术详情',
 -  updateTitle: 'DeepSeek Harness 更新',
