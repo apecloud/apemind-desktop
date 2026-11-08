@@ -13,7 +13,7 @@ on:
         default: true
         type: boolean
       arm_run_id:
-        description: 'Actions run ID containing desktop-macos-14'
+        description: 'Actions run ID containing desktop-macos-15'
         required: true
         type: string
       intel_run_id:
@@ -41,7 +41,7 @@ jobs:
       - name: Download macOS Apple Silicon artifact
         uses: actions/download-artifact@v4
         with:
-          name: desktop-macos-14
+          name: desktop-macos-15
           run-id: ${{ inputs.arm_run_id }}
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}

@@ -36,7 +36,7 @@ jobs:
       matrix:
         include:
           - name: macOS Apple Silicon
-            os: macos-14
+            os: macos-15
             target: package:mac:arm64
             artifact_glob: 'work/dsh-desktop/apps/desktop/.desktop-build/targets/**/artifacts/**/*'
           - name: macOS Intel
