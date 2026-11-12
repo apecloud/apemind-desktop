@@ -278,6 +278,7 @@ resources:
   - source: apps/desktop/resources/apemind-cli.lock.json
     target: apps/desktop/resources/apemind-cli.lock.json
     kind: release-lock
+    note: 内置 CLI v0.7.56（32302ee4703171f170380378a2a67a87935a19a4），包含 Go 1.26.11 安全更新；三个平台的 SHA-256 与公开发布产物实测一致。
     upstream_logic_changed: false
 
   - source: apps/desktop/resources/README.md
