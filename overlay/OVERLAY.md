@@ -62,6 +62,7 @@ patches:
       - target: apps/desktop/electron-builder.config.d.mts
       - target: apps/desktop/scripts/package-target.ts
       - target: apps/desktop/tests/macos-signature.spec.ts
+      - target: apps/desktop/tests/main-startup.spec.ts
     reason: Desktop 与 Agent 使用同一份随包 apemind CLI；打包前下载锁定版本并校验摘要，缺失或错误的二进制不能进入产物。
     upstream_logic_changed: true
   # ── 05-brand-mark.patch：侧栏 mark + 中间 hero 的图形（用户可见）──────
@@ -156,7 +157,9 @@ patches:
       要显示 ApeMind，必须让 occupant 注册并改其内容。
     guardrail: >
       改动仅限两个 occupant 函数的实现 + 那道 profile 门所在的一行：
-      · index.ts：门改为 official | apemind（未设 profile 时上游行为不变）
+      · index.ts：门改为 official | apemind（未设 profile 时上游行为不变）；
+        不注册上游新增的 conversation.hero.frame（DeepSeek PixelWhale），
+        两种 build profile 都保留 ApeMind 首页品牌，随注册一并删除其类型 import
       · Brand.tsx：name 槽改为文字 "ApeMind"（字体栈取自 brand-spec.md）
       mark 槽由后续品牌补丁统一替换为 ApeMind 方形标。
     note: >

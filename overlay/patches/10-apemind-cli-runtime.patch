@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/electron-builder.config.d.mts b/apps/desktop/electron-builder.config.d.mts
-index 2973a6eacc..a524eb8d00 100644
+index 2973a6ea..a524eb8d 100644
 --- a/apps/desktop/electron-builder.config.d.mts
 +++ b/apps/desktop/electron-builder.config.d.mts
 @@ -20,6 +20,8 @@ export interface DesktopElectronBuilderConfig {
@@ -12,7 +12,7 @@ index 2973a6eacc..a524eb8d00 100644
    readonly mac: {
      readonly extendInfo: {
 diff --git a/apps/desktop/scripts/electron-builder-config.mjs b/apps/desktop/scripts/electron-builder-config.mjs
-index 1b294f3fe3..0bb197918b 100644
+index cd80e179..51a77844 100644
 --- a/apps/desktop/scripts/electron-builder-config.mjs
 +++ b/apps/desktop/scripts/electron-builder-config.mjs
 @@ -26,6 +26,7 @@ import { resolveDesktopBuildVersion } from './desktop-build-version.mjs'
@@ -23,7 +23,7 @@ index 1b294f3fe3..0bb197918b 100644
  import { preserveWindowsRuntimeSignature, signWindowsCode } from './windows-runtime-signature.mjs'
  import { prepareWindowsAsarUnpack, verifyWindowsAsarUnpack } from './windows-asar-unpack.mjs'
  import { recordPackagingEvent } from './packaging-run.mjs'
-@@ -158,6 +159,7 @@ export function createElectronBuilderConfig(
+@@ -160,6 +161,7 @@ export function createElectronBuilderConfig(
      extraResources: [
        { from: buildPaths.runtime, to: 'runtime' },
        { from: fileURLToPath(new URL('../resources/icon-windows.png', import.meta.url)), to: 'icon.png' },
@@ -32,7 +32,7 @@ index 1b294f3fe3..0bb197918b 100644
        ...(packagesWindows ? [{ from: fileURLToPath(new URL('../resources/tray-windows.ico', import.meta.url)), to: 'tray.ico' }] : []),
      ],
 diff --git a/apps/desktop/scripts/package-target.ts b/apps/desktop/scripts/package-target.ts
-index f90fdb7f8f..47f81de18e 100644
+index f90fdb7f..47f81de1 100644
 --- a/apps/desktop/scripts/package-target.ts
 +++ b/apps/desktop/scripts/package-target.ts
 @@ -9,6 +9,7 @@ import {
@@ -52,19 +52,19 @@ index f90fdb7f8f..47f81de18e 100644
    let preparationFailure: { error: unknown } | undefined
    const executePreparation = async (args: readonly string[], env: NodeJS.ProcessEnv, cwd?: string): Promise<void> => {
 diff --git a/apps/desktop/src/main.ts b/apps/desktop/src/main.ts
-index d8d0e30c4c..60afc6e609 100644
+index 0766a3c9..ab91cb6d 100644
 --- a/apps/desktop/src/main.ts
 +++ b/apps/desktop/src/main.ts
-@@ -4,7 +4,7 @@ import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
- /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
- 
+@@ -8,7 +8,7 @@ import { isDesktopUpdateChannel } from './settings-file.ts'
+ import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
+ import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
  import { access, readFile, writeFile } from 'node:fs/promises'
 -import { join } from 'node:path'
 +import { delimiter, dirname, join } from 'node:path'
  import { fileURLToPath } from 'node:url'
  import {
    app,
-@@ -198,6 +198,7 @@ interface RuntimeResources {
+@@ -202,6 +202,7 @@ interface RuntimeResources {
    readonly nodeBin: string
    readonly node: string
    readonly pnpm: string
@@ -72,7 +72,7 @@ index d8d0e30c4c..60afc6e609 100644
    readonly dsh: string
  }
  
-@@ -210,7 +211,9 @@ function runtimeResources(): RuntimeResources {
+@@ -214,7 +215,9 @@ function runtimeResources(): RuntimeResources {
        : join(process.resourcesPath, 'runtime', 'primary-runtime', 'dependencies', 'pnpm', 'bin', 'pnpm.mjs'))
    const dsh = (development ? process.env.DSH_DESKTOP_DSH_DIR : undefined)
      ?? (development ? join(app.getAppPath(), '.desktop-build', 'development', 'project') : join(app.getAppPath(), 'dsh'))
@@ -83,17 +83,24 @@ index d8d0e30c4c..60afc6e609 100644
  }
  
  function developmentPrimaryRuntime(): string {
-@@ -371,6 +374,8 @@ async function main(): Promise<void> {
-   const journalDirectory = process.env.DSH_DESKTOP_UPDATE_JOURNAL_DIR
-   const updateJournal = journalDirectory === undefined ? undefined : new DesktopUpdateJournal(journalDirectory, app.getVersion())
-   const resources = runtimeResources()
-+  process.env.APEMIND_CLI_BIN = resources.cli
-+  process.env.PATH = [dirname(resources.cli), process.env.PATH ?? ''].join(delimiter)
-   const paths = resolveDesktopPaths()
-   const development = !app.isPackaged
-   const primaryRuntime = development
+@@ -534,7 +537,14 @@ async function main(): Promise<void> {
+   const backend = new DesktopBackendController((onFailure) => {
+     const hostInspectPort = developmentHostInspectPort(development)
+     const host = new DesktopHostProcess(resources.node, resources.dsh, activeProject,
+-      hostInspectPort, { ...hostEnvironment, DSH_CLIENT_VERSION: desktopClientVersion() }, onFailure,
++      hostInspectPort, {
++        ...hostEnvironment,
++        // The Host owns the only CLI consumers (login plugin, Agent children); prepend the bundled CLI
++        // so a login-shell PATH or APEMIND_CLI_BIN cannot replace it.
++        APEMIND_CLI_BIN: resources.cli,
++        PATH: [dirname(resources.cli), hostEnvironment.PATH].filter(Boolean).join(delimiter),
++        DSH_CLIENT_VERSION: desktopClientVersion(),
++      }, onFailure,
+       primaryRuntime,
+       resources, (next) => { platformView.setSession(next) }, (record) => {
+         operationJournal ??= new OperationJournal(join(app.getPath('userData'), 'plugin-operations'), {
 diff --git a/apps/desktop/tests/macos-signature.spec.ts b/apps/desktop/tests/macos-signature.spec.ts
-index 2e6a2bd48e..487e9f5e91 100644
+index 86152154..214e828a 100644
 --- a/apps/desktop/tests/macos-signature.spec.ts
 +++ b/apps/desktop/tests/macos-signature.spec.ts
 @@ -1,5 +1,11 @@
@@ -120,3 +127,47 @@ index 2e6a2bd48e..487e9f5e91 100644
      expect(portablePath(config.extraResources[0]?.from ?? '')).toContain('/.desktop-build/targets/mac-arm64/runtime')
      const [dshFiles, dshNodeModules] = config.files.slice(-2)
      if (!dshFiles || !dshNodeModules || typeof dshFiles === 'string' || typeof dshNodeModules === 'string') {
+diff --git a/apps/desktop/tests/main-startup.spec.ts b/apps/desktop/tests/main-startup.spec.ts
+index 39f7b3d4..9f9d766a 100644
+--- a/apps/desktop/tests/main-startup.spec.ts
++++ b/apps/desktop/tests/main-startup.spec.ts
+@@ -4,7 +4,7 @@ import type { AccountView } from '@deepseek-ai/dsh-deepseek-account/types'
+ import { WINDOWS_TITLEBAR_HEIGHT } from '../src/windows-layout.ts'
+ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+ import type { IpcMainInvokeEvent } from 'electron'
+-import { join } from 'node:path'
++import { delimiter, dirname, join } from 'node:path'
+ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+ import { tmpdir } from 'node:os'
+ import type { MenuItemConstructorOptions, MessageBoxOptions } from 'electron'
+@@ -2961,7 +2961,18 @@ describe('desktop main startup', () => {
+   it('creates the Host only after the login-shell read and ends the read on quit', async () => {
+     let finishRead!: () => void
+     const read = new Promise<void>((resolve) => { finishRead = resolve })
+-    harness.loginShell.mockImplementation(async (base) => { await read; return harness.readLoginShell(base) })
++    harness.loginShell.mockImplementation(async (base) => {
++      await read
++      const result = await harness.readLoginShell(base)
++      return {
++        ...result,
++        environment: {
++          ...result.environment,
++          PATH: '/from/login-shell',
++          APEMIND_CLI_BIN: '/from/login-shell/apemind',
++        },
++      }
++    })
+     await import('../src/main.ts')
+     await harness.preparing.promise
+     const boot = invoke(DESKTOP_IPC.boot)
+@@ -2971,6 +2982,10 @@ describe('desktop main startup', () => {
+     finishRead()
+     await harness.hostStarted.promise
+     expect(harness.hosts[0]!.environment?.DSH_TEST_LOGIN_SHELL).toBe('login')
++    // The bundled CLI wins over anything the login shell exports.
++    const bundledCli = join('desktop-test-resources', 'apemind', 'bin', 'apemind.exe')
++    expect(harness.hosts[0]!.environment?.APEMIND_CLI_BIN).toBe(bundledCli)
++    expect(harness.hosts[0]!.environment?.PATH).toBe([dirname(bundledCli), '/from/login-shell'].join(delimiter))
+     harness.hosts[0]!.ready.resolve()
+     await Promise.all([boot, harness.navigated.promise])
+     const { signal } = harness.loginShell.mock.calls[0]![2]
