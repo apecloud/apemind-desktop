@@ -1,5 +1,5 @@
 diff --git a/packages/bundle/base/cordis.patch.yml b/packages/bundle/base/cordis.patch.yml
-index fc83f8160c..a67818eb96 100644
+index f455fe70..bb414a1b 100644
 --- a/packages/bundle/base/cordis.patch.yml
 +++ b/packages/bundle/base/cordis.patch.yml
 @@ -125,6 +125,10 @@
@@ -14,26 +14,26 @@ index fc83f8160c..a67818eb96 100644
      # models in the picker) until a `llm-pi-ai:` settings section supplies provider
      # profiles — then those routes register live, keys resolving per request
 diff --git a/packages/bundle/base/package.json b/packages/bundle/base/package.json
-index 9a68dad067..1bdd9c2e97 100644
+index 97aceee9..377390b8 100644
 --- a/packages/bundle/base/package.json
 +++ b/packages/bundle/base/package.json
-@@ -39,6 +39,7 @@
-     "@deepseek-ai/dsh-agent": "workspace:*",
-     "@deepseek-ai/dsh-agent-default-model": "workspace:*",
+@@ -43,6 +43,7 @@
+     "@deepseek-ai/dsh-agent-instructions": "workspace:*",
      "@deepseek-ai/dsh-agent-loop": "workspace:*",
+     "@deepseek-ai/dsh-agent-team": "workspace:*",
 +    "@deepseek-ai/dsh-apemind-login": "workspace:*",
+     "@deepseek-ai/dsh-api-gateway": "workspace:*",
+     "@deepseek-ai/dsh-api-remote-access": "workspace:*",
      "@deepseek-ai/dsh-attachment-local": "workspace:*",
-     "@deepseek-ai/dsh-shell-env": "workspace:*",
-     "@deepseek-ai/dsh-bash-sandbox": "workspace:*",
 diff --git a/tsconfig.host.json b/tsconfig.host.json
-index b3a36750e6..333c517b73 100644
+index 31c80a81..d77e0845 100644
 --- a/tsconfig.host.json
 +++ b/tsconfig.host.json
-@@ -549,6 +549,7 @@
-     { "path": "./packages/jobs/jobs-local" },
-     { "path": "./packages/jobs/tool-jobs" },
-     { "path": "./packages/experimental/agent-team" },
+@@ -408,6 +408,7 @@
+     { "path": "./packages/settings/settings" },
+     { "path": "./packages/credentials/credentials" },
+     { "path": "./packages/credentials/credentials-local" },
 +    { "path": "./packages/credentials/apemind-login" },
-     { "path": "./packages/experimental/agent-team-profile" },
-     { "path": "./packages/experimental/inspector-profile" },
-     { "path": "./packages/experimental/liveshare-protocol/tsconfig.host.json" },
+     { "path": "./packages/credentials/authorization" },
+     { "path": "./packages/experimental/tool-session-query" },
+     { "path": "./packages/storage/storage" },

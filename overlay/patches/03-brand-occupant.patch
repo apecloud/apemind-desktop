@@ -1,12 +1,12 @@
 diff --git a/packages/client/ui-brand-official/src/client/Brand.tsx b/packages/client/ui-brand-official/src/client/Brand.tsx
-index 9ac6dd7ce2..42c7794a7e 100644
+index 9ac6dd7c..42c7794a 100644
 --- a/packages/client/ui-brand-official/src/client/Brand.tsx
 +++ b/packages/client/ui-brand-official/src/client/Brand.tsx
 @@ -1,4 +1,4 @@
 -import { BrandWordmark, FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
 +import { FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
  import type { SidebarBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
- 
+
  /**
 @@ -15,5 +15,9 @@ export function OfficialBrandMark({ size }: SidebarBrandMarkOwnerProps) {
   * @returns the official name wordmark.
@@ -20,13 +20,32 @@ index 9ac6dd7ce2..42c7794a7e 100644
 +  )
  }
 diff --git a/packages/client/ui-brand-official/src/client/index.ts b/packages/client/ui-brand-official/src/client/index.ts
-index 332a5f6007..fd3446b049 100644
+index e5dc78b0..b1a5610f 100644
 --- a/packages/client/ui-brand-official/src/client/index.ts
 +++ b/packages/client/ui-brand-official/src/client/index.ts
-@@ -14,7 +14,10 @@ export const inject = ['slots']
+@@ -1,24 +1,21 @@
+-/** Official DeepSeek Harness occupants: the profile-gated sidebar brand slots and the home whale frame layer. */
++/** ApeMind Desktop sidebar brand occupants. */
+ import type { Context as ClientContext } from '@deepseek-ai/cordis'
+ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+ import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+-import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+-import { PixelWhale } from './home-whale/PixelWhale.tsx'
+ import { OfficialBrandMark, OfficialBrandName } from './Brand.tsx'
+
+ /** Required service: the UI slot registry. */
+ export const inject = ['slots']
+
+ /**
+- * Fill official sidebar artwork and frame the blank home with the whale decoration.
++ * Fill the sidebar brand slots.
   * @param ctx - Client root context.
   */
  export function apply(ctx: ClientContext): void {
+-  ctx.slots.inject('conversation.hero.frame', () => ctx.slots.register({
+-    name: 'conversation.hero.frame',
+-    id: 'pixel-whale',
+-  }, PixelWhale))
 -  if (process.env.DSH_CLIENT_BUILD_PROFILE !== 'official') return
 +  // ApeMind: 上游只在 'official' profile 下注册。我们的客户端构建没有设该 profile，
 +  // 所以这里额外接受一个 profile 值；未设 profile 时仍保持上游行为不变。

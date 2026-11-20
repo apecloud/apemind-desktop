@@ -62,6 +62,7 @@ patches:
       - target: apps/desktop/electron-builder.config.d.mts
       - target: apps/desktop/scripts/package-target.ts
       - target: apps/desktop/tests/macos-signature.spec.ts
+      - target: apps/desktop/tests/main-startup.spec.ts
     reason: Desktop 与 Agent 使用同一份随包 apemind CLI；打包前下载锁定版本并校验摘要，缺失或错误的二进制不能进入产物。
     upstream_logic_changed: true
   # ── 05-brand-mark.patch：侧栏 mark + 中间 hero 的图形（用户可见）──────
@@ -156,7 +157,9 @@ patches:
       要显示 ApeMind，必须让 occupant 注册并改其内容。
     guardrail: >
       改动仅限两个 occupant 函数的实现 + 那道 profile 门所在的一行：
-      · index.ts：门改为 official | apemind（未设 profile 时上游行为不变）
+      · index.ts：门改为 official | apemind（未设 profile 时上游行为不变）；
+        不注册上游新增的 conversation.hero.frame（DeepSeek PixelWhale），
+        两种 build profile 都保留 ApeMind 首页品牌，随注册一并删除其类型 import
       · Brand.tsx：name 槽改为文字 "ApeMind"（字体栈取自 brand-spec.md）
       mark 槽由后续品牌补丁统一替换为 ApeMind 方形标。
     note: >
@@ -278,7 +281,7 @@ resources:
   - source: apps/desktop/resources/apemind-cli.lock.json
     target: apps/desktop/resources/apemind-cli.lock.json
     kind: release-lock
-    note: 内置 CLI v0.7.56（32302ee4703171f170380378a2a67a87935a19a4），包含 Go 1.26.11 安全更新；三个平台的 SHA-256 与公开发布产物实测一致。
+    note: 内置 CLI v0.7.57（11d68af66c8f6c45e2f384c308b015082a907b42）；三个平台的 SHA-256 与公开发布产物实测一致。
     upstream_logic_changed: false
 
   - source: apps/desktop/resources/README.md
