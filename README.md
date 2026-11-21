@@ -28,7 +28,7 @@ upstream.lock  ──►  checkout 上游锁定 commit  ──►  应用 overla
 
 ## 状态（2026-09-11）
 
-登录与 Agent 集成合同见 [CLI-first 集成设计](docs/engineering-process/2026-09-14-apemind-cli-first-integration.md)，文档入口见 [docs](docs/README.md)。
+文档入口与工作空间行为约定见 [docs](docs/README.md)。
 
 | 项 | 状态 |
 |---|---|
