@@ -35,14 +35,22 @@ echo "    commit     : ${UPSTREAM_COMMIT}"
 
 # ── 1. 取上游 ──────────────────────────────────────────────────────────
 if [[ ! -d "${WORK_DIR}/.git" ]]; then
-  echo "==> clone 上游"
-  mkdir -p "$(dirname "${WORK_DIR}")"
-  git clone --filter=blob:none "${UPSTREAM_REPO}" "${WORK_DIR}"
+  echo "==> clone 上游（单提交浅克隆）"
+  mkdir -p "${WORK_DIR}"
+  git -C "${WORK_DIR}" init --quiet
+  git -C "${WORK_DIR}" remote add origin "${UPSTREAM_REPO}"
+  if git -C "${WORK_DIR}" fetch --depth=1 --no-tags origin "${UPSTREAM_COMMIT}"; then
+    git -C "${WORK_DIR}" checkout --quiet --detach FETCH_HEAD
+  else
+    rm -rf "${WORK_DIR}"
+    git clone --filter=blob:none --no-tags "${UPSTREAM_REPO}" "${WORK_DIR}"
+  fi
 fi
 
 echo "==> checkout 锁定 commit"
 if ! git -C "${WORK_DIR}" cat-file -e "${UPSTREAM_COMMIT}^{commit}" 2>/dev/null; then
-  git -C "${WORK_DIR}" fetch --filter=blob:none origin "${UPSTREAM_COMMIT}"
+  git -C "${WORK_DIR}" fetch --depth=1 --no-tags origin "${UPSTREAM_COMMIT}" \
+    || git -C "${WORK_DIR}" fetch --filter=blob:none --no-tags origin "${UPSTREAM_COMMIT}"
 fi
 git -C "${WORK_DIR}" checkout --detach "${UPSTREAM_COMMIT}"
 
@@ -125,7 +133,7 @@ fi
 if [[ -d "${ADD_DIR}" ]] && [[ -n "$(find "${ADD_DIR}" -type f -print -quit)" ]]; then
   echo "==> 派生 lockfile（add-files 引入新的 workspace 包）"
   if command -v pnpm >/dev/null 2>&1; then
-    (cd "${WORK_DIR}" && pnpm install --lockfile-only --ignore-scripts 2>/dev/null) \
+    (cd "${WORK_DIR}" && pnpm install --lockfile-only --ignore-scripts --prefer-offline 2>/dev/null) \
       && echo "    pnpm-lock.yaml 已派生" \
       || echo "    ⚠️ 派生失败（pnpm 不可用或网络受限）—— 后续 pnpm install 需自行处理" >&2
   else

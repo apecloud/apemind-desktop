@@ -13,6 +13,15 @@
 # 变更清单（与 docs/branding.md 一致，改这里必须同步改那边）：
 
 patches:
+  - file: patches/23-desktop-release-speed.patch
+    targets:
+      - target: apps/desktop/scripts/package-target.ts
+    reason: >
+      发布打包矩阵同时运行 macOS arm64、macOS Intel 与 Windows x64。允许通过显式环境变量
+      DSH_DESKTOP_BUILD_SCOPE=artifacts 跳过各平台重复的 test/script aggregate typecheck（改由并行
+      Linux 作业统一校验并门禁发布），并通过 DSH_DESKTOP_PARALLEL_PREPARE=1 在 macOS 上与 Windows 一样
+      并行执行本地包打包与运行时准备；未设置环境变量时保持上游默认行为与全部单测兼容。
+    upstream_logic_changed: true
   - file: patches/22-branded-cli-launcher.patch
     targets:
       - target: apps/desktop/cli/dsh

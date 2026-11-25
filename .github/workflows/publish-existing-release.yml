@@ -110,6 +110,39 @@ jobs:
             echo 'No release assets were downloaded' >&2
             exit 1
           fi
+          upload_one() {
+            local asset="$1"
+            for attempt in 1 2 3 4 5; do
+              echo "Uploading $(basename "$asset") (attempt ${attempt}/5)"
+              if gh release upload "$RELEASE_TAG" \
+                --repo "$GITHUB_REPOSITORY" \
+                --clobber \
+                "$asset"; then
+                return 0
+              fi
+              if (( attempt < 5 )); then
+                sleep $((attempt * 15))
+              fi
+            done
+            echo "Failed to upload $(basename "$asset") after 5 attempts" >&2
+            return 1
+          }
+          max_parallel=4
+          pids=()
+          failed=0
           for asset in "${assets[@]}"; do
-            gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber "$asset"
+            upload_one "$asset" &
+            pids+=($!)
+            if (( ${#pids[@]} >= max_parallel )); then
+              if ! wait "${pids[0]}"; then
+                failed=1
+              fi
+              pids=("${pids[@]:1}")
+            fi
           done
+          for pid in "${pids[@]}"; do
+            if ! wait "$pid"; then
+              failed=1
+            fi
+          done
+          (( failed == 0 ))

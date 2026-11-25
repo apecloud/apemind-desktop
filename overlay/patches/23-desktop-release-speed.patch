@@ -1,0 +1,25 @@
+diff --git a/apps/desktop/scripts/package-target.ts b/apps/desktop/scripts/package-target.ts
+index 5375b30..1b8e737 100644
+--- a/apps/desktop/scripts/package-target.ts
++++ b/apps/desktop/scripts/package-target.ts
+@@ -480,7 +480,10 @@ export async function packageTarget(
+     })
+   }
+   await prepareApeMindCli(targetEnv, target.platform, target.arch)
+-  await execute(invocation.unsigned ? ['run', 'build', '--profile', 'local'] : ['run', 'build:official'], buildEnv, REPOSITORY_ROOT)
++  const buildCommand = environment.DSH_DESKTOP_BUILD_SCOPE === 'artifacts'
++    ? ['exec', 'tsx', 'scripts/build.ts', '--profile', invocation.unsigned ? 'local' : 'official', '--scope', 'artifacts']
++    : (invocation.unsigned ? ['run', 'build', '--profile', 'local'] : ['run', 'build:official'])
++  await execute(buildCommand, buildEnv, REPOSITORY_ROOT)
+   let preparationFailure: { error: unknown } | undefined
+   const executePreparation = async (args: readonly string[], env: NodeJS.ProcessEnv, cwd?: string): Promise<void> => {
+     if (preparationFailure !== undefined) throw preparationFailure.error
+@@ -515,7 +518,7 @@ export async function packageTarget(
+   }
+   const prepareRuntime = () => executePreparation(
+     ['run', 'prepare:runtime', ...(signPrimaryRuntime ? ['--defer-primary-runtime-smoke'] : [])], downloadEnv)
+-  if (target.platform === 'win32') {
++  if (target.platform === 'win32' || environment.DSH_DESKTOP_PARALLEL_PREPARE === '1') {
+     const results = await Promise.allSettled([pack(), prepareRuntime()])
+     for (const result of results) if (result.status === 'rejected') throw result.reason
+   } else {
