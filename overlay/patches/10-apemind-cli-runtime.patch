@@ -1,5 +1,5 @@
 diff --git a/apps/desktop/electron-builder.config.d.mts b/apps/desktop/electron-builder.config.d.mts
-index 2973a6ea..a524eb8d 100644
+index 2973a6eacc..a524eb8d00 100644
 --- a/apps/desktop/electron-builder.config.d.mts
 +++ b/apps/desktop/electron-builder.config.d.mts
 @@ -20,6 +20,8 @@ export interface DesktopElectronBuilderConfig {
@@ -12,7 +12,7 @@ index 2973a6ea..a524eb8d 100644
    readonly mac: {
      readonly extendInfo: {
 diff --git a/apps/desktop/scripts/electron-builder-config.mjs b/apps/desktop/scripts/electron-builder-config.mjs
-index cd80e179..51a77844 100644
+index 496548341f..391620ef80 100644
 --- a/apps/desktop/scripts/electron-builder-config.mjs
 +++ b/apps/desktop/scripts/electron-builder-config.mjs
 @@ -26,6 +26,7 @@ import { resolveDesktopBuildVersion } from './desktop-build-version.mjs'
@@ -32,12 +32,12 @@ index cd80e179..51a77844 100644
        ...(packagesWindows ? [{ from: fileURLToPath(new URL('../resources/tray-windows.ico', import.meta.url)), to: 'tray.ico' }] : []),
      ],
 diff --git a/apps/desktop/scripts/package-target.ts b/apps/desktop/scripts/package-target.ts
-index f90fdb7f..47f81de1 100644
+index 8d318d6848..ca9a23174a 100644
 --- a/apps/desktop/scripts/package-target.ts
 +++ b/apps/desktop/scripts/package-target.ts
 @@ -9,6 +9,7 @@ import {
    resolveDesktopAutoUpdateConfig,
- } from './desktop-auto-update-environment.mjs'
+ } from '@deepseek-ai/dsh-desktop-publisher/desktop-auto-update-environment.mjs'
  import { desktopArtifactOutput, desktopTargetBuildPaths } from './desktop-build-paths.mjs'
 +import { prepareApeMindCli } from './apemind-cli-runtime.mjs'
  import { packageMacOSArtifacts, type DesktopPrepackagedArtifact } from './package-macos.ts'
@@ -52,7 +52,7 @@ index f90fdb7f..47f81de1 100644
    let preparationFailure: { error: unknown } | undefined
    const executePreparation = async (args: readonly string[], env: NodeJS.ProcessEnv, cwd?: string): Promise<void> => {
 diff --git a/apps/desktop/src/main.ts b/apps/desktop/src/main.ts
-index 0766a3c9..ab91cb6d 100644
+index 291ed08476..fa510b53f0 100644
 --- a/apps/desktop/src/main.ts
 +++ b/apps/desktop/src/main.ts
 @@ -8,7 +8,7 @@ import { isDesktopUpdateChannel } from './settings-file.ts'
@@ -100,7 +100,7 @@ index 0766a3c9..ab91cb6d 100644
        resources, (next) => { platformView.setSession(next) }, (record) => {
          operationJournal ??= new OperationJournal(join(app.getPath('userData'), 'plugin-operations'), {
 diff --git a/apps/desktop/tests/macos-signature.spec.ts b/apps/desktop/tests/macos-signature.spec.ts
-index 86152154..214e828a 100644
+index 261e755c30..a054e326b2 100644
 --- a/apps/desktop/tests/macos-signature.spec.ts
 +++ b/apps/desktop/tests/macos-signature.spec.ts
 @@ -1,5 +1,11 @@
@@ -128,7 +128,7 @@ index 86152154..214e828a 100644
      const [dshFiles, dshNodeModules] = config.files.slice(-2)
      if (!dshFiles || !dshNodeModules || typeof dshFiles === 'string' || typeof dshNodeModules === 'string') {
 diff --git a/apps/desktop/tests/main-startup.spec.ts b/apps/desktop/tests/main-startup.spec.ts
-index 39f7b3d4..9f9d766a 100644
+index e689f3e672..4ca296fdb2 100644
 --- a/apps/desktop/tests/main-startup.spec.ts
 +++ b/apps/desktop/tests/main-startup.spec.ts
 @@ -4,7 +4,7 @@ import type { AccountView } from '@deepseek-ai/dsh-deepseek-account/types'
@@ -140,7 +140,7 @@ index 39f7b3d4..9f9d766a 100644
  import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
  import { tmpdir } from 'node:os'
  import type { MenuItemConstructorOptions, MessageBoxOptions } from 'electron'
-@@ -2961,7 +2961,18 @@ describe('desktop main startup', () => {
+@@ -3033,7 +3033,18 @@ describe('desktop main startup', () => {
    it('creates the Host only after the login-shell read and ends the read on quit', async () => {
      let finishRead!: () => void
      const read = new Promise<void>((resolve) => { finishRead = resolve })
@@ -160,7 +160,7 @@ index 39f7b3d4..9f9d766a 100644
      await import('../src/main.ts')
      await harness.preparing.promise
      const boot = invoke(DESKTOP_IPC.boot)
-@@ -2971,6 +2982,10 @@ describe('desktop main startup', () => {
+@@ -3043,6 +3054,10 @@ describe('desktop main startup', () => {
      finishRead()
      await harness.hostStarted.promise
      expect(harness.hosts[0]!.environment?.DSH_TEST_LOGIN_SHELL).toBe('login')

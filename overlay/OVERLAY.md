@@ -281,7 +281,7 @@ resources:
   - source: apps/desktop/resources/apemind-cli.lock.json
     target: apps/desktop/resources/apemind-cli.lock.json
     kind: release-lock
-    note: 内置 CLI v0.7.57（11d68af66c8f6c45e2f384c308b015082a907b42）；三个平台的 SHA-256 与公开发布产物实测一致。
+    note: 内置 CLI v0.7.58（c7e35434cd52d888e1338b996be1f7ef95bc0a79）；三个平台的 SHA-256 与公开发布产物实测一致。
     upstream_logic_changed: false
 
   - source: apps/desktop/resources/README.md

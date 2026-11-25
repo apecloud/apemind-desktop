@@ -1,5 +1,5 @@
 diff --git a/packages/api/remotes/package.json b/packages/api/remotes/package.json
-index c3dd93fc..35d21684 100644
+index 3a02268a2b..010f914f0f 100644
 --- a/packages/api/remotes/package.json
 +++ b/packages/api/remotes/package.json
 @@ -56,7 +56,8 @@
@@ -13,7 +13,7 @@ index c3dd93fc..35d21684 100644
    "peerDependencies": {
      "@deepseek-ai/cordis": "workspace:~",
 diff --git a/packages/api/remotes/src/client/index.ts b/packages/api/remotes/src/client/index.ts
-index 5d91957c..5d34b807 100644
+index c81fb95cec..fb9e937c6a 100644
 --- a/packages/api/remotes/src/client/index.ts
 +++ b/packages/api/remotes/src/client/index.ts
 @@ -4,6 +4,7 @@ import type { Context } from '@deepseek-ai/cordis'
@@ -24,7 +24,7 @@ index 5d91957c..5d34b807 100644
  import userQuestionsRemote from '@deepseek-ai/dsh-user-questions/remote'
  import commandsRemote from '@deepseek-ai/dsh-commands/remote'
  import agentTeamsRemote from '@deepseek-ai/dsh-agent-team/remote'
-@@ -56,6 +57,7 @@ export type {
+@@ -64,6 +65,7 @@ export type {
  } from '@deepseek-ai/dsh-plugin-market/types'
  export type { PluginInventorySnapshot } from '@deepseek-ai/dsh-host-plugin-inventory/types'
  export type {} from '@deepseek-ai/dsh-agent-preset-registry/remote'
@@ -32,7 +32,7 @@ index 5d91957c..5d34b807 100644
  export type {} from '@deepseek-ai/dsh-user-questions/remote'
  export type {} from '@deepseek-ai/dsh-commands/remote'
  export type {} from '@deepseek-ai/dsh-web/remote'
-@@ -197,7 +199,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
+@@ -205,7 +207,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
    const disposers: Array<() => Promise<void>> = []
    try {
      for (const contribution of [
@@ -40,12 +40,12 @@ index 5d91957c..5d34b807 100644
 +      productAnalyticsRemote, authorizationRemote, agentPresetsRemote, commandsRemote, agentTeamsRemote, settingsControllerRemote, accountRemote,
        goalsRemote, llmRemote, dynamicRemote, scheduleRemote,
        pluginInventoryRemote, pluginManagerRemote, mcpManagerRemote, pluginMarketRemote, pluginRegistryProbeRemote,
-       toolResultsRemote,
+       connectorAccountsRemote,
 diff --git a/packages/bundle/web-app/cordis.patch.yml b/packages/bundle/web-app/cordis.patch.yml
-index e842d8e3..178df945 100644
+index 36727d2910..483404dfba 100644
 --- a/packages/bundle/web-app/cordis.patch.yml
 +++ b/packages/bundle/web-app/cordis.patch.yml
-@@ -335,6 +335,10 @@
+@@ -357,6 +357,10 @@
      - id: ui-settings-models
        name: '@deepseek-ai/dsh-client-ui-settings-models'
  
@@ -57,22 +57,22 @@ index e842d8e3..178df945 100644
      # and removes the profile's bundles through the `pluginManager` Remote.
      # Without a profile-backed Host it reports itself unavailable.
 diff --git a/packages/bundle/web-app/package.json b/packages/bundle/web-app/package.json
-index 7ca54d97..65359e39 100644
+index af6f965b14..39a59d722f 100644
 --- a/packages/bundle/web-app/package.json
 +++ b/packages/bundle/web-app/package.json
-@@ -58,6 +58,7 @@
-     }
+@@ -59,6 +59,7 @@
    },
    "dependencies": {
+     "@deepseek-ai/dsh-host-authentication-token": "workspace:*",
 +    "@deepseek-ai/dsh-client-ui-apemind-login": "workspace:*",
      "@deepseek-ai/dsh-agent-instructions": "workspace:*",
      "@deepseek-ai/dsh-agent-preset": "workspace:*",
      "@deepseek-ai/dsh-agent-preset-registry": "workspace:*",
 diff --git a/packages/experimental/liveshare/src/endpoint-classification.ts b/packages/experimental/liveshare/src/endpoint-classification.ts
-index e817a48d..85166aff 100644
+index 1242197b3b..5870eca4fa 100644
 --- a/packages/experimental/liveshare/src/endpoint-classification.ts
 +++ b/packages/experimental/liveshare/src/endpoint-classification.ts
-@@ -94,6 +94,15 @@ export const VIEWER_ENDPOINT_CLASSES = {
+@@ -115,6 +115,15 @@ export const VIEWER_ENDPOINT_CLASSES = {
    'account/startSignIn': 'owner-only', // owner account and sign-in; the served page never reads it
    'account/watch': 'owner-only', // owner account and sign-in; the served page never reads it
    'account/watchExpiry': 'owner-only', // owner account and sign-in; the served page never reads it
@@ -85,14 +85,14 @@ index e817a48d..85166aff 100644
 +  'apemindAuth/startBrowserLogin': 'owner-only', // ApeMind account session; the served page never reads it
 +  'apemindAuth/startDeviceLogin': 'owner-only', // ApeMind account session; the served page never reads it
 +  'apemindAuth/state': 'owner-only', // ApeMind account session; the served page never reads it
-   'job/follow': 'owner-only', // owner background jobs'
+   'commands/execute': 'owner-only', // owner executes a slash command
    'job/kill': 'owner-only', // owner background jobs
-   'job/list': 'owner-only', // owner background jobs'
+   'session/create': 'owner-only', // owner creates a Session
 diff --git a/tsconfig.client.json b/tsconfig.client.json
-index f5159615..403e8f65 100644
+index d6a347c5aa..94b201ea8f 100644
 --- a/tsconfig.client.json
 +++ b/tsconfig.client.json
-@@ -115,6 +115,7 @@
+@@ -119,6 +119,7 @@
      { "path": "./packages/client/ui-layout" },
      { "path": "./packages/client/ui-sidebar" },
      { "path": "./packages/client/ui-brand-official" },
