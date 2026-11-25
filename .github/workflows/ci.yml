@@ -54,6 +54,7 @@ jobs:
         run: ./scripts/sync-upstream.sh --work-dir "${RUNNER_TEMP}/dsh-desktop"
 
       - name: 激活上游要求的 pnpm（必须匹配 packageManager）
+        id: pnpm
         run: |
           set -euo pipefail
           export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
@@ -67,6 +68,15 @@ jobs:
           corepack prepare "${PM}" --activate
           command -v pnpm
           pnpm --version
+          echo "store_path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+
+      - name: 缓存 pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm.outputs.store_path }}
+          key: desktop-pnpm-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('upstream.lock', 'overlay/add-files/**/package.json') }}
+          restore-keys: |
+            desktop-pnpm-store-${{ runner.os }}-${{ runner.arch }}-
 
       - name: 派生 lockfile（add-files 引入新的 workspace 包）
         working-directory: ${{ runner.temp }}/dsh-desktop
@@ -84,7 +94,7 @@ jobs:
           OVERLAY="${GITHUB_WORKSPACE}/overlay/add-files"
           echo "overlay add-files: ${OVERLAY}"
           if [ -d "${OVERLAY}" ] && [ -n "$(find "${OVERLAY}" -type f -print -quit)" ]; then
-            pnpm install --lockfile-only --ignore-scripts
+            pnpm install --lockfile-only --ignore-scripts --prefer-offline
             echo "lock 已派生"
           else
             echo "add-files 为空，无需派生 lock"
@@ -92,7 +102,7 @@ jobs:
 
       - name: 安装依赖
         working-directory: ${{ runner.temp }}/dsh-desktop
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: 构建
         working-directory: ${{ runner.temp }}/dsh-desktop

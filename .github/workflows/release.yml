@@ -23,12 +23,62 @@ concurrency:
 env:
   DSH_DESKTOP_APP_ID: com.apemind.desktop
   DOWNLOAD_TEST_ORIGIN: https://apemind.ai
-  ELECTRON_MIRROR: https://registry.npmmirror.com/-/binary/electron/
   GIT_CONFIG_COUNT: '1'
   GIT_CONFIG_KEY_0: core.autocrlf
   GIT_CONFIG_VALUE_0: 'false'
 
 jobs:
+  verify-typecheck:
+    name: Verify workspace typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Sync upstream and apply ApeMind overlay
+        shell: bash
+        run: ./scripts/sync-upstream.sh --work-dir "${RUNNER_TEMP}/dsh-desktop"
+
+      - name: Activate pnpm
+        id: pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          PM="$(./scripts/lock-get.sh toolchain.package_manager)"
+          corepack enable
+          corepack prepare "$PM" --activate
+          pnpm --version
+          echo "store_path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm.outputs.store_path }}
+          key: desktop-pnpm-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('upstream.lock', 'overlay/add-files/**/package.json') }}
+          restore-keys: |
+            desktop-pnpm-store-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Derive workspace lockfile
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          OVERLAY="${GITHUB_WORKSPACE}/overlay/add-files"
+          if [ -d "$OVERLAY" ] && [ -n "$(find "$OVERLAY" -type f -print -quit)" ]; then
+            pnpm install --lockfile-only --ignore-scripts --prefer-offline
+          fi
+
+      - name: Install dependencies
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        shell: bash
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Typecheck workspace
+        working-directory: ${{ runner.temp }}/dsh-desktop
+        shell: bash
+        run: pnpm run typecheck
+
   build:
     name: Build ${{ matrix.name }}
     strategy:
@@ -54,6 +104,12 @@ jobs:
       # generated XLSX fixture. Keep the package boot/plugin smoke while skipping
       # only Office conversion coverage; Office conversion remains covered on macOS.
       DSH_DESKTOP_SKIP_OFFICE_SMOKE: ${{ startsWith(matrix.os, 'windows-') && '1' || '0' }}
+      # Aggregate host/client typecheck is platform-independent and runs once in parallel
+      # on ubuntu-latest (verify-typecheck) before Publish GitHub Release.
+      DSH_DESKTOP_BUILD_SCOPE: artifacts
+      DSH_DESKTOP_PARALLEL_PREPARE: '1'
+      DSH_DESKTOP_PACKAGE_CACHE_DIR: ${{ runner.temp }}/dsh-package-cache
+      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
     steps:
       - uses: actions/checkout@v4
         with:
@@ -89,6 +145,7 @@ jobs:
         run: ./scripts/sync-upstream.sh --work-dir "${RUNNER_TEMP}/dsh-desktop"
 
       - name: Activate pnpm
+        id: pnpm
         shell: bash
         run: |
           set -euo pipefail
@@ -96,6 +153,40 @@ jobs:
           corepack enable
           corepack prepare "$PM" --activate
           pnpm --version
+          echo "store_path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm.outputs.store_path }}
+          key: desktop-pnpm-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('upstream.lock', 'overlay/add-files/**/package.json') }}
+          restore-keys: |
+            desktop-pnpm-store-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Cache desktop packaging downloads and runtime pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.DSH_DESKTOP_PACKAGE_CACHE_DIR }}
+          key: desktop-pkg-cache-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('upstream.lock', 'overlay/add-files/**/package.json') }}
+          restore-keys: |
+            desktop-pkg-cache-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Cache electron-builder binaries
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ELECTRON_BUILDER_CACHE }}
+          key: desktop-eb-cache-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('upstream.lock') }}
+          restore-keys: |
+            desktop-eb-cache-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Cache macOS native signatures
+        if: runner.os == 'macOS'
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/apemind-macos-sig-cache
+          key: desktop-macos-sig-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('upstream.lock') }}-${{ vars.MACOS_SIGNING_IDENTITY }}
+          restore-keys: |
+            desktop-macos-sig-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Derive workspace lockfile
         working-directory: ${{ runner.temp }}/dsh-desktop
@@ -104,13 +195,13 @@ jobs:
           set -euo pipefail
           OVERLAY="${GITHUB_WORKSPACE}/overlay/add-files"
           if [ -d "$OVERLAY" ] && [ -n "$(find "$OVERLAY" -type f -print -quit)" ]; then
-            pnpm install --lockfile-only --ignore-scripts
+            pnpm install --lockfile-only --ignore-scripts --prefer-offline
           fi
 
       - name: Install dependencies
         working-directory: ${{ runner.temp }}/dsh-desktop
         shell: bash
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Prefetch bundled ApeMind CLI
         working-directory: ${{ runner.temp }}/dsh-desktop
@@ -190,7 +281,11 @@ jobs:
           CERTIFICATE_PASSWORD_VALUE: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
         run: |
           set -euo pipefail
+          mkdir -p "$DSH_DESKTOP_PACKAGE_CACHE_DIR" "$ELECTRON_BUILDER_CACHE"
           if [[ "$RUNNER_OS" == "macOS" ]]; then
+            SIG_CACHE_DIR="$(cd "$RUNNER_TEMP" && pwd -P)/apemind-macos-sig-cache"
+            mkdir -p "$SIG_CACHE_DIR"
+            chmod 700 "$SIG_CACHE_DIR"
             : > .env.macos
             {
               printf 'DSH_DESKTOP_APP_ID=%s\n' "$APP_ID"
@@ -199,6 +294,8 @@ jobs:
               printf "DSH_DESKTOP_MANDATORY_UPDATE_CONFIG='%s'\n" '{"allowedPageOrigins":["https://apemind.ai"]}'
               printf 'DSH_DESKTOP_MACOS_SIGNING_IDENTITY=%s\n' "$MACOS_SIGNING_IDENTITY"
               printf 'DSH_DESKTOP_MACOS_TEAM_ID=%s\n' "$APPLE_TEAM_ID_VALUE"
+              printf 'DSH_DESKTOP_MACOS_SIGNATURE_CACHE_DIR=%s\n' "$SIG_CACHE_DIR"
+              printf 'DSH_DESKTOP_MACOS_PACK_CONCURRENCY=8\n'
               printf 'APPLE_ID=%s\n' "$APPLE_ID_VALUE"
               printf 'APPLE_APP_SPECIFIC_PASSWORD=%s\n' "$APPLE_APP_SPECIFIC_PASSWORD_VALUE"
               printf 'APPLE_TEAM_ID=%s\n' "$APPLE_TEAM_ID_VALUE"
@@ -212,6 +309,7 @@ jobs:
               printf 'DSH_DESKTOP_AUTO_UPDATE_ENV=production\n'
               printf 'DSH_DESKTOP_MANDATORY_UPDATE_PROD_ORIGIN=%s\n' "$MANDATORY_UPDATE_ORIGIN"
               printf "DSH_DESKTOP_MANDATORY_UPDATE_CONFIG='%s'\n" '{"allowedPageOrigins":["https://apemind.ai"]}'
+              printf 'DSH_DESKTOP_WINDOWS_PACK_CONCURRENCY=8\n'
             } >> .env.windows
           fi
 
@@ -238,7 +336,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p release-assets
+          mkdir -p release-assets build-receipt
           export RELEASE_TAG="${{ inputs.tag }}"
           while IFS= read -r -d '' file; do
             base="$(basename "$file")"
@@ -254,21 +352,35 @@ jobs:
           else
             shasum -a 256 release-assets/* > release-assets/SHA256SUMS-${{ matrix.os }}.txt
           fi
-          tar -czf release-assets/${{ matrix.os }}-build-receipt.tgz -C "${RUNNER_TEMP}/dsh-desktop/apps/desktop/.desktop-build" .
+          # Keep lightweight JSON receipts separate from desktop-* artifacts instead of
+          # tarring multi-GB unpacked build trees that Publish GitHub Release deletes anyway.
+          cp release-assets/SHA256SUMS-${{ matrix.os }}.txt build-receipt/
+          while IFS= read -r -d '' receipt; do
+            rel="${receipt#${RUNNER_TEMP}/dsh-desktop/apps/desktop/.desktop-build/}"
+            mkdir -p "build-receipt/$(dirname "$rel")"
+            cp "$receipt" "build-receipt/$rel"
+          done < <(find "${RUNNER_TEMP}/dsh-desktop/apps/desktop/.desktop-build/targets" -maxdepth 4 -type f \( -name 'release-record*.json' -o -name 'versions.json' -o -name 'runtime.json' -o -name 'package-set.json' \) -print0)
 
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.os }}
           path: release-assets
+          compression-level: 0
           if-no-files-found: error
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-receipt-${{ matrix.os }}
+          path: build-receipt
+          if-no-files-found: warn
           retention-days: 14
 
   release:
     name: Publish GitHub Release
-    needs: build
+    needs: [build, verify-typecheck]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: release-assets
@@ -302,6 +414,7 @@ jobs:
             create_args=(
               "$RELEASE_TAG"
               --repo "$GITHUB_REPOSITORY"
+              --target "$GITHUB_SHA"
               --title "$RELEASE_TITLE"
               --generate-notes
             )
@@ -324,23 +437,39 @@ jobs:
             echo "No release assets were downloaded" >&2
             exit 1
           fi
-          for asset in "${assets[@]}"; do
-            uploaded=0
+          upload_one() {
+            local asset="$1"
             for attempt in 1 2 3 4 5; do
               echo "Uploading $(basename "$asset") (attempt ${attempt}/5)"
               if gh release upload "$RELEASE_TAG" \
                 --repo "$GITHUB_REPOSITORY" \
                 --clobber \
                 "$asset"; then
-                uploaded=1
-                break
+                return 0
               fi
               if (( attempt < 5 )); then
                 sleep $((attempt * 15))
               fi
             done
-            if (( uploaded == 0 )); then
-              echo "Failed to upload $(basename "$asset") after 5 attempts" >&2
-              exit 1
+            echo "Failed to upload $(basename "$asset") after 5 attempts" >&2
+            return 1
+          }
+          max_parallel=4
+          pids=()
+          failed=0
+          for asset in "${assets[@]}"; do
+            upload_one "$asset" &
+            pids+=($!)
+            if (( ${#pids[@]} >= max_parallel )); then
+              if ! wait "${pids[0]}"; then
+                failed=1
+              fi
+              pids=("${pids[@]:1}")
             fi
           done
+          for pid in "${pids[@]}"; do
+            if ! wait "$pid"; then
+              failed=1
+            fi
+          done
+          (( failed == 0 ))
