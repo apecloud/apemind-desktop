@@ -27,7 +27,7 @@ index 42c7794a7e..5b80043bab 100644
  
  /**
 diff --git a/packages/client/ui-conversation/src/client/skeleton/EmptyHero.tsx b/packages/client/ui-conversation/src/client/skeleton/EmptyHero.tsx
-index b46db926da..0fcf3482d2 100644
+index 9adcf1e0ac..a6a3ac7d1e 100644
 --- a/packages/client/ui-conversation/src/client/skeleton/EmptyHero.tsx
 +++ b/packages/client/ui-conversation/src/client/skeleton/EmptyHero.tsx
 @@ -1,10 +1,9 @@
@@ -42,7 +42,7 @@ index b46db926da..0fcf3482d2 100644
  } from '@deepseek-ai/dsh-client-ui-primitives'
  import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
  import type { ConversationContentProps } from '../contract/slots.ts'
-@@ -71,58 +70,9 @@ export interface HeroShellProps {
+@@ -73,58 +72,9 @@ export interface HeroShellProps {
    children?: ReactNode
  }
  
@@ -104,10 +104,10 @@ index b46db926da..0fcf3482d2 100644
  
  /**
   * Render the hero chrome (headline only; no composer, no workspace row).
-@@ -130,24 +80,14 @@ function HeroFish({ hovering }: { hovering: boolean }) {
+@@ -132,24 +82,14 @@ function HeroFish({ hovering }: { hovering: boolean }) {
   * @returns the centered hero element tree.
   */
- export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
+ export function HeroShell({ t, renderSlot, headline, children }: HeroShellProps) {
 -  const [hovering, setHovering] = useState(false)
    return (
      <div className={css.root}>
